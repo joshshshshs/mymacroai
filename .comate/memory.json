@@ -1,0 +1,32 @@
+[
+  {
+    "topic": "任务完成情况 - Master Layout文件创建",
+    "memory_to_store": "已按照Master Project Root Layout成功创建所有缺失的文件和文件夹，包括：app/(auth)/onboarding.tsx、app/(tabs)/dashboard.tsx、nutrition.tsx、squads.tsx、app/(modals)/scan.tsx、import.tsx、store.tsx、components/ui/下的所有精确文件、components/features/下的精确结构、services/下的精确结构、types/下的精确文件、hooks/下的精确文件。结构验证完成，与Master Layout完全匹配。",
+    "memory_id": "cea6"
+  },
+  {
+    "topic": "Project Structure Confirmation",
+    "memory_to_store": "确认MyMacroAI项目结构：主目录为MyMacroAI/，需要创建src/services/storage/storage.ts、src/store/userStore.ts、src/services/health/HealthSync.ts、src/services/ai/GeminiService.ts等核心服务文件",
+    "memory_id": "f5c8"
+  },
+  {
+    "topic": "v2.1 规范功能差距分析",
+    "memory_to_store": "已完成MyMacro AI项目v2.1规范的功能差距分析。识别出3个关键缺失功能：1) Legacy Bridge实现不完整，2) Social Physics碰撞效果缺失，3) Hidden Economy系统需完善。详细分析报告将在.comate/project_notes/v2.1_gap_analysis.md中记录。",
+    "memory_id": "01b3"
+  },
+  {
+    "topic": "任务1执行详情",
+    "memory_to_store": "开始执行任务1：更新UserStore添加智能调整功能的基础状态管理。需要添加freeAdjustmentsUsed和isProMember字段及相关action方法。",
+    "memory_id": "71bb"
+  },
+  {
+    "topic": "用餐规划系统实现开始",
+    "memory_to_store": "开始执行MyMacro AI用餐规划系统实现任务。当前任务：创建食谱数据库和储藏室存储系统。已读取完整类型定义和UserStore作为基础。",
+    "memory_id": "c4e0"
+  },
+  {
+    "topic": "Real World Connections Implementation",
+    "memory_to_store": "开始实现MyMacro AI的Real World Connections功能，包括杂货清单系统、外部集成和通知分析。需要创建4个核心模块：Grocery Store状态管理、External Integrations深度链接、Recipe Engine智能筛选升级、Notification Analytics通知分析。",
+    "memory_id": "3046"
+  }
+]

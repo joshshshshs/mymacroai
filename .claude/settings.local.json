@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(npx expo install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx expo:*)",
+      "Bash(cat:*)",
+      "Bash(npm view:*)",
+      "Bash(npm install:*)",
+      "Bash(timeout 60 npx react-native bundle:*)",
+      "Bash(echo:*)",
+      "Bash(killall:*)",
+      "Bash(cd:*)",
+      "Bash(while read f)",
+      "Bash(do if file \"$f\")",
+      "Bash(then grep -P [x{4E00}-x{9FFF}] $f)",
+      "Bash(fi)",
+      "Bash(done)"
+    ]
+  }
+}
