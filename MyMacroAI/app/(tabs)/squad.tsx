@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import Animated, { 
+import Animated, {
   Layout,
   FadeInDown,
   ZoomIn,
@@ -70,7 +70,7 @@ export default function SquadsScreen() {
   const userStreak = useUserStore(state => state.social.streak);
   const userConsistencyScore = useUserStore(state => state.consistencyMetrics.consistencyScore);
   const { light, medium } = useHaptics();
-  
+
   // Add current user to the squad list
   const squadMembers = useMemo(() => {
     const userMember: SquadMember = {
@@ -81,7 +81,7 @@ export default function SquadsScreen() {
       lastActive: new Date().toISOString(),
       isActive: true
     };
-    
+
     return [userMember, ...MOCK_SQUAD_MEMBERS];
   }, [userStreak, userConsistencyScore]);
 
@@ -113,7 +113,7 @@ export default function SquadsScreen() {
       const isSelected = pressedMember === memberId;
       return {
         transform: [
-          { 
+          {
             scale: withSpring(isSelected ? 0.95 : 1, {
               damping: 15,
               stiffness: 120
@@ -121,8 +121,8 @@ export default function SquadsScreen() {
           }
         ],
         borderColor: withSpring(
-          isSelected ? 'rgba(59, 130, 246, 0.6)' : 
-          memberId === 'current' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+          isSelected ? 'rgba(59, 130, 246, 0.6)' :
+            memberId === 'current' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)',
           { duration: 200 }
         )
       };
@@ -139,9 +139,9 @@ export default function SquadsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
       <Header title="Private Squad" showLogo={false} />
-      
+
       {/* Squad Stats Overview */}
-      <Animated.View 
+      <Animated.View
         entering={FadeInDown.duration(600).delay(200)}
         style={{ padding: 20 }}
       >
@@ -179,7 +179,7 @@ export default function SquadsScreen() {
       </Animated.View>
 
       {/* Member List */}
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingTop: 0 }}
         showsVerticalScrollIndicator={false}
@@ -199,72 +199,54 @@ export default function SquadsScreen() {
             >
               <Animated.View style={getMemberAnimation(member.id)}>
                 <BlurView
-                intensity={25}
-                tint="dark"
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: 16,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: member.id === 'current' 
-                    ? 'rgba(59, 130, 246, 0.3)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  backgroundColor: member.id === 'current' 
-                    ? 'rgba(59, 130, 246, 0.1)' 
-                    : 'rgba(0, 0, 0, 0.3)',
-                }}
-              >
-                {/* Rank Badge with Physics Animation */}
-                <Animated.View
+                  intensity={25}
+                  tint="dark"
                   style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: getRankColor(index),
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 12,
+                    padding: 16,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: member.id === 'current'
+                      ? 'rgba(59, 130, 246, 0.3)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: member.id === 'current'
+                      ? 'rgba(59, 130, 246, 0.1)'
+                      : 'rgba(0, 0, 0, 0.3)',
                   }}
                 >
-                  <Text style={{ 
-                    fontSize: 14, 
-                    fontWeight: 'bold',
-                    color: '#000'
-                  }}>
-                    {getRankEmoji(index)}
-                  </Text>
-                </Animated.View>
-
-                {/* Member Info */}
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                    <Text style={{ 
-                      fontSize: 16, 
-                      fontWeight: '600',
-                      color: '#fff',
-                      marginRight: 8
-                    }}>
-                      {member.name}
-                    </Text>
-                    <View style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      backgroundColor: getStatusColor(member.isActive),
-                    }} />
+                  {/* Rank Badge with Physics Animation */}
+                  <Animated.View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: getRankColor(index),
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 12,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 14, 
+                    < View style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: getStatusColor(member.isActive),
+                      }} />
                   </View>
-                  
+
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ 
-                      fontSize: 12, 
+                    <Text style={{
+                      fontSize: 12,
                       color: '#9CA3AF',
                       marginRight: 12
                     }}>
                       ⚡ {member.consistencyScore} pts
                     </Text>
-                    <Text style={{ 
-                      fontSize: 12, 
+                    <Text style={{
+                      fontSize: 12,
                       color: '#F59E0B'
                     }}>
                       🔥 {member.streak} days
@@ -286,35 +268,36 @@ export default function SquadsScreen() {
                       style={{
                         width: `${member.consistencyScore}%`,
                         height: '100%',
-                        backgroundColor: member.consistencyScore >= 80 
-                          ? '#10B981' 
-                          : member.consistencyScore >= 60 
-                          ? '#F59E0B' 
-                          : '#EF4444',
+                        backgroundColor: member.consistencyScore >= 80
+                          ? '#10B981'
+                          : member.consistencyScore >= 60
+                            ? '#F59E0B'
+                            : '#EF4444',
                         borderRadius: 2,
                       }}
                       entering={FadeInDown.duration(800).delay(index * 200)}
                     />
                   </View>
-                  <Text style={{ 
-                    fontSize: 10, 
+                  <Text style={{
+                    fontSize: 10,
                     color: '#9CA3AF'
                   }}>
                     {member.consistencyScore}%
                   </Text>
                 </Animated.View>
               </BlurView>
-              </Animated.View>
-            </Pressable>
           </Animated.View>
-        ))}
-      </ScrollView>
+            </Pressable>
+    </Animated.View>
+  ))
+}
+      </ScrollView >
 
-      {/* Reaction Dock */}
-      <ReactionDock 
-        selectedMember={selectedMember}
-        onReactionSent={() => setSelectedMember(null)}
+  {/* Reaction Dock */ }
+  < ReactionDock
+selectedMember = { selectedMember }
+onReactionSent = {() => setSelectedMember(null)}
       />
-    </View>
+    </View >
   );
 }

@@ -1,389 +1,286 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Dimensions,
-  ActivityIndicator,
-} from 'react-native';
-import { useUserStore, useHealthMetrics, usePreferences } from '../../store/userStore';
-import BentoCard from '../../components/ui/BentoCard';
-import LiquidGauge from '../../components/ui/LiquidGauge';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
-const { width } = Dimensions.get('window');
-const CARD_SPACING = 16;
-const CARD_WIDTH = (width - CARD_SPACING * 3) / 2;
+// UI Components
+import { DreamyBackground } from '@/src/components/ui/DreamyBackground';
+import { GlassCard } from '@/src/components/ui/GlassCard';
+import { GlassDockNav, TabItem } from '@/src/components/ui/GlassDockNav';
+import { JarvisMicButton } from '@/src/components/ui/JarvisMicButton';
+import { LiquidRing } from '@/src/components/ui/LiquidRing';
+import { OmniLoggerSheet } from '@/src/components/features/input/OmniLoggerSheet';
 
-interface HealthSummary {
-  calories: {
-    consumed: number;
-    remaining: number;
-    target: number;
-  };
-  sleep: {
-    score: number;
-    duration: number;
-    quality: string;
-  };
-  activity: {
-    steps: number;
-    activeMinutes: number;
-    caloriesBurned: number;
-  };
-  hydration: {
-    current: number;
-    target: number;
-    progress: number;
-  };
-}
+// Utils
+import { haptics } from '@/src/utils/haptics';
+
+import { useUserStore } from '@/src/store/UserStore'; // Added useUserStore
+import { geminiService } from '@/src/services/ai/GeminiService'; // Added geminiService
 
 export default function DashboardScreen() {
-  const healthMetrics = useHealthMetrics();
-  const preferences = usePreferences();
-  const [isLoading, setIsLoading] = useState(true);
-  const [healthSummary, setHealthSummary] = useState<HealthSummary>({
-    calories: { consumed: 0, remaining: 2000, target: 2500 },
-    sleep: { score: 85, duration: 7.5, quality: '良好' },
-    activity: { steps: 8542, activeMinutes: 45, caloriesBurned: 420 },
-    hydration: { current: 1800, target: 2500, progress: 72 },
-  });
+  const router = useRouter(); // Added router
+  const [activeTab, setActiveTab] = useState(0);
+  const [isOmniLoggerOpen, setIsOmniLoggerOpen] = useState(false);
 
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const { currentIntake, dailyTarget, coins } = useUserStore(); // Added user store state
+
+  // Dynamic Context Message
+  const [contextMessage, setContextMessage] = useState("Analyzing biometrics...");
 
   useEffect(() => {
-    // 模拟数据加载
-    const timer = setTimeout(() => {
-      setAiSuggestions([
-        '建议增加15分钟步行活动以完成日目标',
-        '水分摄入已达到目标的72%，继续保持',
-        '今日睡眠质量良好，建议保持规律作息'
-      ]);
-      setIsLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    // Update context message based on time of day
+    const hour = new Date().getHours();
+    setContextMessage(geminiService.getContextMessage(hour));
   }, []);
 
-  const getCalorieProgress = () => {
-    const progress = (healthSummary.calories.consumed / healthSummary.calories.target) * 100;
-    return Math.min(progress, 100);
+  // Calculate Remaining
+  const remainingCals = dailyTarget.calories - currentIntake.calories;
+  const progress = Math.min(currentIntake.calories / dailyTarget.calories, 1);
+
+  // Derived Data for Display
+  const calories = {
+    current: currentIntake.calories,
+    target: dailyTarget.calories,
+    remaining: remainingCals,
+    macros: {
+      protein: { current: currentIntake.protein, target: dailyTarget.protein, label: 'Protein' },
+      carbs: { current: currentIntake.carbs, target: dailyTarget.carbs, label: 'Carbs' },
+      fats: { current: currentIntake.fats, target: dailyTarget.fats, label: 'Fats' },
+    }
   };
 
-  const getSleepColor = (score: number) => {
-    if (score >= 80) return ['#34C759', '#30D158'];
-    if (score >= 60) return ['#FFD60A', '#FFCC00'];
-    return ['#FF3B30', '#FF453A'];
+  const navTabs: TabItem[] = [
+    { icon: 'home-outline', label: 'Home' },
+    { icon: 'restaurant-outline', label: 'Kitchen' },
+    { icon: 'mic', label: '', isJarvis: true },
+    { icon: 'pulse-outline', label: 'Biology' },
+    { icon: 'people-outline', label: 'Squad' },
+  ];
+
+  const handleTabPress = (index: number) => {
+    setActiveTab(index);
+    haptics.selection();
   };
 
-  const getActivityColor = (steps: number) => {
-    const target = 10000;
-    const progress = (steps / target) * 100;
-    if (progress >= 100) return ['#5856D6', '#5E5CE6'];
-    if (progress >= 70) return ['#007AFF', '#5AC8FA'];
-    return ['#AF52DE', '#BF5AF2'];
+  const handleMicPress = () => {
+    haptics.medium();
+    setIsOmniLoggerOpen(true);
   };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>加载健康数据中...</Text>
-      </View>
-    );
-  }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* AI建议横幅 */}
-      {aiSuggestions.length > 0 && preferences.aiRecommendations && (
-        <BentoCard
-          style={styles.bannerCard}
-          intensity={60}
-          tint="dark"
+    <View style={styles.container}>
+      {/* 0. Background */}
+      <DreamyBackground />
+
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerTitle}>AI健康建议</Text>
-            <Text style={styles.bannerText}>
-              {aiSuggestions[0]}
-            </Text>
-          </View>
-        </BentoCard>
-      )}
+          {/* Header Spacer (AppHeader is in MainLayout) */}
+          <View style={{ height: 60 }} />
 
-      {/* Hero Section - 热量管理 */}
-      <BentoCard style={styles.heroCard}>
-        <View style={styles.heroContent}>
-          <View style={styles.heroHeader}>
-            <Text style={styles.heroTitle}>热量管理</Text>
-            <Text style={styles.heroSubtitle}>今日目标: {healthSummary.calories.target} kcal</Text>
-          </View>
-          
-          <View style={styles.heroGauge}>
-            <LiquidGauge
-              value={getCalorieProgress()}
-              size={140}
-              strokeWidth={16}
-              gradientColors={['#FF2D55', '#FF375F']}
-              label="已摄入"
-              unit="%"
-            />
-            
-            <View style={styles.calorieStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{healthSummary.calories.consumed}</Text>
-                <Text style={styles.statLabel}>已摄入</Text>
+          {/* 1. Hero Section: Nested Liquid Rings */}
+          <View style={styles.heroSection}>
+            <View style={styles.ringsContainer}>
+              {/* Outer: Protein (Green) */}
+              <View style={styles.ringWrapper}>
+                <LiquidRing
+                  value={(calories.macros.protein.current / calories.macros.protein.target) * 100}
+                  size={280}
+                  color="#10B981"
+                  strokeWidth={12}
+                />
               </View>
-              
-              <View style={styles.statDivider} />
-              
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, styles.remainingValue]}>
-                  {healthSummary.calories.remaining}
+              {/* Middle: Carbs (Blue) */}
+              <View style={[styles.ringWrapper, styles.absoluteCenter]}>
+                <LiquidRing
+                  value={(calories.macros.carbs.current / calories.macros.carbs.target) * 100}
+                  size={220}
+                  color="#3B82F6"
+                  strokeWidth={12}
+                />
+              </View>
+              {/* Inner: Fats (Orange) */}
+              <View style={[styles.ringWrapper, styles.absoluteCenter]}>
+                <LiquidRing
+                  value={(calories.macros.fats.current / calories.macros.fats.target) * 100}
+                  size={160}
+                  color="#F59E0B"
+                  strokeWidth={12}
+                />
+              </View>
+
+              {/* Center Text */}
+              <View style={styles.centerTextContainer}>
+                <Text style={styles.heroNumber}>{calories.remaining}</Text>
+                <Text style={styles.heroLabel}>kcal left</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Context Card - Intelligent Insight */}
+          <View className="mx-5 mb-6">
+            <GlassCard variant="default" intensity={20}>
+              <View className="flex-row items-center space-x-3 p-1">
+                <Ionicons name="sparkles" size={18} color="#FCD34D" />
+                <Text className="text-mist-50 text-sm font-medium flex-1">
+                  {contextMessage}
                 </Text>
-                <Text style={styles.statLabel}>剩余</Text>
               </View>
-            </View>
+            </GlassCard>
           </View>
-        </View>
-      </BentoCard>
 
-      {/* Context Section - 两列小卡片 */}
-      <View style={styles.contextSection}>
-        {/* 睡眠质量卡片 */}
-        <BentoCard style={{ ...styles.contextCard, width: CARD_WIDTH }}>
-          <View style={styles.contextContent}>
-            <LiquidGauge
-              value={healthSummary.sleep.score}
-              size={80}
-              strokeWidth={8}
-              gradientColors={getSleepColor(healthSummary.sleep.score)}
-              showValue={true}
-              unit=""
-            />
-            <View style={styles.contextText}>
-              <Text style={styles.contextTitle}>睡眠质量</Text>
-              <Text style={styles.contextValue}>{healthSummary.sleep.duration}h</Text>
-              <Text style={styles.contextSubtitle}>{healthSummary.sleep.quality}</Text>
-            </View>
+          {/* 3. Quick Stream (Recent Logs) */}
+          <Text style={styles.sectionTitle}>Recent Logs</Text>
+          <View style={styles.streamContainer}>
+            {[1, 2, 3].map((i) => (
+              <GlassCard key={i} style={styles.streamItem} intensity={20}>
+                <View style={styles.streamRow}>
+                  <View style={styles.streamIconBg}>
+                    <Ionicons name="fast-food-outline" size={16} color="#A3E635" />
+                  </View>
+                  <View>
+                    <Text style={styles.streamTitle}>Oatmeal & Berries</Text>
+                    <Text style={styles.streamTime}>8:30 AM • 450 kcal</Text>
+                  </View>
+                </View>
+              </GlassCard>
+            ))}
           </View>
-        </BentoCard>
 
-        {/* 活动步数卡片 */}
-        <BentoCard style={{ ...styles.contextCard, width: CARD_WIDTH }}>
-          <View style={styles.contextContent}>
-            <LiquidGauge
-              value={(healthSummary.activity.steps / 10000) * 100}
-              size={80}
-              strokeWidth={8}
-              gradientColors={getActivityColor(healthSummary.activity.steps)}
-              showValue={false}
-            />
-            <View style={styles.contextText}>
-              <Text style={styles.contextTitle}>今日步数</Text>
-              <Text style={styles.contextValue}>
-                {healthSummary.activity.steps.toLocaleString()}
-              </Text>
-              <Text style={styles.contextSubtitle}>
-                {healthSummary.activity.activeMinutes}分钟活动
-              </Text>
-            </View>
-          </View>
-        </BentoCard>
-      </View>
+          {/* Spacer for Dock Nav */}
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </SafeAreaView>
 
-      {/* 水分补充卡片 */}
-      <BentoCard style={styles.hydrationCard}>
-        <View style={styles.hydrationContent}>
-          <View style={styles.hydrationHeader}>
-            <Text style={styles.hydrationTitle}>水分补充</Text>
-            <Text style={styles.hydrationSubtitle}>
-              {healthSummary.hydration.current}ml / {healthSummary.hydration.target}ml
-            </Text>
-          </View>
-          
-          <View style={styles.hydrationProgress}>
-            <LiquidGauge
-              value={healthSummary.hydration.progress}
-              size={100}
-              strokeWidth={10}
-              gradientColors={['#32D74B', '#30D158']}
-              label="水分"
-              unit="%"
-            />
-            
-            <View style={styles.hydrationStats}>
-              <Text style={styles.hydrationValue}>
-                还需 {healthSummary.hydration.target - healthSummary.hydration.current}ml
-              </Text>
-              <Text style={styles.hydrationTip}>建议每小时补充200ml水分</Text>
-            </View>
-          </View>
-        </View>
-      </BentoCard>
-    </ScrollView>
+      {/* Omni-Logger Sheet */}
+      <OmniLoggerSheet
+        visible={isOmniLoggerOpen}
+        onClose={() => setIsOmniLoggerOpen(false)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
-  contentContainer: {
-    padding: CARD_SPACING,
-    gap: CARD_SPACING,
-  },
-  loadingContainer: {
+  safeArea: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  heroSection: {
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    marginBottom: 32,
+    marginTop: 20,
   },
-  loadingText: {
-    marginTop: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 16,
+  ringsContainer: {
+    position: 'relative',
+    width: 280,
+    height: 280,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  bannerCard: {
-    marginBottom: CARD_SPACING,
+  ringWrapper: {
+    // Ensuring rings are centered is handled by absolute positioning logic below
   },
-  bannerContent: {
-    padding: 8,
+  absoluteCenter: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -500 }, { translateY: -500 }], // Hacky without dynamic sizes? 
+    // Actually, transform translate percent is relative to element size.
+    // -50% of element size works.
+    transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
   },
-  bannerTitle: {
-    color: 'white',
+  centerTextContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroNumber: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#F1F5F9',
+    letterSpacing: -1,
+  },
+  heroLabel: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: -4,
+  },
+  contextCard: {
+    padding: 16,
+    borderRadius: 24,
+    marginBottom: 24,
+  },
+  contextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  contextTextContainer: {
+    flex: 1,
+  },
+  contextTitle: {
+    color: '#F1F5F9',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  bannerText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  contextBody: {
+    color: '#CBD5E1',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  sectionTitle: {
+    color: '#94A3B8',
     fontSize: 14,
-    lineHeight: 20,
+    fontWeight: '600',
+    marginBottom: 12,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  heroCard: {
-    minHeight: 200,
+  streamContainer: {
+    gap: 12,
   },
-  heroContent: {
-    flex: 1,
+  streamItem: {
+    padding: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  heroHeader: {
-    marginBottom: 20,
-  },
-  heroTitle: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 16,
-  },
-  heroGauge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  calorieStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    color: 'white',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  remainingValue: {
-    color: '#34C759',
-  },
-  statLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  contextSection: {
-    flexDirection: 'row',
-    gap: CARD_SPACING,
-  },
-  contextCard: {
-    minHeight: 120,
-  },
-  contextContent: {
+  streamRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  contextText: {
-    flex: 1,
-  },
-  contextTitle: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  contextValue: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  contextSubtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-  },
-  hydrationCard: {
-    minHeight: 140,
-  },
-  hydrationContent: {
-    flex: 1,
-  },
-  hydrationHeader: {
-    marginBottom: 16,
-  },
-  hydrationTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  hydrationSubtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
-  },
-  hydrationProgress: {
-    flexDirection: 'row',
+  streamIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(163, 230, 53, 0.1)',
     alignItems: 'center',
-    gap: 20,
+    justifyContent: 'center',
   },
-  hydrationStats: {
-    flex: 1,
+  streamTitle: {
+    color: '#F1F5F9',
+    fontSize: 14,
+    fontWeight: '500',
   },
-  hydrationValue: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  hydrationTip: {
-    color: 'rgba(255, 255, 255, 0.6)',
+  streamTime: {
+    color: '#64748B',
     fontSize: 12,
-    lineHeight: 16,
+    marginTop: 2,
   },
 });

@@ -7,11 +7,23 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import { useHaptics } from '../../hooks/useHaptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useHaptics } from '@/src/utils/haptics';
+
+// UI
+import { GlassCard } from '@/src/components/ui/GlassCard';
+import { GlassButton } from '@/src/components/ui/GlassButton';
+import { DreamyBackground } from '@/src/components/ui/DreamyBackground';
+
+// Utils
+import { haptics } from '@/src/utils/haptics';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48 - 12) / 2;
@@ -33,7 +45,15 @@ interface MealEntry {
   icon: string;
 }
 
+// Stores
+import { usePantryItems, usePantryActions } from '@/src/store/pantryStore';
+import { useUserStore } from '@/src/store/UserStore';
+
 export default function NutritionScreen() {
+  const router = useRouter();
+  const pantryItems = usePantryItems();
+  const { addItem, removeItem } = usePantryActions();
+  const { logFood } = useUserStore();
   const { triggerHaptic } = useHaptics();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -284,6 +304,81 @@ export default function NutritionScreen() {
         <View style={styles.bottomPadding} />
       </ScrollView>
     </View>
+  );
+}
+
+const MEAL_IDEA = {
+  title: 'Salmon & Quinoa Bolt',
+  kcal: 540,
+  protein: 42,
+  time: '25m',
+  image: 'https://images.unsplash.com/photo-1467003909585-2f8a7270028d?q=80&w=600&auto=format&fit=crop', // Placeholder
+};
+
+const PANTRY_ITEMS = [
+  { id: 1, name: 'Eggs', qty: '12' },
+  { id: 2, name: 'Chicken', qty: '2lb' },
+  { id: 3, name: 'Rice', qty: '1kg' },
+  { id: 4, name: 'Avocado', qty: '3' },
+  { id: 5, name: 'Spinach', qty: 'Bag' },
+  { id: 6, name: 'Oats', qty: 'Box' },
+];
+
+export function KitchenScreen() {
+  const handleCook = () => {
+    haptics.heavy();
+    // Start cooking mode
+  };
+
+  return (
+    <View style={styles.container}>
+      <DreamyBackground />
+
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header Spacer */}
+          <View style={{ height: 60 }} />
+
+          <Text style={styles.screenTitle}>Kitchen</Text>
+
+          {/* 1. Meal Hero */}
+          <Text style={styles.sectionTitle}>Tonight's Suggestion</Text>
+          <GlassCard style={styles.heroCard} intensity={40} showSheen>
+            <View style={styles.imageContainer}>
+              {/* In real app, use Expo Image with caching */}
+              <Ionicons name="restaurant" size={64} color="rgba(255,255,255,0.2)" />
+            </View>
+
+            <View style={styles.heroContent}>
+              <View style={styles.mealHeader}>
+                <Text style={styles.mealTitle}>{MEAL_IDEA.title}</Text>
+                <View style={styles.tagContainer}>
+                  <View style={styles.tag}><Text style={styles.tagText}>{MEAL_IDEA.time}</Text></View>
+                  <View style={styles.tag}><Text style={styles.tagText}>{MEAL_IDEA.kcal} kcal</Text></View>
+                </View>
+              </View>
+
+              <GlassButton
+                onPress={() => {
+                  haptics.success();
+                  logFood(650, 45, 60, 20); // Mock logging the meal hero
+                  console.log("Cooked Meal Hero");
+                }}
+                style={{ flex: 1 }}
+              >
+                <Text style={styles.buttonText}>Cook This (650 kcal)</Text>
+                <Ionicons name="flame" size={18} color="#0B1410" />
+              </GlassButton>
+            </View>
+          </GlassCard>
+
+        </View>
+
+        {/* Spacer */}
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    </SafeAreaView>
+    </View >
   );
 }
 

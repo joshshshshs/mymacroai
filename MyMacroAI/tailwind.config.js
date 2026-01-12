@@ -4,18 +4,37 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Design System v2.1 Specific Tokens
+        'forest-bg': '#0B1410',
+        'forest-card': '#13201C',
+        'lime-accent': '#A3E635',
+        'leaf-accent': '#65A30D',
+
+        // Deep Forest (Dark)
         forest: {
-          50: '#f8f9fa',
-          100: '#e9ecef',
-          200: '#dee2e6',
-          300: '#ced4da',
-          400: '#adb5bd',
-          500: '#6c757d',
-          600: '#495057',
-          700: '#343a40',
-          800: '#212529',
-          900: '#121417',
+          bg: '#0B1410',
+          card: '#13201C',
+          elevated: '#1A2B25',
         },
+        // Morning Mist (Light)
+        mist: {
+          bg: '#F2F5F3',
+          card: '#FFFFFF',
+          elevated: '#FAFAFA',
+        },
+        // Accents
+        lime: {
+          400: '#A3E635',
+          500: '#84CC16',
+          600: '#65A30D',
+        },
+        // Glass
+        glass: {
+          dark: 'rgba(255, 255, 255, 0.05)',
+          light: 'rgba(255, 255, 255, 0.70)',
+          border: 'rgba(255, 255, 255, 0.10)',
+        },
+        // Keep existing deep colors if needed, but prioritizing Design System
         deep: {
           primary: '#1a365d',
           secondary: '#2d3748',
@@ -53,8 +72,11 @@ module.exports = {
         'md': '0.375rem',
         'lg': '0.5rem',
         'xl': '0.75rem',
-        '2xl': '1rem',
-        '3xl': '1.5rem'
+        '2xl': '28px',
+        '3xl': '32px',
+        '4xl': '36px',
+        'full': '9999px',
+        'glass-radius': '32px',
       }
     },
   },
