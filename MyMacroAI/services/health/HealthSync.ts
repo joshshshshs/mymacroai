@@ -7,7 +7,7 @@ import AppleHealthKit, {
 } from 'react-native-health';
 import * as HealthConnect from 'react-native-health-connect';
 import type { Permission } from 'react-native-health-connect';
-import type { HealthData, HealthSyncConfig, SyncResult } from '../../types/health';
+import type { HealthData, HealthSyncConfig, SyncResult } from '@/src/types';
 import { logger } from '../../utils/logger';
 import {
   HealthError,

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { authService, type SignUpData, type SignInData } from '../services/auth/AuthService';
-import { useUserStore } from '../store/userStore';
+import { useUserStore } from '@/src/store/UserStore';
 import { logger } from '../utils/logger';
 
 interface AuthContextType {

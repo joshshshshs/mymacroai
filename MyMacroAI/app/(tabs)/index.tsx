@@ -1,4 +1,8 @@
-// Home Tab
+import { Redirect } from 'expo-router';
+
+/**
+ * Home Tab - Redirects to Dashboard
+ */
 export default function HomeTab() {
-  return null;
+  return <Redirect href="/dashboard" />;
 }

@@ -48,7 +48,9 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace']
+        mono: ['JetBrains Mono', 'monospace'],
+        'inter-regular': ['Inter_400Regular'],
+        'inter-bold': ['Inter_700Bold'],
       },
       fontSize: {
         'xs': '0.75rem',

@@ -1,4 +1,4 @@
-import { useUserStore } from '../../store/userStore';
+import { useUserStore } from '@/src/store/UserStore';
 import type { Intent, IntentExecutionResult } from './GeminiService';
 
 /**

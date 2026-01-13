@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-import type { HealthData, NutritionData, UserPreferences } from '../../types';
-import type { AIAnalysis, AIRecommendation, AIContext } from '../../types/ai';
+import type { HealthData, NutritionData, UserPreferences } from '@/src/types';
+import type { AIAnalysis, AIRecommendation, AIContext } from '@/src/types';
 import {
   imageObfuscator,
   type PhysiqueAnalysisResult,

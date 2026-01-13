@@ -1,5 +1,5 @@
-import type { DailyLog } from '../../types/user';
-import type { NutritionData, WorkoutData, SleepData } from '../../types/health';
+import type { DailyLog } from '@/src/types';
+import type { NutritionData, WorkoutData, SleepData } from '@/src/types';
 import { ErrorCode, ValidationError } from '../../utils/errors';
 
 /**

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useRootNavigationState } from 'expo-router';
 import Animated, { FadeIn, SlideInRight } from 'react-native-reanimated';
-import { useUserActions, useUserStore } from '../../store/userStore';
+import { useUserActions, useUserStore } from '@/src/store/UserStore';
 import { IntroStep } from '../../components/features/onboarding/IntroStep';
 import { ImportStep } from '../../components/features/onboarding/ImportStep';
 import { HealthStep } from '../../components/features/onboarding/HealthStep';
@@ -22,13 +22,14 @@ export default function OnboardingScreen() {
   const [progress, setProgress] = useState(0);
   const { completeOnboarding } = useUserActions();
   const isOnboardingCompleted = useUserStore(state => state.isOnboardingCompleted);
+  const rootNavigationState = useRootNavigationState();
 
   // 如果已经完成引导，重定向到主界面
   useEffect(() => {
-    if (isOnboardingCompleted) {
+    if (isOnboardingCompleted && rootNavigationState?.key) {
       router.replace('/(tabs)/dashboard');
     }
-  }, [isOnboardingCompleted, router]);
+  }, [isOnboardingCompleted, router, rootNavigationState]);
 
   // 更新进度条
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function OnboardingScreen() {
   const handleNext = () => {
     const steps: OnboardingStep[] = ['intro', 'import', 'health', 'camera', 'complete'];
     const currentIndex = steps.indexOf(currentStep);
-    
+
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1]);
     }
@@ -54,7 +55,7 @@ export default function OnboardingScreen() {
   const handleBack = () => {
     const steps: OnboardingStep[] = ['intro', 'import', 'health', 'camera', 'complete'];
     const currentIndex = steps.indexOf(currentStep);
-    
+
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1]);
     }
@@ -76,28 +77,28 @@ export default function OnboardingScreen() {
     switch (currentStep) {
       case 'intro':
         return (
-          <IntroStep 
+          <IntroStep
             onNext={handleNext}
             onSkip={handleSkip}
           />
         );
       case 'import':
         return (
-          <ImportStep 
+          <ImportStep
             onNext={handleNext}
             onBack={handleBack}
           />
         );
       case 'health':
         return (
-          <HealthStep 
+          <HealthStep
             onNext={handleNext}
             onBack={handleBack}
           />
         );
       case 'camera':
         return (
-          <CameraStep 
+          <CameraStep
             onComplete={handleComplete}
             onBack={handleBack}
           />
@@ -111,16 +112,16 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       {/* 进度指示器 */}
       {currentStep !== 'intro' && (
-        <Animated.View 
+        <Animated.View
           entering={FadeIn.duration(300)}
           style={styles.progressContainer}
         >
           <View style={styles.progressBar}>
-            <View 
+            <View
               style={[
                 styles.progressFill,
                 { width: `${progress}%` }
-              ]} 
+              ]}
             />
           </View>
           <View style={styles.stepIndicator}>
@@ -132,7 +133,7 @@ export default function OnboardingScreen() {
       )}
 
       {/* 当前步骤内容 */}
-      <Animated.View 
+      <Animated.View
         entering={SlideInRight.duration(500)}
         style={styles.content}
       >

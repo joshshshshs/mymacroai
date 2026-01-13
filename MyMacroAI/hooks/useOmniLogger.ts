@@ -4,7 +4,7 @@ import { geminiService, type Intent, type IntentType, type OmniLoggerContext } f
 import { useHaptics } from './useHaptics';
 import { useAuth } from './useAuth';
 import { useHealth } from './useHealth';
-import { usePreferences } from '../store/userStore';
+import { usePreferences } from '@/src/store/UserStore';
 
 // Omni-Logger状态类型
 export type OmniLoggerState = 'idle' | 'listening' | 'processing' | 'executing' | 'success' | 'error';
@@ -27,7 +27,7 @@ export function useOmniLogger() {
   const [isActive, setIsActive] = useState(false);
   const [recordingText, setRecordingText] = useState('');
   const [lastResult, setLastResult] = useState<OmniLoggerResult | null>(null);
-  
+
   // Refs for audio recording
   const mediaRecorderRef = useRef<any>(null);
   const audioChunksRef = useRef<any[]>([]);
@@ -50,7 +50,7 @@ export function useOmniLogger() {
 
       // 启动语音识别（模拟实现）
       await startSpeechRecognition();
-      
+
     } catch (err) {
       console.error('Failed to start listening:', err);
       setState('error');
@@ -65,20 +65,20 @@ export function useOmniLogger() {
     try {
       setState('processing');
       await triggerHaptic('medium');
-      
+
       // 停止语音识别
       await stopSpeechRecognition();
-      
+
       // 如果有传入文本，使用它；否则使用录音转文本
       const finalText = text || await transcribeAudio();
-      
+
       if (!finalText.trim()) {
         throw new Error('No speech detected');
       }
 
       setRecordingText(finalText);
       await processNaturalLanguage(finalText);
-      
+
     } catch (err) {
       console.error('Failed to process input:', err);
       setState('error');
@@ -93,30 +93,25 @@ export function useOmniLogger() {
   const processNaturalLanguage = useCallback(async (input: string) => {
     try {
       setState('processing');
-      
+
       // 构建上下文
       const context: OmniLoggerContext = {
         userText: input,
         timestamp: new Date().toISOString(),
-        userContext: user ? {
-          user,
-          healthData: [],
-          nutritionData: [],
-          preferences,
-          timestamp: new Date().toISOString()
-        } : undefined
+        // userContext omitted - AIContext interface requires full data not yet available
+        userContext: undefined
       };
 
       // 调用Gemini服务进行意图识别
       const intents = await geminiService.processNaturalLanguage(input, context);
-      
+
       if (intents.length === 0) {
         throw new Error('No intents detected');
       }
 
       // 执行识别的意图
       await executeIntents(intents);
-      
+
     } catch (err) {
       console.error('Natural language processing failed:', err);
       setState('error');
@@ -131,9 +126,9 @@ export function useOmniLogger() {
   const executeIntents = useCallback(async (intents: Intent[]) => {
     try {
       setState('executing');
-      
+
       const executionResults = [];
-      
+
       for (const intent of intents) {
         try {
           const result = await executeSingleIntent(intent);
@@ -157,16 +152,16 @@ export function useOmniLogger() {
       setLastResult(finalResult);
       setState('success');
       await success();
-      
+
       // 显示成功消息
       const successfulIntents = executionResults.filter(r => r.success);
       if (successfulIntents.length > 0) {
         Alert.alert(
-          '操作完成', 
+          '操作完成',
           `成功执行了 ${successfulIntents.length} 个操作`
         );
       }
-      
+
     } catch (err) {
       console.error('Intent execution failed:', err);
       setState('error');
@@ -183,19 +178,19 @@ export function useOmniLogger() {
     switch (intent.type) {
       case 'LOG_FOOD':
         return await executeLogFoodIntent(intent);
-        
+
       case 'LOG_WORKOUT':
         return await executeLogWorkoutIntent(intent);
-        
+
       case 'LOG_WEIGHT':
         return await executeLogWeightIntent(intent);
-        
+
       case 'LOG_CYCLE':
         return await executeLogCycleIntent(intent);
-        
+
       case 'ADD_PANTRY':
         return await executeAddPantryIntent(intent);
-        
+
       default:
         throw new Error(`未知的意图类型: ${intent.type}`);
     }
@@ -207,14 +202,14 @@ export function useOmniLogger() {
   const executeLogFoodIntent = useCallback(async (intent: Intent) => {
     const { parameters } = intent;
     const foodItems = parameters.foodItems || parameters.detectedFoods || ['未知食物'];
-    
+
     await logNutrition({
       foodItems,
       mealType: parameters.mealType || 'unknown',
       calories: parameters.calories || 0,
       timestamp: new Date().toISOString()
     });
-    
+
     return {
       intent,
       success: true,
@@ -227,14 +222,14 @@ export function useOmniLogger() {
    */
   const executeLogWorkoutIntent = useCallback(async (intent: Intent) => {
     const { parameters } = intent;
-    
+
     await logWorkout({
       activityType: parameters.activityType || '其他运动',
       duration: parameters.duration || 30, // 默认30分钟
       caloriesBurned: parameters.calories || 0,
       timestamp: new Date().toISOString()
     });
-    
+
     return {
       intent,
       success: true,
@@ -248,17 +243,17 @@ export function useOmniLogger() {
   const executeLogWeightIntent = useCallback(async (intent: Intent) => {
     const { parameters } = intent;
     const weight = parameters.weightValue;
-    
+
     if (!weight) {
       throw new Error('未检测到体重数值');
     }
-    
+
     await logWeight({
       value: weight,
       unit: 'kg',
       timestamp: new Date().toISOString()
     });
-    
+
     return {
       intent,
       success: true,
@@ -331,13 +326,13 @@ export function useOmniLogger() {
     isActive,
     recordingText,
     lastResult,
-    
+
     // 操作方法
     startListening,
     stopListening,
     processTextInput,
     reset,
-    
+
     // 状态检查
     isIdle: state === 'idle',
     isListening: state === 'listening',

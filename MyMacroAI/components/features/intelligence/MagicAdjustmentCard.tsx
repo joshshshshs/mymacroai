@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useUserStore, useFreeAdjustmentsUsed, useIsProMember } from '../../../store/userStore';
+import { useUserStore, useFreeAdjustmentsUsed, useIsProMember } from '@/src/store/UserStore';
 import AutoAdjuster, { type AdjustmentResult } from '../../../services/nutrition/AutoAdjuster';
 
 interface MagicAdjustmentCardProps {

@@ -18,7 +18,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import { useUserStore } from '../../../store/userStore';
+import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '../../../hooks/useHaptics';
 import { SquadMember } from '../../../types/user';
 

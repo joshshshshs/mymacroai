@@ -30,6 +30,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClose }) => {
     const [intent, setIntent] = useState<string>('');
+    const [inputValue, setInputValue] = useState<string>('');
     const translateY = useSharedValue(0);
 
     const handleActionPress = (id: string) => {
@@ -106,7 +107,7 @@ export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClo
     };
 
     return (
-        <GlassSheet visible={visible} onClose={onClose} height="50%" triggerHaptics={haptics.medium}>
+        <GlassSheet visible={visible} onClose={onClose} height={SCREEN_HEIGHT * 0.5} triggerHaptics={haptics.medium}>
             <GestureDetector gesture={panGesture}>
                 <Animated.View style={[styles.container, animatedStyle]}>
 

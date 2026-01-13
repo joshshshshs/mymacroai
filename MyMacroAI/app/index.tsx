@@ -1,28 +1,29 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from '../styles/app';
+import { ThemedText } from '@/src/components/ui/ThemedText';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View 
+    <View
       style={[styles.container, { paddingTop: insets.top }]}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>
+        <ThemedText variant="premium-heading" style={styles.title}>
           MyMacroAI
-        </Text>
-        <Text style={styles.subtitle}>
+        </ThemedText>
+        <ThemedText variant="premium-body" style={styles.subtitle}>
           The Health Operating System
-        </Text>
-        
+        </ThemedText>
+
         <Link href="/dashboard" asChild>
           <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>
+            <ThemedText variant="body" weight="600" style={styles.buttonText}>
               Get Started
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
         </Link>
       </View>

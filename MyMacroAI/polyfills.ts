@@ -21,6 +21,7 @@ const tryOverrideGlobals = (): boolean => {
     return true;
   } catch {
     try {
+      // @ts-ignore - URL polyfill type mismatch with native TypeScript URL type
       globalThis.URL = PolyfillURL;
       globalThis.URLSearchParams = PolyfillURLSearchParams;
       return true;
@@ -61,15 +62,15 @@ const patchUrlPrototype = (): void => {
   };
 
   const buildSetter = (field: 'username' | 'password') => {
-    return function setter(value: string) {
+    return function setter(this: URL, value: string) {
       try {
-        const url = new PolyfillURL(getHref(this as URL));
+        const url = new PolyfillURL(getHref(this));
         if (field === 'username') {
           url.username = value ?? '';
         } else {
           url.password = value ?? '';
         }
-        setHref(this as URL, url.href);
+        setHref(this, url.href);
       } catch {
         // ignore to avoid crashing during polyfill patching
       }

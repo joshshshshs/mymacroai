@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { SlideInRight, SlideOutRight, FadeIn, FadeOut } from 'react-native-reanimated';
 
 // UI
-import { GlassCard } from '@/src/components/ui/GlassCard';
+import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
 import { haptics } from '@/src/utils/haptics';
 
 interface ProfileDrawerProps {
@@ -60,7 +60,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ visible, onClose }
                     <ScrollView showsVerticalScrollIndicator={false}>
                         {/* Bio-Data Section */}
                         <Text style={styles.sectionTitle}>BIO-DATA</Text>
-                        <GlassCard style={styles.sectionCard} intensity={20}>
+                        <SoftGlassCard style={styles.sectionCard} variant="soft">
                             <View style={styles.row}>
                                 <Text style={styles.label}>Height</Text>
                                 <Text style={styles.value}>180 cm</Text>
@@ -75,11 +75,11 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ visible, onClose }
                                 <Text style={styles.label}>Goal</Text>
                                 <Text style={styles.value}>Hypertrophy</Text>
                             </View>
-                        </GlassCard>
+                        </SoftGlassCard>
 
                         {/* App Settings */}
                         <Text style={styles.sectionTitle}>SYSTEM</Text>
-                        <GlassCard style={styles.sectionCard} intensity={20}>
+                        <SoftGlassCard style={styles.sectionCard} variant="soft">
                             <View style={styles.row}>
                                 <Text style={styles.label}>Notifications</Text>
                                 <Switch
@@ -97,19 +97,19 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ visible, onClose }
                                     trackColor={{ false: '#333', true: '#10B981' }}
                                 />
                             </View>
-                        </GlassCard>
+                        </SoftGlassCard>
 
                         {/* Legacy Bridge */}
                         <Text style={styles.sectionTitle}>LEGACY BRIDGE</Text>
                         <TouchableOpacity onPress={handleImportCSV} activeOpacity={0.8}>
-                            <GlassCard style={styles.actionCard} intensity={30}>
+                            <SoftGlassCard style={styles.actionCard} variant="medium">
                                 <Ionicons name="document-text-outline" size={24} color="#3B82F6" />
                                 <View style={styles.actionContent}>
                                     <Text style={styles.actionTitle}>Import MyFitnessPal CSV</Text>
                                     <Text style={styles.actionSub}>Transfer your legacy data securely.</Text>
                                 </View>
                                 <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
-                            </GlassCard>
+                            </SoftGlassCard>
                         </TouchableOpacity>
 
                         {/* Data Privacy (Danger Zone) */}

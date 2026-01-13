@@ -6,7 +6,7 @@ import Button from '../../../components/ui/Button';
 import Typography from '../../../components/ui/Typography';
 import Animated, { FadeIn, SlideInLeft } from 'react-native-reanimated';
 import { csvParserService, CSVParserResult } from '../../../services/import/CSVParser';
-import { useUserActions, useDailyLogs } from '../../../store/userStore';
+import { useUserActions, useDailyLogs } from '@/src/store/UserStore';
 import { logger } from '../../../utils/logger';
 
 const { width } = Dimensions.get('window');

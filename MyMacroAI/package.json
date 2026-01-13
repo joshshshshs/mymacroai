@@ -22,7 +22,6 @@
     "@tanstack/react-query": "^4.36.1",
     "expo": "~52.0.31",
     "expo-av": "~15.0.2",
-    "expo-barcode-scanner": "^13.0.1",
     "expo-blur": "~14.0.3",
     "expo-camera": "~16.0.18",
     "expo-constants": "~17.0.8",
@@ -42,6 +41,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.9",
+    "react-native-gesture-handler": "^2.30.0",
     "react-native-health": "^1.12.0",
     "react-native-health-connect": "^3.5.0",
     "react-native-mmkv": "^2.12.2",
@@ -53,6 +53,7 @@
     "react-native-svg-transformer": "^1.5.2",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-web": "^0.19.10",
+    "react-native-worklets-core": "^1.6.2",
     "resend": "^6.7.0",
     "zustand": "^4.5.2"
   },

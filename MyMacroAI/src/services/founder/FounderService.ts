@@ -1,4 +1,4 @@
-import { useUserStore } from '../../store/UserStore';
+import { useUserStore } from '@/src/store/UserStore';
 
 // Assuming basic supabase setup or raw fetch if package not installed yet for client
 // For this strict implementation, we'll use a fetch wrapper to the Edge Function URL.

@@ -14,7 +14,7 @@ interface GlassSheetProps {
     visible: boolean;
     onClose: () => void;
     children: React.ReactNode;
-    height?: number | string;
+    height?: number;
     triggerHaptics?: () => void;
 }
 
@@ -24,7 +24,7 @@ export const GlassSheet: React.FC<GlassSheetProps> = ({
     visible,
     onClose,
     children,
-    height = 'auto',
+    height,
     triggerHaptics
 }) => {
     const translateY = useSharedValue(SCREEN_HEIGHT);
@@ -68,7 +68,7 @@ export const GlassSheet: React.FC<GlassSheetProps> = ({
                 </TouchableWithoutFeedback>
 
                 {/* Glass Sheet */}
-                <Animated.View style={[styles.sheetContainer, sheetStyle, { height }]}>
+                <Animated.View style={[styles.sheetContainer, sheetStyle, height ? { height } : undefined]}>
                     <BlurView intensity={60} tint="dark" style={styles.blur}>
                         {/* Drag Handle */}
                         <View style={styles.handleContainer}>

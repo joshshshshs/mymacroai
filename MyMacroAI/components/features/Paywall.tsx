@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useUserStore } from '../../store/userStore';
+import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '../../hooks/useHaptics';
 import { logger } from '../../utils/logger';
 

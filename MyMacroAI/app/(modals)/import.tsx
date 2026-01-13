@@ -9,19 +9,20 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import Animated, { 
+import Animated, {
   FadeIn,
   SlideInDown,
   ZoomIn,
   useAnimatedStyle,
-  withSpring 
+  withSpring
 } from 'react-native-reanimated';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { csvParserService, CSVParserResult } from '../../services/import/CSVParser';
-import { useUserStore } from '../../store/userStore';
+import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '../../hooks/useHaptics';
 import { logger } from '../../utils/logger';
+import { ThemedText } from '@/src/components/ui/ThemedText';
 
 /**
  * Legacy Bridge导入界面 - MyFitnessPal数据迁移
@@ -64,7 +65,7 @@ export default function ImportModal() {
     try {
       // 读取文件内容
       const fileContent = await FileSystem.readAsStringAsync(fileUri);
-      
+
       // 验证文件格式
       if (!csvParserService.validateCSVFormat(fileContent)) {
         throw new Error('文件格式不符合MyFitnessPal标准');
@@ -112,15 +113,15 @@ export default function ImportModal() {
   return (
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       {/* 背景遮罩 */}
-      <Pressable 
-        style={{ flex: 1 }} 
+      <Pressable
+        style={{ flex: 1 }}
         onPress={handleClose}
       />
-      
+
       {/* 导入界面内容 */}
-      <Animated.View 
+      <Animated.View
         entering={SlideInDown.springify().damping(15)}
         style={{
           position: 'absolute',
@@ -135,48 +136,38 @@ export default function ImportModal() {
       >
         <BlurView intensity={40} tint="dark" style={{ flex: 1 }}>
           <View style={{ flex: 1, padding: 24 }}>
-            
+
             {/* 标题区域 */}
-            <Animated.View 
+            <Animated.View
               entering={FadeIn.duration(600)}
               style={{ alignItems: 'center', marginBottom: 32 }}
             >
-              <Text style={{ 
-                fontSize: 28, 
-                fontWeight: 'bold', 
-                color: '#fff',
-                marginBottom: 8 
-              }}>
+              <ThemedText variant="premium-heading" style={{ color: '#fff', fontSize: 28, lineHeight: 34, marginBottom: 8 }}>
                 Legacy Bridge
-              </Text>
-              <Text style={{ 
-                fontSize: 16, 
-                color: '#9CA3AF',
-                textAlign: 'center',
-                lineHeight: 22 
-              }}>
+              </ThemedText>
+              <ThemedText variant="premium-body" style={{ color: '#9CA3AF', textAlign: 'center' }}>
                 从MyFitnessPal迁移您的历史数据
-              </Text>
+              </ThemedText>
             </Animated.View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              
+
               {!importResult ? (
                 // 初始导入界面
                 <Animated.View entering={FadeIn.delay(200)}>
-                  
+
                   {/* 功能介绍 */}
-                  <View style={{ 
-                    backgroundColor: 'rgba(255,255,255,0.1)', 
-                    borderRadius: 20, 
+                  <View style={{
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: 20,
                     padding: 20,
-                    marginBottom: 24 
+                    marginBottom: 24
                   }}>
-                    <Text style={{ 
-                      fontSize: 16, 
-                      color: '#fff', 
+                    <Text style={{
+                      fontSize: 16,
+                      color: '#fff',
                       marginBottom: 12,
-                      fontWeight: '600' 
+                      fontWeight: '600'
                     }}>
                       📊 支持的数据类型
                     </Text>
@@ -189,7 +180,7 @@ export default function ImportModal() {
                   </View>
 
                   {/* 文件选择区域 */}
-                  <Pressable 
+                  <Pressable
                     onPress={handleFilePick}
                     disabled={isImporting}
                     style={({ pressed }) => ({
@@ -208,11 +199,11 @@ export default function ImportModal() {
                     ) : (
                       <>
                         <Text style={{ fontSize: 48, marginBottom: 16 }}>📁</Text>
-                        <Text style={{ 
-                          fontSize: 18, 
-                          fontWeight: 'bold', 
+                        <Text style={{
+                          fontSize: 18,
+                          fontWeight: 'bold',
                           color: '#3B82F6',
-                          marginBottom: 8 
+                          marginBottom: 8
                         }}>
                           选择CSV文件
                         </Text>
@@ -224,16 +215,16 @@ export default function ImportModal() {
                   </Pressable>
 
                   {/* 使用说明 */}
-                  <View style={{ 
-                    backgroundColor: 'rgba(107, 114, 128, 0.2)', 
-                    borderRadius: 16, 
-                    padding: 16 
+                  <View style={{
+                    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+                    borderRadius: 16,
+                    padding: 16
                   }}>
-                    <Text style={{ 
-                      fontSize: 14, 
+                    <Text style={{
+                      fontSize: 14,
                       color: '#9CA3AF',
                       fontStyle: 'italic',
-                      textAlign: 'center' 
+                      textAlign: 'center'
                     }}>
                       在MyFitnessPal中：设置 → 导出数据 → 选择CSV格式
                     </Text>
@@ -243,27 +234,27 @@ export default function ImportModal() {
               ) : (
                 // 导入结果界面
                 <Animated.View entering={ZoomIn}>
-                  
+
                   {/* 结果统计 */}
-                  <View style={{ 
-                    backgroundColor: importResult.success ? 
+                  <View style={{
+                    backgroundColor: importResult.success ?
                       'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                    borderRadius: 20, 
+                    borderRadius: 20,
                     padding: 20,
                     marginBottom: 24,
                     borderWidth: 1,
                     borderColor: importResult.success ? '#10B981' : '#EF4444'
                   }}>
-                    <Text style={{ 
-                      fontSize: 20, 
-                      fontWeight: 'bold', 
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: 'bold',
                       color: importResult.success ? '#10B981' : '#EF4444',
                       marginBottom: 12,
                       textAlign: 'center'
                     }}>
                       {importResult.success ? '✅ 导入成功' : '❌ 导入失败'}
                     </Text>
-                    
+
                     <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
                       <View style={{ alignItems: 'center' }}>
                         <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#fff' }}>
@@ -288,26 +279,26 @@ export default function ImportModal() {
 
                   {/* 错误详情（如果有） */}
                   {importResult.errors.length > 0 && (
-                    <View style={{ 
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-                      borderRadius: 16, 
+                    <View style={{
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      borderRadius: 16,
                       padding: 16,
-                      marginBottom: 24 
+                      marginBottom: 24
                     }}>
-                      <Text style={{ 
-                        fontSize: 16, 
-                        fontWeight: '600', 
+                      <Text style={{
+                        fontSize: 16,
+                        fontWeight: '600',
                         color: '#EF4444',
-                        marginBottom: 8 
+                        marginBottom: 8
                       }}>
                         错误详情
                       </Text>
                       <ScrollView style={{ maxHeight: 120 }}>
                         {importResult.errors.map((error, index) => (
-                          <Text key={index} style={{ 
-                            fontSize: 12, 
+                          <Text key={index} style={{
+                            fontSize: 12,
                             color: '#FCA5A5',
-                            marginBottom: 4 
+                            marginBottom: 4
                           }}>
                             • {error}
                           </Text>
@@ -318,7 +309,7 @@ export default function ImportModal() {
 
                   {/* 操作按钮 */}
                   <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <Pressable 
+                    <Pressable
                       onPress={handleRestart}
                       style={({ pressed }) => ({
                         flex: 1,
@@ -330,7 +321,7 @@ export default function ImportModal() {
                     >
                       <Text style={{ color: '#D1D5DB', fontWeight: '600' }}>重新导入</Text>
                     </Pressable>
-                    <Pressable 
+                    <Pressable
                       onPress={handleClose}
                       style={({ pressed }) => ({
                         flex: 1,

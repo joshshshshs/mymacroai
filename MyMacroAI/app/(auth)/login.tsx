@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '../../hooks/useAuth';
 import { useHaptics } from '../../hooks/useHaptics';
+import { ThemedText } from '@/src/components/ui/ThemedText';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -71,8 +72,8 @@ export default function LoginScreen() {
           <View style={styles.logoContainer}>
             <Ionicons name="fitness" size={48} color="#3B82F6" />
           </View>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your health journey</Text>
+          <ThemedText variant="premium-heading" style={styles.title}>Welcome Back</ThemedText>
+          <ThemedText variant="premium-body" style={styles.subtitle}>Sign in to continue your health journey</ThemedText>
         </Animated.View>
 
         {/* Form */}

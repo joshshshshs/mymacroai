@@ -1,61 +1,79 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
+/**
+ * Tabs Layout - Main Navigation Structure
+ * Uses new ProtrudingTabBar with curved notch center button
+ */
+
+import React, { useState } from 'react';
+import { Tabs, usePathname, useRouter } from 'expo-router';
+import { AiHubModalRedesign } from '@/src/components/features/ai/AiHubModalRedesign';
+import { ProtrudingTabBar } from '@/src/components/navigation/ProtrudingTabBar';
 
 export default function TabsLayout() {
+  const [aiHubVisible, setAiHubVisible] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Determine active tab from pathname
+  const getActiveTab = () => {
+    if (pathname.includes('/dashboard')) return 'dashboard';
+    if (pathname.includes('/nutrition')) return 'nutrition';
+    if (pathname.includes('/health')) return 'health';
+    if (pathname.includes('/squad')) return 'squad';
+    return 'dashboard';
+  };
+
+  const handleTabPress = (tabName: string) => {
+    if (tabName === 'ai-hub') {
+      setAiHubVisible(true);
+    } else {
+      router.push(`/(tabs)/${tabName}`);
+    }
+  };
+
   return (
-    <Tabs
-      screenOptions={{
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: '#3B82F6',
-        tabBarInactiveTintColor: '#64748B',
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: '仪表板',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="speedometer" size={size} color={color} />
-          ),
+    <>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { display: 'none' }, // Hide default tab bar completely
         }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{ href: null }} // Hide from tab bar
+        />
+
+        <Tabs.Screen
+          name="dashboard"
+          options={{ title: 'Dashboard' }}
+        />
+
+        <Tabs.Screen
+          name="nutrition"
+          options={{ title: 'Nutrition' }}
+        />
+
+
+
+        <Tabs.Screen
+          name="health"
+          options={{ title: 'Health' }}
+        />
+
+        <Tabs.Screen
+          name="squad"
+          options={{ title: 'Squad' }}
+        />
+      </Tabs>
+
+      {/* Custom Protruding Tab Bar */}
+      <ProtrudingTabBar
+        activeTab={getActiveTab()}
+        onTabPress={handleTabPress}
       />
-      <Tabs.Screen
-        name="health"
-        options={{
-          title: '健康',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="nutrition"
-        options={{
-          title: '营养',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="nutrition" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="squads"
-        options={{
-          title: '战队',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+
+      {/* Full Screen AI Hub Modal */}
+      <AiHubModalRedesign visible={aiHubVisible} onClose={() => setAiHubVisible(false)} />
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-});

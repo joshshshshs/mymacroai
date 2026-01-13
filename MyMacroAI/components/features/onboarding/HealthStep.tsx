@@ -5,7 +5,7 @@ import Button from '../../../components/ui/Button';
 import Typography from '../../../components/ui/Typography';
 import Animated, { FadeIn, SlideInLeft } from 'react-native-reanimated';
 import { healthSyncService } from '../../../services/health/HealthSync';
-import { useUserActions, usePreferences } from '../../../store/userStore';
+import { useUserActions, usePreferences } from '@/src/store/UserStore';
 import { logger } from '../../../utils/logger';
 
 const { width } = Dimensions.get('window');

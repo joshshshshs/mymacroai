@@ -1,4 +1,4 @@
-import { FoodCategory } from '../../types/nutrition';
+import { FoodCategory } from '@/src/types';
 
 export interface Recipe {
   id: string;

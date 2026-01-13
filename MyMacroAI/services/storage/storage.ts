@@ -137,18 +137,16 @@ class StorageService {
     try {
       const storage = this.ensureInitialized();
       if (storage.contains(key)) {
-        const type = storage.getType(key);
+        const strVal = storage.getString(key);
+        if (strVal !== undefined) return strVal as unknown as T;
 
-        switch (type) {
-          case 'string':
-            return storage.getString(key) as T;
-          case 'number':
-            return storage.getNumber(key) as T;
-          case 'boolean':
-            return storage.getBoolean(key) as T;
-          default:
-            return null;
-        }
+        const numVal = storage.getNumber(key);
+        if (numVal !== undefined) return numVal as unknown as T;
+
+        const boolVal = storage.getBoolean(key);
+        if (boolVal !== undefined) return boolVal as unknown as T;
+
+        return null;
       }
       return null;
     } catch (error) {
@@ -222,12 +220,12 @@ class StorageService {
   }
 
   /**
-   * Get storage size in bytes
+   * Get storage size (number of keys stored)
    */
   getSize(): number {
     try {
       const storage = this.ensureInitialized();
-      return storage.size;
+      return storage.getAllKeys().length;
     } catch (error) {
       logger.error('Storage getSize error:', error);
       return 0;

@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // UI
-import { GlassButton } from '../../ui/GlassButton';
+import { GlassButton } from '../ui/GlassButton';
 
 // Services
 import { revenueCatService } from '@/src/services/paywall/RevenueCat';

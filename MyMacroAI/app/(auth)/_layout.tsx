@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stack } from 'expo-router';
-import { useUserStore } from '../../store/userStore';
+import { useUserStore } from '@/src/store/UserStore';
 
 /**
  * 认证模块布局 - 管理登录和引导流程

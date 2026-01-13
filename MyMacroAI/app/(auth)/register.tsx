@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '../../hooks/useAuth';
 import { useHaptics } from '../../hooks/useHaptics';
+import { ThemedText } from '@/src/components/ui/ThemedText';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -93,9 +94,9 @@ export default function RegisterScreen() {
     }
   };
 
-  const getPasswordStrength = (): { label: string; color: string; width: string } => {
+  const getPasswordStrength = (): { label: string; color: string; width: number } => {
     if (!password) {
-      return { label: '', color: '#E5E7EB', width: '0%' };
+      return { label: '', color: '#E5E7EB', width: 0 };
     }
 
     let strength = 0;
@@ -105,10 +106,10 @@ export default function RegisterScreen() {
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
 
     const strengthMap = [
-      { label: 'Weak', color: '#EF4444', width: '25%' },
-      { label: 'Fair', color: '#F59E0B', width: '50%' },
-      { label: 'Good', color: '#10B981', width: '75%' },
-      { label: 'Strong', color: '#059669', width: '100%' },
+      { label: 'Weak', color: '#EF4444', width: 25 },
+      { label: 'Fair', color: '#F59E0B', width: 50 },
+      { label: 'Good', color: '#10B981', width: 75 },
+      { label: 'Strong', color: '#059669', width: 100 },
     ];
 
     return strengthMap[Math.min(strength, 3)];
@@ -131,8 +132,8 @@ export default function RegisterScreen() {
           <View style={styles.logoContainer}>
             <Ionicons name="person-add" size={48} color="#3B82F6" />
           </View>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Start your health journey today</Text>
+          <ThemedText variant="premium-heading" style={styles.title}>Create Account</ThemedText>
+          <ThemedText variant="premium-body" style={styles.subtitle}>Start your health journey today</ThemedText>
         </Animated.View>
 
         {/* Form */}
@@ -248,7 +249,7 @@ export default function RegisterScreen() {
                   <View
                     style={[
                       styles.strengthFill,
-                      { width: passwordStrength.width, backgroundColor: passwordStrength.color },
+                      { width: `${passwordStrength.width}%`, backgroundColor: passwordStrength.color },
                     ]}
                   />
                 </View>
