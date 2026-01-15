@@ -1,10 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import { geminiService, type Intent, type IntentType, type OmniLoggerContext } from '../services/ai/GeminiService';
 import { useHaptics } from './useHaptics';
 import { useAuth } from './useAuth';
 import { useHealth } from './useHealth';
 import { usePreferences } from '@/src/store/UserStore';
+import { soundEffects } from '@/src/services/audio/SoundEffectsService';
 
 // Omni-Logger状态类型
 export type OmniLoggerState = 'idle' | 'listening' | 'processing' | 'executing' | 'success' | 'error';
@@ -29,8 +32,7 @@ export function useOmniLogger() {
   const [lastResult, setLastResult] = useState<OmniLoggerResult | null>(null);
 
   // Refs for audio recording
-  const mediaRecorderRef = useRef<any>(null);
-  const audioChunksRef = useRef<any[]>([]);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
   // Hooks
   const { triggerHaptic, success, error: hapticError } = useHaptics();
@@ -47,6 +49,7 @@ export function useOmniLogger() {
       setIsActive(true);
       setRecordingText('');
       await triggerHaptic('light');
+      await soundEffects.playPopupSound(); // Sound effect on mic activation
 
       // 启动语音识别（模拟实现）
       await startSpeechRecognition();
@@ -55,6 +58,7 @@ export function useOmniLogger() {
       console.error('Failed to start listening:', err);
       setState('error');
       await hapticError();
+      await soundEffects.playErrorSound();
     }
   }, [triggerHaptic, hapticError]);
 
@@ -67,10 +71,10 @@ export function useOmniLogger() {
       await triggerHaptic('medium');
 
       // 停止语音识别
-      await stopSpeechRecognition();
+      const audioUri = await stopSpeechRecognition();
 
       // 如果有传入文本，使用它；否则使用录音转文本
-      const finalText = text || await transcribeAudio();
+      const finalText = text || await transcribeAudio(audioUri);
 
       if (!finalText.trim()) {
         throw new Error('No speech detected');
@@ -152,6 +156,7 @@ export function useOmniLogger() {
       setLastResult(finalResult);
       setState('success');
       await success();
+      await soundEffects.playSuccessSound(); // Success sound
 
       // 显示成功消息
       const successfulIntents = executionResults.filter(r => r.success);
@@ -209,6 +214,8 @@ export function useOmniLogger() {
       calories: parameters.calories || 0,
       timestamp: new Date().toISOString()
     });
+
+    await soundEffects.playLogSound(); // Thock sound on log
 
     return {
       intent,
@@ -304,20 +311,76 @@ export function useOmniLogger() {
     await processNaturalLanguage(text);
   }, [processNaturalLanguage]);
 
-  // 语音识别模拟函数
+  const getAudioMimeType = (uri: string) => {
+    const extension = uri.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'm4a':
+        return 'audio/m4a';
+      case 'mp4':
+        return 'audio/mp4';
+      case '3gp':
+        return 'audio/3gpp';
+      case 'caf':
+        return 'audio/x-caf';
+      case 'wav':
+        return 'audio/wav';
+      case 'mp3':
+        return 'audio/mpeg';
+      default:
+        return 'audio/m4a';
+    }
+  };
+
   const startSpeechRecognition = async () => {
-    // 模拟语音识别启动
-    console.log('Speech recognition started');
+    const permission = await Audio.requestPermissionsAsync();
+    if (!permission.granted) {
+      throw new Error('Microphone permission not granted');
+    }
+
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      interruptionModeIOS: 2, // DoNotMix
+      interruptionModeAndroid: 2, // DoNotMix
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+      staysActiveInBackground: false,
+    });
+
+    const recording = new Audio.Recording();
+    await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+    await recording.startAsync();
+    recordingRef.current = recording;
   };
 
-  const stopSpeechRecognition = async () => {
-    // 模拟语音识别停止
-    console.log('Speech recognition stopped');
+  const stopSpeechRecognition = async (): Promise<string | null> => {
+    const recording = recordingRef.current;
+    if (!recording) return null;
+
+    await recording.stopAndUnloadAsync();
+    recordingRef.current = null;
+
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+      interruptionModeIOS: 2, // DoNotMix
+      interruptionModeAndroid: 2, // DoNotMix
+    });
+
+    return recording.getURI();
   };
 
-  const transcribeAudio = async (): Promise<string> => {
-    // 模拟语音转文本
-    return '这是一段模拟的语音转文本结果';
+  const transcribeAudio = async (audioUri?: string | null): Promise<string> => {
+    if (!audioUri) {
+      return '';
+    }
+
+    const base64Audio = await FileSystem.readAsStringAsync(audioUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const mimeType = getAudioMimeType(audioUri);
+    return await geminiService.transcribeAudio(base64Audio, mimeType);
   };
 
   return {

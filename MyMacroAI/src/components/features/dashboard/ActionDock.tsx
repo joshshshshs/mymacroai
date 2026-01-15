@@ -24,7 +24,7 @@ export const ActionDock = () => {
 
     const handlePress = (action: string) => {
         haptics.light();
-        console.log(`Action pressed: ${action}`);
+        // Action handled by parent component
     };
 
     return (

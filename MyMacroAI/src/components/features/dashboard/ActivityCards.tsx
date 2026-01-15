@@ -1,16 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassCard } from '@/src/components/ui/GlassCard';
+import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
 
 export const ActivityCards = () => {
     return (
         <View style={styles.gridContainer}>
             <View style={styles.row}>
                 {/* 1. Training Load */}
-                <GlassCard
-                    variant="frosted"
-                    intensity={25}
+                <SoftGlassCard
+                    variant="soft"
                     style={styles.card}
                 >
                     <View style={styles.cardHeader}>
@@ -21,12 +20,11 @@ export const ActivityCards = () => {
                         <Text style={styles.mainText}>Last Workout:</Text>
                         <Text style={styles.valueText}>Leg Day</Text>
                     </View>
-                </GlassCard>
+                </SoftGlassCard>
 
                 {/* 2. Squad Rank */}
-                <GlassCard
-                    variant="frosted"
-                    intensity={25}
+                <SoftGlassCard
+                    variant="soft"
                     style={styles.card}
                 >
                     <View style={styles.cardHeader}>
@@ -40,7 +38,7 @@ export const ActivityCards = () => {
                             <Text style={styles.subtext}>2. Top 3 squad members</Text>
                         </View>
                     </View>
-                </GlassCard>
+                </SoftGlassCard>
             </View>
         </View>
     );

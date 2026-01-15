@@ -40,8 +40,7 @@ export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClo
 
     const triggerCameraMode = () => {
         haptics.success();
-        console.log('Swipe Up: Hunter Camera Mode Activated');
-        onClose(); // Close sheet to simulate opening camera
+        onClose(); // Close sheet to open camera
     };
 
     const panGesture = Gesture.Pan()
@@ -67,9 +66,6 @@ export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClo
 
         haptics.heavy();
 
-        // Show processing state visually (could add a generic loading state here)
-        console.log("Processing command...");
-
         try {
             // Real Gemini NLU Processing
             const result = await geminiService.processNaturalLanguage(inputValue);
@@ -79,12 +75,9 @@ export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClo
 
                 // Commit to Store
                 logFood(calories, protein, carbs, fats, food);
-
                 haptics.success();
-                console.log(`Logged: ${food} (${calories}kcal)`);
             } else {
                 // Handle Query or other intents
-                console.log("Gemini Response:", result.response);
                 haptics.selection();
             }
 

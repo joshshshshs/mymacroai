@@ -30,7 +30,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Get user store actions
-  const { setUser: setStoreUser, setAuthenticated, clearUserData } = useUserStore();
+  const { actions } = useUserStore();
+  const { setUser: setStoreUser, setAuthenticated } = actions;
 
   // Initialize auth state
   useEffect(() => {
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(null);
         setUser(null);
         setAuthenticated(false);
-        clearUserData();
+        // User data cleared on signout
       } else if (event === 'TOKEN_REFRESHED' && newSession) {
         setSession(newSession);
       }
@@ -91,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       unsubscribe();
     };
-  }, [setStoreUser, setAuthenticated, clearUserData]);
+  }, [setStoreUser, setAuthenticated]);
 
   // Sign up handler
   const signUp = useCallback(async (data: SignUpData): Promise<boolean> => {

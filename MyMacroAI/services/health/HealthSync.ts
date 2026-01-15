@@ -5,8 +5,9 @@ import AppleHealthKit, {
   type HealthStatusResult,
   type HealthValue,
 } from 'react-native-health';
-import * as HealthConnect from 'react-native-health-connect';
-import type { Permission } from 'react-native-health-connect';
+// HealthConnect is Android-only, imported dynamically to prevent iOS errors
+// Types are defined inline to avoid triggering native module resolution
+type HealthConnectPermission = string;
 import type { HealthData, HealthSyncConfig, SyncResult } from '@/src/types';
 import { logger } from '../../utils/logger';
 import {
@@ -22,7 +23,7 @@ import {
  */
 class HealthSyncService {
   private healthKit: typeof AppleHealthKit | null = null;
-  private healthConnect: typeof HealthConnect | null = null;
+  private healthConnect: any | null = null;
   private config: HealthSyncConfig;
   private isInitialized = false;
 
@@ -116,7 +117,9 @@ class HealthSyncService {
    */
   private async initializeHealthConnect(): Promise<void> {
     try {
-      this.healthConnect = HealthConnect;
+      // Dynamic import to prevent TurboModule error on iOS
+      const HealthConnectModule = require('react-native-health-connect');
+      this.healthConnect = HealthConnectModule;
 
       // 检查HealthConnect可用性
       const status = await this.healthConnect.getSdkStatus();
@@ -179,7 +182,7 @@ class HealthSyncService {
   /**
    * 获取HealthConnect权限配置
    */
-  private getHealthConnectPermissions(): Permission[] {
+  private getHealthConnectPermissions(): HealthConnectPermission[] {
     return [
       'android.permission.health.READ_STEPS',
       'android.permission.health.READ_CALORIES',
@@ -192,7 +195,7 @@ class HealthSyncService {
       'android.permission.health.WRITE_WEIGHT',
       'android.permission.health.WRITE_BODY_FAT',
       'android.permission.health.WRITE_HYDRATION'
-    ] as unknown as Permission[];
+    ];
   }
 
   /**
@@ -264,7 +267,7 @@ class HealthSyncService {
             callback
           )
         );
-        
+
         healthData.push({
           type: 'steps',
           value: steps.reduce((sum: number, sample) => sum + (sample.value || 0), 0),
@@ -289,7 +292,7 @@ class HealthSyncService {
             callback
           )
         );
-        
+
         healthData.push({
           type: 'calories',
           value: calories.reduce((sum: number, sample) => sum + (sample.value || 0), 0),
@@ -331,7 +334,7 @@ class HealthSyncService {
             endTime: endDate.toISOString()
           }
         });
-        
+
         healthData.push({
           type: 'steps',
           value: steps.records.reduce((sum: number, record: any) => sum + (record.count || 0), 0),
@@ -463,7 +466,7 @@ class HealthSyncService {
       const healthConnectPermissions = await this.healthConnect.getGrantedPermissions();
       this.config.dataTypes.forEach(type => {
         permissions[type] = healthConnectPermissions.includes(
-          `android.permission.health.READ_${type.toUpperCase()}` as unknown as Permission
+          `android.permission.health.READ_${type.toUpperCase()}`
         );
       });
     }

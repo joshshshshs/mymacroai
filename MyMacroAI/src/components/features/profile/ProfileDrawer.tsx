@@ -31,7 +31,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ visible, onClose }
             "Are you sure you want to nuke all your data? This cannot be undone.",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "NUKE IT", style: "destructive", onPress: () => console.log("Data Nuked") }
+                { text: "NUKE IT", style: "destructive", onPress: () => { /* TODO: Implement data deletion */ } }
             ]
         );
     };

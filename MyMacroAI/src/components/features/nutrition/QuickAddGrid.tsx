@@ -16,7 +16,7 @@ export const QuickAddGrid = () => {
 
     const handlePress = (id: string) => {
         haptics.light();
-        console.log(`Quick Add: ${id}`);
+        // Quick add action handled by navigation
     };
 
     return (

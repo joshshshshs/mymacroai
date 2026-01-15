@@ -16,10 +16,7 @@ class FounderService {
             // 1. Call Edge Function
             // const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, { body: { email } });
 
-            // Mocking the successful network call for now to strictly follow "no network errors" rule if env missing
-            console.log(`[FounderService] Claiming status for ${email}...`);
-
-            // basic validation
+            // Basic validation
             if (!email.includes('@')) throw new Error("Invalid Email");
 
             // Simulate API delay

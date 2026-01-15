@@ -1,25 +1,21 @@
-import { View, StyleSheet, useColorScheme, Image, Dimensions } from 'react-native';
-import { PASTEL_COLORS } from '../../design-system/aesthetics';
+import { View, StyleSheet, useColorScheme, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
 /**
- * SoftDreamyBackground
- * - Light Mode: Renders a glassmorphism image background.
- * - Dark Mode: Renders a solid dark background (or gradients if added later).
+ * SoftDreamyBackground - Zentra-style
+ * - Light Mode: Soft cream/beige gradient matching the mockup
+ * - Dark Mode: Deep forest theme with bioluminescent accents
  */
 
 const { width, height } = Dimensions.get('window');
-
-// Require the asset (ensure it exists at this path from Step 237)
-const GLASS_BG_LIGHT = require('../../../assets/glass-bg-light.png');
 
 export const SoftDreamyBackground: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   if (isDark) {
-    // Deep Forest Theme (#0B1410) with bioluminescent accents
+    // Deep Forest Theme with subtle gradients
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -45,20 +41,50 @@ export const SoftDreamyBackground: React.FC = () => {
           opacity: 0.06
         }]} />
 
-        {/* Blur blending */}
         <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
       </View>
     );
   }
 
-  // Light Mode (unchanged logic)
+  // Light Mode - Zentra-style soft cream/beige gradient (matching mockup)
   return (
     <View style={styles.container}>
-      <Image
-        source={GLASS_BG_LIGHT}
-        style={styles.image}
-        resizeMode="cover"
+      {/* Main gradient - soft cream to light gray */}
+      <LinearGradient
+        colors={['#FAF9F6', '#F5F3EF', '#EDE9E3', '#F5F3EF', '#FAF9F6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
       />
+
+      {/* Soft warm accent blob - top right */}
+      <View style={[styles.softBlob, {
+        top: -80,
+        right: -60,
+        backgroundColor: '#FFE4C4',
+        opacity: 0.4,
+      }]} />
+
+      {/* Soft cool accent blob - bottom left */}
+      <View style={[styles.softBlob, {
+        bottom: 100,
+        left: -80,
+        backgroundColor: '#E8E4F0',
+        opacity: 0.5,
+      }]} />
+
+      {/* Subtle pink accent - center */}
+      <View style={[styles.softBlob, {
+        top: height * 0.4,
+        right: -100,
+        backgroundColor: '#FFE4E8',
+        opacity: 0.3,
+        width: width * 0.6,
+        height: width * 0.6,
+      }]} />
+
+      {/* Light blur overlay for dreaminess */}
+      <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
     </View>
   );
 };
@@ -66,20 +92,19 @@ export const SoftDreamyBackground: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000', // Default base
+    backgroundColor: '#FAF9F6',
     zIndex: -1,
-  },
-  image: {
-    width: width,
-    height: height,
-    position: 'absolute',
-    top: 0,
-    left: 0,
   },
   bloom: {
     position: 'absolute',
     width: width * 0.8,
     height: width * 0.8,
     borderRadius: (width * 0.8) / 2,
-  }
+  },
+  softBlob: {
+    position: 'absolute',
+    width: width * 0.7,
+    height: width * 0.7,
+    borderRadius: (width * 0.7) / 2,
+  },
 });

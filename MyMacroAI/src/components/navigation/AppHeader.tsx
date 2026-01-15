@@ -1,9 +1,3 @@
-/**
- * AppHeader - Minimal Global Header with Soft Glass Pills
- * Clean header with MacroCoins/Streak (left) and Profile (right)
- * Ultra-soft glassmorphic pills with pastel aesthetic
- */
-
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,17 +7,34 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SPACING } from '../../design-system/tokens';
 import { PASTEL_COLORS } from '../../design-system/aesthetics';
 import { useUserStore } from '@/src/store/UserStore';
+import { MacroCoinIcon } from '../ui/MacroCoinIcon';
 
-export const AppHeader: React.FC = () => {
+interface AppHeaderProps {
+  title?: string;
+  showCoins?: boolean;
+  coins?: number;
+  showStreak?: boolean;
+  streak?: number;
+}
+
+export const AppHeader: React.FC<AppHeaderProps> = ({
+  title,
+  showCoins = true,
+  coins: propCoins,
+  showStreak = true,
+  streak: propStreak
+}) => {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
-  // Get user data from store
-  const coins = useUserStore((state) => state.coins) || 1250;
-  const streak = useUserStore((state) => state.streak) || 14;
-  // profileImage removed as it's not in store currently
+  // Get user data from store (fallback if props not provided)
+  const storeCoins = useUserStore((state) => state.coins);
+  const storeStreak = useUserStore((state) => state.streak);
+
+  const coins = propCoins ?? storeCoins ?? 0;
+  const streak = propStreak ?? storeStreak ?? 0;
 
   const handleCoinsPress = () => {
     // Open MacroShop
@@ -58,7 +69,7 @@ export const AppHeader: React.FC = () => {
               <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
               <View style={[styles.pillOverlay, { backgroundColor: PASTEL_COLORS.glass.light }]} />
               <View style={styles.pillContent}>
-                <Text style={styles.coinIcon}>🪙</Text>
+                <MacroCoinIcon size={18} />
                 <Text style={[styles.pillText, { color: textColor }]}>{coins}</Text>
               </View>
             </View>

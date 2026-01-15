@@ -71,7 +71,6 @@ export const HunterCamera: React.FC<HunterCameraProps> = ({ onClose, onScanSucce
 
         setScanned(true);
         haptics.heavy();
-        console.log(`Bar code with type ${type} and data ${data} has been scanned!`);
 
         // Mock OpenFoodFacts Lookup
         Alert.alert(

@@ -131,8 +131,8 @@ export const SoftGlassCard: React.FC<SoftGlassCardProps> = ({
         ]}
       />
 
-      {/* Top highlight (simulates light reflection) - Skip for Alpha to keep it flat/clean per spec */}
-      {!isAlpha && (
+      {/* Top highlight removed per user request (was causing 'gray shadow' look) */}
+      {/* {!isAlpha && (
         <LinearGradient
           colors={['rgba(255, 255, 255, 0.4)', 'transparent']}
           start={{ x: 0, y: 0 }}
@@ -140,7 +140,7 @@ export const SoftGlassCard: React.FC<SoftGlassCardProps> = ({
           style={[StyleSheet.absoluteFill, { borderRadius: SOFT_RADIUS.xl }]}
           pointerEvents="none"
         />
-      )}
+      )} */}
 
       {/* Content */}
       <View style={styles.content}>{children}</View>

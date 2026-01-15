@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LiquidRing } from '@/src/components/ui/LiquidRing';
-import { GlassCard } from '@/src/components/ui/GlassCard';
+import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
 
 interface MacroStats {
     current: number;
@@ -30,7 +30,7 @@ export const MacroPhage: React.FC<MacroPhageProps> = ({ macros }) => {
     return (
         <View style={styles.container}>
             <Text style={styles.sectionTitle}>Today's Progress</Text>
-            <GlassCard variant="frosted" intensity={25} style={styles.card}>
+            <SoftGlassCard variant="soft" style={styles.card}>
                 <View style={styles.ringsRow}>
                     {/* Protein - Orange */}
                     <View style={styles.ringItem}>
@@ -86,7 +86,7 @@ export const MacroPhage: React.FC<MacroPhageProps> = ({ macros }) => {
                         <Text style={styles.label}>Fats</Text>
                     </View>
                 </View>
-            </GlassCard>
+            </SoftGlassCard>
         </View>
     );
 };

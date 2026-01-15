@@ -20,7 +20,7 @@ import Animated, {
 import { BlurView } from 'expo-blur';
 import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '../../../hooks/useHaptics';
-import { SquadMember } from '../../../types/user';
+import { SquadMember } from '@/src/types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -46,7 +46,7 @@ export default function Leaderboard() {
   // 如果没有小队数据，显示空状态
   if (!squad || !squad.members || squad.members.length === 0) {
     return (
-      <Animated.View 
+      <Animated.View
         entering={FadeIn.duration(600)}
         style={{
           padding: 24,
@@ -67,20 +67,20 @@ export default function Leaderboard() {
           }}
         >
           <Text style={{ fontSize: 48, marginBottom: 16 }}>🏆</Text>
-          <Text style={{ 
-            fontSize: 18, 
-            fontWeight: 'bold', 
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
             color: '#fff',
             marginBottom: 8,
             textAlign: 'center'
           }}>
             排行榜
           </Text>
-          <Text style={{ 
-            fontSize: 14, 
+          <Text style={{
+            fontSize: 14,
             color: '#9CA3AF',
             textAlign: 'center',
-            lineHeight: 20 
+            lineHeight: 20
           }}>
             加入小队后，在这里查看成员排名和互动
           </Text>
@@ -99,13 +99,13 @@ export default function Leaderboard() {
   // 处理排名项点击（物理碰撞效果）
   const handleRankPress = async (rank: number, member: SquadMember) => {
     if (collisionActive) return;
-    
+
     setCollisionActive(true);
     setSelectedRank(rank);
-    
+
     // 触发触觉反馈
     await triggerCollision();
-    
+
     // 物理碰撞动画
     const item = positions[rank];
     if (item) {
@@ -157,21 +157,21 @@ export default function Leaderboard() {
   return (
     <View style={{ flex: 1 }}>
       {/* 标题区域 */}
-      <Animated.View 
+      <Animated.View
         entering={SlideInDown.springify()}
         style={{ padding: 24, paddingBottom: 16 }}
       >
-        <Text style={{ 
-          fontSize: 28, 
-          fontWeight: 'bold', 
+        <Text style={{
+          fontSize: 28,
+          fontWeight: 'bold',
           color: '#fff',
           marginBottom: 8,
           textAlign: 'center'
         }}>
           Physics Race Track
         </Text>
-        <Text style={{ 
-          fontSize: 14, 
+        <Text style={{
+          fontSize: 14,
           color: '#9CA3AF',
           textAlign: 'center'
         }}>
@@ -179,7 +179,7 @@ export default function Leaderboard() {
         </Text>
       </Animated.View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16 }}
@@ -234,9 +234,9 @@ export default function Leaderboard() {
                   }}
                 >
                   {/* 排名图标 */}
-                  <View style={{ 
-                    width: 40, 
-                    height: 40, 
+                  <View style={{
+                    width: 40,
+                    height: 40,
                     borderRadius: 20,
                     backgroundColor: rankColor,
                     alignItems: 'center',
@@ -251,41 +251,41 @@ export default function Leaderboard() {
                   {/* 成员信息 */}
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <Text style={{ 
-                        fontSize: 16, 
-                        fontWeight: 'bold', 
+                      <Text style={{
+                        fontSize: 16,
+                        fontWeight: 'bold',
                         color: '#fff',
-                        marginRight: 8 
+                        marginRight: 8
                       }}>
                         {member.name}
                       </Text>
                       {isCurrentUser && (
-                        <Text style={{ 
-                          fontSize: 12, 
+                        <Text style={{
+                          fontSize: 12,
                           color: '#10B981',
                           backgroundColor: 'rgba(16, 185, 129, 0.2)',
                           paddingHorizontal: 6,
                           paddingVertical: 2,
-                          borderRadius: 8 
+                          borderRadius: 8
                         }}>
                           你
                         </Text>
                       )}
                     </View>
-                    
+
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       {/* 连续打卡天数 */}
-                      <View style={{ 
-                        flexDirection: 'row', 
+                      <View style={{
+                        flexDirection: 'row',
                         alignItems: 'center',
-                        marginRight: 12 
+                        marginRight: 12
                       }}>
                         <Text style={{ fontSize: 12, color: '#F59E0B', marginRight: 4 }}>🔥</Text>
                         <Text style={{ fontSize: 12, color: '#9CA3AF' }}>
                           {member.streak || 0}天
                         </Text>
                       </View>
-                      
+
                       {/* 一致性分数 */}
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={{ fontSize: 12, color: '#3B82F6', marginRight: 4 }}>📊</Text>
@@ -298,10 +298,10 @@ export default function Leaderboard() {
 
                   {/* 综合分数 */}
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ 
-                      fontSize: 18, 
-                      fontWeight: 'bold', 
-                      color: rankColor 
+                    <Text style={{
+                      fontSize: 18,
+                      fontWeight: 'bold',
+                      color: rankColor
                     }}>
                       {Math.round((member.streak || 0) * 10 + (member.consistencyScore || 0))}
                     </Text>
@@ -332,20 +332,20 @@ export default function Leaderboard() {
         })}
 
         {/* 物理效果说明 */}
-        <Animated.View 
+        <Animated.View
           entering={FadeIn.delay(rankedMembers.length * 100 + 200)}
-          style={{ 
-            backgroundColor: 'rgba(107, 114, 128, 0.2)', 
-            borderRadius: 12, 
+          style={{
+            backgroundColor: 'rgba(107, 114, 128, 0.2)',
+            borderRadius: 12,
             padding: 16,
-            marginTop: 8 
+            marginTop: 8
           }}
         >
-          <Text style={{ 
-            fontSize: 12, 
+          <Text style={{
+            fontSize: 12,
             color: '#9CA3AF',
             fontStyle: 'italic',
-            textAlign: 'center' 
+            textAlign: 'center'
           }}>
             💡 点击排名卡片体验物理碰撞效果和触觉反馈
           </Text>

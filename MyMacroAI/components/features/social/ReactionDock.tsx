@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Dimensions } from 'react-native';
-import Animated, { 
+import Animated, {
   FadeInUp,
   ZoomIn,
   ZoomOut,
@@ -12,7 +12,7 @@ import Animated, {
 import { BlurView } from 'expo-blur';
 import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '../../../hooks/useHaptics';
-import { SquadMember } from '../../../types/user';
+import { SquadMember } from '@/src/types';
 
 interface ReactionDockProps {
   selectedMember: SquadMember | null;
@@ -26,7 +26,7 @@ const { width: screenWidth } = Dimensions.get('window');
  */
 export default function ReactionDock({ selectedMember, onReactionSent }: ReactionDockProps) {
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null);
-  const { addReaction } = useUserStore(state => state);
+  const { actions } = useUserStore();
   const { triggerReaction } = useHaptics();
 
   const reactions = [
@@ -39,12 +39,12 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
     if (!selectedMember || selectedMember.id === 'current') return;
 
     setSelectedReaction(reactionId);
-    
+
     // Trigger haptic feedback
     await triggerReaction();
-    
+
     // Add reaction to store
-    addReaction({
+    actions.addReaction({
       type: reactionId as 'fire' | 'muscle' | 'nudge',
       senderId: 'current',
       receiverId: selectedMember.id,
@@ -64,7 +64,7 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
       const isSelected = selectedReaction === reactionId;
       return {
         transform: [
-          { 
+          {
             scale: withSpring(isSelected ? 1.2 : 1, {
               damping: 10,
               stiffness: 100
@@ -81,7 +81,7 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
       const isSelected = selectedReaction === reactionId;
       return {
         transform: [
-          { 
+          {
             scale: withSequence(
               withTiming(isSelected ? 1.5 : 0, { duration: 0 }),
               withTiming(isSelected ? 0 : 0, { duration: 1500 })
@@ -101,7 +101,7 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
   }
 
   return (
-    <Animated.View 
+    <Animated.View
       entering={FadeInUp.duration(600).springify()}
       style={{
         position: 'absolute',
@@ -124,17 +124,17 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
           alignItems: 'center',
         }}
       >
-        <Text style={{ 
-          color: '#fff', 
-          fontSize: 14, 
+        <Text style={{
+          color: '#fff',
+          fontSize: 14,
           fontWeight: '600',
           marginBottom: 4
         }}>
           Send reaction to
         </Text>
-        <Text style={{ 
-          color: '#3B82F6', 
-          fontSize: 16, 
+        <Text style={{
+          color: '#3B82F6',
+          fontSize: 16,
           fontWeight: 'bold'
         }}>
           {selectedMember.name}
@@ -169,12 +169,12 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
                 getPulseAnimation(reaction.id)
               ]}
             />
-            
+
             <Pressable
               onPress={() => handleReactionPress(reaction.id)}
               disabled={!!selectedReaction}
             >
-              <Animated.View 
+              <Animated.View
                 style={[
                   {
                     width: 60,
@@ -193,7 +193,7 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
                 <Text style={{ fontSize: 24 }}>
                   {reaction.emoji}
                 </Text>
-                
+
                 {/* Success Animation */}
                 {selectedReaction === reaction.id && (
                   <Animated.Text
@@ -211,9 +211,9 @@ export default function ReactionDock({ selectedMember, onReactionSent }: Reactio
                 )}
               </Animated.View>
             </Pressable>
-            
-            <Text style={{ 
-              fontSize: 12, 
+
+            <Text style={{
+              fontSize: 12,
               color: '#9CA3AF',
               fontWeight: '500'
             }}>

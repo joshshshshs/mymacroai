@@ -3,18 +3,17 @@
  * Uses new ProtrudingTabBar with curved notch center button
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs, usePathname, useRouter } from 'expo-router';
-import { AiHubModalRedesign } from '@/src/components/features/ai/AiHubModalRedesign';
 import { ProtrudingTabBar } from '@/src/components/navigation/ProtrudingTabBar';
 
 export default function TabsLayout() {
-  const [aiHubVisible, setAiHubVisible] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   // Determine active tab from pathname
   const getActiveTab = () => {
+    if (pathname.includes('/ai')) return 'ai-hub';
     if (pathname.includes('/dashboard')) return 'dashboard';
     if (pathname.includes('/nutrition')) return 'nutrition';
     if (pathname.includes('/health')) return 'health';
@@ -24,9 +23,10 @@ export default function TabsLayout() {
 
   const handleTabPress = (tabName: string) => {
     if (tabName === 'ai-hub') {
-      setAiHubVisible(true);
+      // Open AI Hub modal instead of tab
+      router.push('/(modals)/ai-hub' as any);
     } else {
-      router.push(`/(tabs)/${tabName}`);
+      router.push(`/(tabs)/${tabName}` as any);
     }
   };
 
@@ -53,7 +53,15 @@ export default function TabsLayout() {
           options={{ title: 'Nutrition' }}
         />
 
+        <Tabs.Screen
+          name="ai"
+          options={{ title: 'AI' }}
+        />
 
+        <Tabs.Screen
+          name="sleep"
+          options={{ title: 'Sleep' }}
+        />
 
         <Tabs.Screen
           name="health"
@@ -71,9 +79,6 @@ export default function TabsLayout() {
         activeTab={getActiveTab()}
         onTabPress={handleTabPress}
       />
-
-      {/* Full Screen AI Hub Modal */}
-      <AiHubModalRedesign visible={aiHubVisible} onClose={() => setAiHubVisible(false)} />
     </>
   );
 }

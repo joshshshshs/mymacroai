@@ -63,8 +63,23 @@ export interface HealthData {
     timestamp: string;
 }
 
+export interface HealthSyncConfig {
+    enableBackgroundSync: boolean;
+    syncInterval: number;
+    dataTypes: HealthData['type'][];
+}
+
+export interface SyncResult {
+    success: boolean;
+    data: HealthData[];
+    syncedAt: Date;
+    errors: string[];
+}
+
+
 export interface NutritionData {
     id: string;
+    name?: string;
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'unknown';
     calories: number;
     protein: number;
@@ -104,6 +119,11 @@ export interface HealthMetrics {
     bodyFat: number | null;
     muscleMass: number | null;
     hydration: number | null;
+    steps: number | null;
+    activeCalories: number | null;
+    distance: number | null;
+    sleepMinutes: number | null;
+    heartRate: number | null;
     sleepQuality: number | null;
     stressLevel: number | null;
     age: number | null;
@@ -142,6 +162,8 @@ export interface UserPreferences {
         afternoon: boolean;
         evening: boolean;
     };
+    // Custom reaction emojis for social feed (4 slots)
+    customReactionEmojis: string[];
 }
 
 export interface FounderStatus {
@@ -158,7 +180,7 @@ export interface StoreItem {
     name: string;
     description: string;
     price: number;
-    category: 'liquid_skins' | 'deep_dives' | 'streak_freeze' | 'avatars';
+    category: 'liquid_skins' | 'deep_dives' | 'streak_freeze' | 'avatars' | 'featured' | 'social' | 'utility' | 'aesthetics' | 'cosmetic';
     rarity: 'common' | 'rare' | 'epic' | 'legendary';
     isPurchased: boolean;
     effect?: string;
@@ -223,6 +245,15 @@ export interface ConsistencyMetrics {
     }[];
 }
 
+// Training Identity Types
+export type TrainingStyle =
+    | 'bodybuilding'
+    | 'running'
+    | 'calisthenics'
+    | 'powerlifting'
+    | 'crossfit'
+    | 'yoga';
+
 // ============================================================================
 // Unified Store State
 // ============================================================================
@@ -230,7 +261,13 @@ export interface ConsistencyMetrics {
 export interface UserState {
     // Core Data
     dailyTarget: MacroTarget;
+    dailyTargetAdjustment: MacroTarget;
     currentIntake: MacroTarget;
+
+    // Per-day intake and log storage (date string YYYY-MM-DD -> data)
+    dailyIntakes: Record<string, MacroTarget>;
+    dailyLogs: Record<string, DailyLog[]>;
+
     dailyLog: {
         history: DailyLog[]; // Unified Rich Logs
         lastUpdated: number;
@@ -259,6 +296,9 @@ export interface UserState {
         showSteps: boolean;
     };
 
+    // Health Grid Layout (Bevel-style reorderable widgets)
+    healthLayout: string[];
+
     // Gamification & Social
     streak: number;
     coins: number;
@@ -267,12 +307,27 @@ export interface UserState {
     social: UserSocial;
     consistencyMetrics: ConsistencyMetrics;
 
+    // Public Profile (Athlete Card)
+    athleteProfile: AthleteProfile;
+
+    // Shop Items
+    streakFreezes?: any[];
+    ghostModeActive?: boolean;
+    ghostModeExpiresAt?: string;
+    unlockedFrames?: string[];
+    unlockedNudgePatterns?: string[];
+    unlockedAppIcons?: string[];
+
     // Smart Adjustments
     freeAdjustmentsUsed: number;
     isProMember: boolean; // Sync with isPro
 
+    // Training Identity
+    trainingStyles: TrainingStyle[];
+
     // Actions
     updateIntake: (intake: Partial<MacroTarget>) => void;
+    setDailyTargetAdjustment: (adjustment: Partial<MacroTarget>) => void;
     logFood: (calories: number, protein: number, carbs: number, fats: number, name?: string) => void;
     addDailyLog: (log: DailyLog) => void; // Added for IntentHandler
     updatePantry: (items: string[]) => void;
@@ -288,8 +343,24 @@ export interface UserState {
 
     purchaseItem: (item: StoreItem) => boolean;
 
+    // Shop Item Actions
+    addStreakFreeze: (freeze: any) => void;
+    activateGhostMode: (expiresAt: string) => void;
+    unlockProfileFrame: (frameId: string) => void;
+    unlockNudgePattern: (patternId: string) => void;
+    unlockAppIcon: (iconId: string) => void;
+
     // Legacy support for accessing health metrics easily if needed
     updateHealthMetrics: (metrics: Partial<HealthMetrics>) => void;
+
+    // Health Grid Layout
+    updateHealthLayout: (layout: string[]) => void;
+
+    // Athlete Profile
+    updateAthleteProfile: (profile: Partial<AthleteProfile>) => void;
+
+    // Training Identity
+    setTrainingStyles: (styles: TrainingStyle[]) => void;
 
     // Consolidated Action Groups
     actions: {
@@ -326,3 +397,4 @@ export function calculateConsistencyScore(
 
 export * from './ai';
 export * from './nutrition';
+export * from './AthleteProfile';

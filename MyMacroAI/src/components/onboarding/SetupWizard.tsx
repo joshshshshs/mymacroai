@@ -24,11 +24,11 @@ export function SetupWizard() {
     const haptics = useHaptics();
 
     // Store Actions
-    const { actions, biometrics, hardware } = useUserStore();
+    const { actions, healthMetrics, hardware } = useUserStore();
 
     // Local State for Step 1
-    const [weight, setWeight] = useState(biometrics.weight?.toString() || '');
-    const [height, setHeight] = useState(biometrics.height?.toString() || '');
+    const [weight, setWeight] = useState(healthMetrics.weight?.toString() || '');
+    const [height, setHeight] = useState(healthMetrics.height?.toString() || '');
 
     // Local State for Step 3
     const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
@@ -51,7 +51,7 @@ export function SetupWizard() {
     };
 
     const updateBiometrics = () => {
-        actions.setBiometrics({
+        actions.updateHealthMetrics({
             weight: parseFloat(weight) || null,
             height: parseFloat(height) || null,
         });

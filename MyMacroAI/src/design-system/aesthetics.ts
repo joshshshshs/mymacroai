@@ -24,6 +24,7 @@ export const PASTEL_COLORS = {
     lavenderFog: ['rgba(232, 213, 242, 0.5)', 'rgba(201, 182, 228, 0.5)'],
     peachGlow: ['rgba(255, 216, 190, 0.5)', 'rgba(255, 182, 217, 0.5)'],
     mintyFresh: ['rgba(194, 233, 251, 0.5)', 'rgba(161, 196, 253, 0.5)'],
+    ice: ['rgba(224, 231, 255, 0.6)', 'rgba(240, 249, 255, 0.6)'],
   },
 
   // Accent colors - Primary is popping blue

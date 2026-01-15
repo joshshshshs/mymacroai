@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import Animated, { useAnimatedProps, useSharedValue, withTiming, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, withTiming, withSpring, withDelay } from 'react-native-reanimated';
 import { ThemedText } from '../../ui/ThemedText';
-import { SoftGlassCard } from '../../ui/SoftGlassCard';
-import { SOFT_RADIUS } from '@/src/design-system/aesthetics';
+import { SOFT_RADIUS, PASTEL_COLORS } from '@/src/design-system/aesthetics';
+import { Ionicons } from '@expo/vector-icons';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -16,85 +16,164 @@ interface HeroRingProps {
         carbs: { current: number; target: number };
         fats: { current: number; target: number };
     };
+    variant?: 'calories-only' | 'macros-split';
+    onEditPress?: () => void;
 }
 
-export const HeroRing: React.FC<HeroRingProps> = ({ calories, target, macros }) => {
-    const progress = Math.min(calories / target, 1);
-    const animatedProgress = useSharedValue(0);
-    const size = 280;
-    const strokeWidth = 24;
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
+export const HeroRing: React.FC<HeroRingProps> = ({ calories, target, macros, variant = 'macros-split', onEditPress }) => {
+    // Shared Config
+    const size = 300;
+    const center = size / 2;
 
-    // Macro rings config (simpler, thinner rings inside)
-    const macroStrokeWidth = 6;
-    const macroRadius = radius - 30;
+    // --- VARIANT 1: CALORIES ONLY (Single Ring) ---
+    const calProgress = Math.min(calories / target, 1);
+    const svCal = useSharedValue(0);
+
+    // --- VARIANT 2: MACROS SPLIT (3 Concentric Rings) ---
+    const protProgress = Math.min(macros.protein.current / macros.protein.target, 1);
+    const carbProgress = Math.min(macros.carbs.current / macros.carbs.target, 1);
+    const fatProgress = Math.min(macros.fats.current / macros.fats.target, 1);
+
+    const svProt = useSharedValue(0);
+    const svCarb = useSharedValue(0);
+    const svFat = useSharedValue(0);
 
     useEffect(() => {
-        animatedProgress.value = withSpring(progress, { damping: 15, stiffness: 60 });
-    }, [progress]);
+        if (variant === 'calories-only') {
+            svCal.value = withSpring(calProgress, { damping: 15, stiffness: 60 });
+        } else {
+            svProt.value = withSpring(protProgress, { damping: 18, stiffness: 50 });
+            svCarb.value = withDelay(100, withSpring(carbProgress, { damping: 18, stiffness: 50 }));
+            svFat.value = withDelay(200, withSpring(fatProgress, { damping: 18, stiffness: 50 }));
+        }
+    }, [variant, calProgress, protProgress, carbProgress, fatProgress]);
 
-    const animatedProps = useAnimatedProps(() => ({
-        strokeDashoffset: circumference * (1 - animatedProgress.value),
-    }));
+
+    // --- RENDER HELPERS ---
+
+    const renderCaloriesOnly = () => {
+        const strokeWidth = 24;
+        const radius = (size - strokeWidth) / 2;
+        const circumference = 2 * Math.PI * radius;
+        const originVal = center + ", " + center;
+
+        const animatedProps = useAnimatedProps(() => ({
+            strokeDashoffset: circumference * (1 - svCal.value),
+        }));
+
+        return (
+            <Svg width={size} height={size}>
+                <Defs>
+                    <LinearGradient id="calGrad" x1="0" y1="0" x2="1" y2="1">
+                        <Stop offset="0" stopColor="#2DD4BF" />
+                        <Stop offset="1" stopColor="#A78BFA" />
+                    </LinearGradient>
+                </Defs>
+
+                {/* Track */}
+                <Circle cx={center} cy={center} r={radius} stroke="rgba(0,0,0,0.05)" strokeWidth={strokeWidth} fill="transparent" />
+
+                {/* Progress */}
+                <AnimatedCircle
+                    cx={center}
+                    cy={center}
+                    r={radius}
+                    stroke="url(#calGrad)"
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeLinecap="round"
+                    rotation="-90"
+                    origin={originVal}
+                    animatedProps={animatedProps}
+                />
+            </Svg>
+        );
+    };
+
+    const renderMacrosSplit = () => {
+        const sw = 14;
+        const gap = 8;
+        const originVal = center + ", " + center;
+
+        // 3 Rings: Protein (Outer), Carbs (Middle), Fats (Inner)
+        const rProt = (size - sw) / 2;
+        const rCarb = rProt - sw - gap;
+        const rFat = rCarb - sw - gap;
+
+        const cProt = 2 * Math.PI * rProt;
+        const cCarb = 2 * Math.PI * rCarb;
+        const cFat = 2 * Math.PI * rFat;
+
+        const propsProt = useAnimatedProps(() => ({ strokeDashoffset: cProt * (1 - svProt.value) }));
+        const propsCarb = useAnimatedProps(() => ({ strokeDashoffset: cCarb * (1 - svCarb.value) }));
+        const propsFat = useAnimatedProps(() => ({ strokeDashoffset: cFat * (1 - svFat.value) }));
+
+        return (
+            <Svg width={size} height={size}>
+                {/* Protein Ring (Outer) */}
+                <Circle cx={center} cy={center} r={rProt} stroke="rgba(0,0,0,0.05)" strokeWidth={sw} fill="transparent" />
+                <AnimatedCircle
+                    cx={center} cy={center} r={rProt}
+                    stroke={PASTEL_COLORS.accents.softOrange} strokeWidth={sw} fill="transparent"
+                    strokeDasharray={cProt} strokeLinecap="round" rotation="-90" origin={originVal}
+                    animatedProps={propsProt}
+                />
+
+                {/* Carb Ring (Middle) */}
+                <Circle cx={center} cy={center} r={rCarb} stroke="rgba(0,0,0,0.05)" strokeWidth={sw} fill="transparent" />
+                <AnimatedCircle
+                    cx={center} cy={center} r={rCarb}
+                    stroke={PASTEL_COLORS.accents.softBlue} strokeWidth={sw} fill="transparent"
+                    strokeDasharray={cCarb} strokeLinecap="round" rotation="-90" origin={originVal}
+                    animatedProps={propsCarb}
+                />
+
+                {/* Fat Ring (Inner) */}
+                <Circle cx={center} cy={center} r={rFat} stroke="rgba(0,0,0,0.05)" strokeWidth={sw} fill="transparent" />
+                <AnimatedCircle
+                    cx={center} cy={center} r={rFat}
+                    stroke="#10B981" strokeWidth={sw} fill="transparent"
+                    strokeDasharray={cFat} strokeLinecap="round" rotation="-90" origin={originVal}
+                    animatedProps={propsFat}
+                />
+            </Svg>
+        );
+    };
+
+    const glowSize = size + 60;
+    const viewBoxStr = "0 0 " + glowSize + " " + glowSize;
 
     return (
         <View style={styles.container}>
+            {/* Edit Widget Button (Placeholder for user request) */}
+            <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
+                <Ionicons name="add" size={20} color="rgba(0,0,0,0.4)" />
+            </TouchableOpacity>
+
             {/* Background Glow */}
             <View style={styles.glowContainer}>
-                <Svg height={size + 40} width={size + 40} viewBox={`0 0 ${size + 40} ${size + 40}`}>
+                <Svg height={glowSize} width={glowSize} viewBox={viewBoxStr}>
                     <Defs>
                         <LinearGradient id="glowGrad" x1="0" y1="0" x2="1" y2="1">
-                            <Stop offset="0" stopColor="#2DD4BF" stopOpacity="0.2" />
-                            <Stop offset="1" stopColor="#A78BFA" stopOpacity="0.1" />
+                            <Stop offset="0" stopColor="#2DD4BF" stopOpacity="0.15" />
+                            <Stop offset="1" stopColor="#A78BFA" stopOpacity="0.05" />
                         </LinearGradient>
                     </Defs>
-                    <Circle cx={(size + 40) / 2} cy={(size + 40) / 2} r={size / 2} fill="url(#glowGrad)" />
+                    <Circle cx={glowSize / 2} cy={glowSize / 2} r={size / 2} fill="url(#glowGrad)" />
                 </Svg>
             </View>
 
             <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-                <Svg width={size} height={size}>
-                    <Defs>
-                        <LinearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-                            <Stop offset="0" stopColor="#2DD4BF" />
-                            <Stop offset="1" stopColor="#A78BFA" />
-                        </LinearGradient>
-                    </Defs>
-
-                    {/* Track */}
-                    <Circle
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        stroke="rgba(255, 255, 255, 0.1)"
-                        strokeWidth={strokeWidth}
-                        fill="transparent"
-                    />
-
-                    {/* Progress */}
-                    <AnimatedCircle
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        stroke="url(#ringGrad)"
-                        strokeWidth={strokeWidth}
-                        fill="transparent"
-                        strokeDasharray={circumference}
-                        strokeLinecap="round"
-                        rotation="-90"
-                        origin={`${size / 2}, ${size / 2}`}
-                        animatedProps={animatedProps}
-                    />
-                </Svg>
+                {variant === 'calories-only' ? renderCaloriesOnly() : renderMacrosSplit()}
 
                 {/* Center Content */}
                 <View style={styles.content}>
-                    <ThemedText variant="label" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 2 }}>REMAINING</ThemedText>
-                    <ThemedText variant="premium-heading" style={{ fontSize: 48, lineHeight: 56, color: '#FFF' }}>
+                    <ThemedText variant="label" style={{ color: 'rgba(0,0,0,0.6)', letterSpacing: 2 }}>REMAINING</ThemedText>
+                    <ThemedText variant="premium-heading" style={{ fontSize: 48, lineHeight: 56, color: '#1F2937' }}>
                         {Math.max(target - calories, 0)}
                     </ThemedText>
-                    <ThemedText variant="caption" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    <ThemedText variant="caption" style={{ color: 'rgba(0,0,0,0.4)' }}>
                         kcal left
                     </ThemedText>
                 </View>
@@ -108,6 +187,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginVertical: 20,
+    },
+    editButton: {
+        position: 'absolute',
+        top: 0,
+        right: 20,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
     },
     glowContainer: {
         position: 'absolute',

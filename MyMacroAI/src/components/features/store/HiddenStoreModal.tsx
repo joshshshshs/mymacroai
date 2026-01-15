@@ -34,11 +34,10 @@ export const HiddenStoreModal: React.FC<HiddenStoreModalProps> = ({ visible, onC
     const handleBuy = (item: ShopItem) => {
         if (coinBalance >= item.price) {
             haptics.heavy();
-            // Trigger generic success feedback visually (omitted for brevity)
-            console.log(`Bought ${item.name}`);
+            // TODO: Process purchase via shop service
         } else {
             haptics.error();
-            console.log("Not enough funds");
+            // Not enough funds - show alert
         }
     };
 

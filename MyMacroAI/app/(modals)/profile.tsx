@@ -1,124 +1,218 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+/**
+ * Profile Screen - Control Center
+ */
+
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    withSequence,
+    Easing,
+} from 'react-native-reanimated';
 
-import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
-import { SoftDreamyBackground } from '@/src/components/ui/SoftDreamyBackground';
-import { PASTEL_COLORS, SOFT_RADIUS, SOFT_TYPOGRAPHY } from '@/src/design-system/aesthetics';
-import { SPACING, RADIUS } from '@/src/design-system/tokens';
+import { SPACING } from '@/src/design-system/tokens';
+import { ProfileMenuItem } from '@/src/components/profile';
 import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '@/hooks/useHaptics';
-import { ThemedText } from '@/src/components/ui/ThemedText';
 
-const { width } = Dimensions.get('window');
-
-export default function ProfileModal() {
+export default function ProfileScreen() {
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === 'dark';
     const router = useRouter();
     const { light } = useHaptics();
+    const preferences = useUserStore(s => s.preferences);
 
-    // Mock data falling back to store later
-    const userName = "Joshua";
-    const joinDate = "Member since Jan 2024";
-    const { streak, coins } = useUserStore(state => ({
-        streak: state.streak,
-        coins: state.coins
+    // Mock user data
+    const user = {
+        name: 'Josh Lifts',
+        email: 'josh@example.com',
+        avatarUrl: null,
+        isPro: false,
+        memberSince: '2026',
+    };
+
+    const colors = {
+        bg: isDark ? '#121214' : '#F5F5F7',
+        text: isDark ? '#FFFFFF' : '#1A1A1A',
+        textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
+        card: isDark ? '#1C1C1E' : '#FFFFFF',
+        accent: '#FF5C00',
+        gold: '#FFD700',
+    };
+
+    const navigate = (route: string) => {
+        light();
+        router.push(route as any);
+    };
+
+    // Pulse animation for Pro card
+    const pulse = useSharedValue(1);
+    const shimmer = useSharedValue(0);
+
+    useEffect(() => {
+        pulse.value = withRepeat(
+            withSequence(
+                withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+                withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+            ),
+            -1,
+            false
+        );
+        shimmer.value = withRepeat(
+            withTiming(1, { duration: 2500, easing: Easing.linear }),
+            -1,
+            false
+        );
+    }, []);
+
+    const pulseStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pulse.value }],
     }));
 
-    const handleClose = () => {
-        light();
-        router.back();
-    };
-
-    const handleSettings = () => {
-        light();
-        router.push('/(modals)/settings');
-    };
-
-    const menuItems = [
-        { icon: 'settings-outline', label: 'Settings', action: handleSettings, color: '#64748B' },
-        { icon: 'person-outline', label: 'Edit Profile', action: () => light(), color: '#64748B' },
-        { icon: 'help-circle-outline', label: 'Help & Support', action: () => light(), color: '#64748B' },
-        { icon: 'star-outline', label: 'Rate App', action: () => light(), color: '#64748B' },
-    ];
-
     return (
-        <View style={styles.container}>
-            <SoftDreamyBackground />
-
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                    <Ionicons name="close-circle" size={32} color="rgba(0,0,0,0.5)" />
-                </TouchableOpacity>
-                <ThemedText variant="h3" style={styles.headerTitle}>Profile</ThemedText>
-                <View style={{ width: 32 }} />
-            </View>
-
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-                {/* Profile Header Card */}
-                <SoftGlassCard variant="prominent" gradient="purpleDream" style={styles.profileCard}>
-                    <View style={styles.avatarContainer}>
-                        <LinearGradient
-                            colors={['#E0C3FC', '#8EC5FC']}
-                            style={styles.avatarPlaceholder}
-                        >
-                            <ThemedText variant="h1" style={styles.avatarInitials}>{userName.charAt(0)}</ThemedText>
-                        </LinearGradient>
-                        <View style={styles.proBadge}>
-                            <ThemedText variant="caption" style={styles.proText}>PRO</ThemedText>
-                        </View>
-                    </View>
-
-                    <ThemedText variant="h2" style={styles.userName}>{userName}</ThemedText>
-                    <Text style={styles.joinDate}>{joinDate}</Text>
-
-                    <View style={styles.statsRow}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{streak}</Text>
-                            <Text style={styles.statLabel}>Day Streak</Text>
-                        </View>
-                        <View style={styles.divider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{coins}</Text>
-                            <Text style={styles.statLabel}>MacroCoins</Text>
-                        </View>
-                        <View style={styles.divider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>12</Text>
-                            <Text style={styles.statLabel}>Workouts</Text>
-                        </View>
-                    </View>
-                </SoftGlassCard>
-
-                {/* Menu Section */}
-                <Text style={styles.sectionTitle}>Account</Text>
-                <View style={styles.menuContainer}>
-                    {menuItems.map((item, index) => (
-                        <TouchableOpacity key={index} activeOpacity={0.7} onPress={item.action}>
-                            <SoftGlassCard variant="soft" style={styles.menuItem}>
-                                <View style={styles.menuLeft}>
-                                    <View style={[styles.iconBox, { backgroundColor: 'rgba(255,255,255,0.5)' }]}>
-                                        <Ionicons name={item.icon as any} size={20} color={item.color} />
-                                    </View>
-                                    <Text style={styles.menuLabel}>{item.label}</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
-                            </SoftGlassCard>
+        <View style={[styles.container, { backgroundColor: colors.bg }]}>
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: '',
+                    headerTransparent: true,
+                    headerRight: () => (
+                        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+                            <Ionicons name="close" size={24} color={colors.text} />
                         </TouchableOpacity>
-                    ))}
-                </View>
+                    ),
+                }}
+            />
 
-                {/* Sign Out */}
-                <TouchableOpacity activeOpacity={0.7} onPress={() => light()} style={styles.signOutButton}>
-                    <Text style={styles.signOutText}>Sign Out</Text>
-                </TouchableOpacity>
+            <SafeAreaView style={styles.safeArea} edges={['top']}>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                    {/* Hero Header */}
+                    <View style={styles.heroSection}>
+                        <View style={[styles.avatarRing, { borderColor: colors.accent }]}>
+                            {user.avatarUrl ? (
+                                <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+                            ) : (
+                                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.card }]}>
+                                    <Text style={[styles.avatarInitial, { color: colors.accent }]}>
+                                        {user.name.charAt(0)}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
 
-                <Text style={styles.versionText}>Version 2.1.0 (Beta)</Text>
+                        <View style={styles.nameRow}>
+                            <Text style={[styles.userName, { color: colors.text }]}>{user.name}</Text>
+                            {user.isPro && (
+                                <View style={[styles.proBadge, { backgroundColor: colors.gold }]}>
+                                    <Ionicons name="star" size={10} color="#1A1A1A" />
+                                    <Text style={styles.proBadgeText}>PRO</Text>
+                                </View>
+                            )}
+                        </View>
 
-            </ScrollView>
+                        <Text style={[styles.memberSince, { color: colors.textSecondary }]}>
+                            Member since {user.memberSince}
+                        </Text>
+
+                        <TouchableOpacity onPress={() => navigate('/(modals)/edit-profile')}>
+                            <Text style={[styles.editProfile, { color: colors.accent }]}>Edit Profile</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Pro Upsell */}
+                    {!user.isPro && (
+                        <Animated.View style={pulseStyle}>
+                            <TouchableOpacity onPress={() => navigate('/(modals)/premium')} activeOpacity={0.85}>
+                                <LinearGradient
+                                    colors={['#FFD700', '#FF8C00', '#FF5C00']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.proCard}
+                                >
+                                    <View style={styles.proCardContent}>
+                                        <View style={styles.proIconWrap}>
+                                            <Ionicons name="sparkles" size={22} color="#FFFFFF" />
+                                        </View>
+                                        <View style={styles.proCardText}>
+                                            <Text style={styles.proCardTitle}>Unlock MyMacro Pro</Text>
+                                            <Text style={styles.proCardSubtitle}>
+                                                AI Scans • Sleep Analysis • Coach Mode
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    )}
+
+                    {/* Menu Groups */}
+                    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>SETTINGS</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <ProfileMenuItem
+                            icon="settings-outline"
+                            label="Preferences & Tuning"
+                            subtitle="Bio data, AI persona, theme"
+                            onPress={() => navigate('/(modals)/settings')}
+                        />
+                        <ProfileMenuItem
+                            icon="watch-outline"
+                            label="My Devices"
+                            subtitle="Connect Apple Health, Oura, Whoop"
+                            onPress={() => navigate('/(modals)/features')}
+                        />
+                    </View>
+
+                    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRIVACY</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <ProfileMenuItem
+                            icon="shield-outline"
+                            label="Data Vault & Privacy"
+                            subtitle="Ghost mode, export, storage"
+                            onPress={() => navigate('/(modals)/data-privacy')}
+                        />
+                    </View>
+
+                    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>SOCIAL</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <ProfileMenuItem
+                            icon="people-outline"
+                            label="Squad & Referrals"
+                            subtitle="Invite friends, wagers"
+                            onPress={() => navigate('/(modals)/referrals')}
+                        />
+                    </View>
+
+                    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>HELP</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <ProfileMenuItem
+                            icon="help-circle-outline"
+                            label="Support & About"
+                            subtitle="Roadmap, legal, version"
+                            onPress={() => navigate('/(modals)/support')}
+                        />
+                    </View>
+
+                    {/* Sign Out */}
+                    <View style={[styles.card, { backgroundColor: colors.card, marginTop: 24 }]}>
+                        <ProfileMenuItem
+                            icon="log-out-outline"
+                            label="Sign Out"
+                            danger
+                            onPress={() => { }}
+                        />
+                    </View>
+
+                    <View style={{ height: 40 }} />
+                </ScrollView>
+            </SafeAreaView>
         </View>
     );
 }
@@ -127,160 +221,120 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: 60,
-        paddingHorizontal: SPACING.lg,
-        marginBottom: SPACING.lg,
+    safeArea: {
+        flex: 1,
     },
     closeButton: {
-        padding: 4,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: 'rgba(0,0,0,0.8)',
+        padding: 8,
     },
     content: {
-        paddingHorizontal: SPACING.lg,
-        paddingBottom: 40,
+        padding: SPACING.lg,
+        paddingTop: 60,
     },
-    profileCard: {
+    heroSection: {
         alignItems: 'center',
-        padding: SPACING.xl,
-        marginBottom: SPACING.xl,
-        borderRadius: 30,
+        marginBottom: 24,
     },
-    avatarContainer: {
-        position: 'relative',
-        marginBottom: SPACING.md,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 8,
+    avatarRing: {
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        borderWidth: 3,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    avatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
     },
     avatarPlaceholder: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 4,
-        borderColor: 'rgba(255,255,255,0.8)',
     },
-    avatarInitials: {
-        fontSize: 40,
-        fontWeight: '700',
-        color: '#FFF',
-    },
-    proBadge: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: '#000',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: '#FFF',
-    },
-    proText: {
-        color: '#FFF',
-        fontSize: 10,
+    avatarInitial: {
+        fontSize: 32,
         fontWeight: '800',
     },
-    userName: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 4,
-    },
-    joinDate: {
-        fontSize: 14,
-        color: 'rgba(0,0,0,0.5)',
-        marginBottom: SPACING.xl,
-    },
-    statsRow: {
+    nameRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        width: '100%',
-        justifyContent: 'space-around',
-        backgroundColor: 'rgba(255,255,255,0.3)',
-        paddingVertical: SPACING.md,
-        borderRadius: 20,
+        gap: 8,
+        marginTop: 12,
     },
-    statItem: {
+    userName: {
+        fontSize: 22,
+        fontWeight: '800',
+    },
+    proBadge: {
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 3,
+        paddingVertical: 3,
+        paddingHorizontal: 8,
+        borderRadius: 6,
     },
-    statValue: {
-        fontSize: 20,
+    proBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#1A1A1A',
+    },
+    memberSince: {
+        fontSize: 13,
+        marginTop: 4,
+    },
+    editProfile: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginTop: 12,
+    },
+    proCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 18,
+        borderRadius: 18,
+        marginBottom: 8,
+    },
+    proCardContent: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+    },
+    proIconWrap: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    proCardText: {
+        flex: 1,
+    },
+    proCardTitle: {
+        fontSize: 16,
         fontWeight: '700',
-        color: '#333',
+        color: '#FFFFFF',
     },
-    statLabel: {
+    proCardSubtitle: {
         fontSize: 12,
-        fontWeight: '500',
-        color: 'rgba(0,0,0,0.5)',
+        color: 'rgba(255,255,255,0.8)',
         marginTop: 2,
     },
-    divider: {
-        width: 1,
-        height: 24,
-        backgroundColor: 'rgba(0,0,0,0.1)',
+    sectionLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1.5,
+        marginBottom: 8,
+        marginTop: 16,
+        marginLeft: 4,
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: SPACING.md,
-        marginLeft: SPACING.xs,
-    },
-    menuContainer: {
-        gap: SPACING.sm,
-        marginBottom: SPACING.xl,
-    },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: SPACING.md,
-        borderRadius: 20,
-    },
-    menuLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.md,
-    },
-    iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    menuLabel: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#333',
-    },
-    signOutButton: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: SPACING.md,
-        marginTop: SPACING.md,
-    },
-    signOutText: {
-        color: '#EF4444',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    versionText: {
-        textAlign: 'center',
-        marginTop: SPACING.lg,
-        color: 'rgba(0,0,0,0.3)',
-        fontSize: 12,
+    card: {
+        borderRadius: 16,
+        overflow: 'hidden',
     },
 });

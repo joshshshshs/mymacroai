@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { getUserContextForAI } from '../../store/UserStore';
 
 // Helper Interface for Proxy Response
 export interface NLUResult {
@@ -18,85 +19,36 @@ class GeminiService {
     // NLU Processing (Secure Proxy)
     async processNaturalLanguage(input: string): Promise<NLUResult> {
         try {
-            console.log("Invoking Secure AI Proxy (NLU)...");
-
             const { data, error } = await supabase.functions.invoke('ai-proxy', {
                 body: {
-                    intent: 'log_food',
+                    intent: 'nlu',
                     payload: input
                 }
             });
 
             if (error) {
                 console.error("AI Proxy Error:", error);
-                // Fallback to mock if API fails or Rate Limit hit
                 if (error instanceof Error && error.message.includes("429")) {
                     return { intent: 'chat', response: "Daily AI limit reached. Please upgrade to Pro." };
                 }
                 throw error;
             }
 
-            // The Proxy returns the raw JSON from Gemini (which we structured in the prompt inside the proxy)
-            // But wait, the PROMPT logic is actually inside the Proxy now too?
-            // The previous code had the prompt client-side. The new Proxy code I wrote takes 'payload' and sends it.
-            // I should update the Proxy to inject the SYSTEM PROMPT if it's just passing raw text.
-            // OR the client sends the raw text and the proxy wraps it. 
-            // My proxy code: contents: [{ parts: [{ text: payload }] }]
-            // This means the Client needs to send the FULL PROMPT including instructions.
-            // Let's adjust the prompt construction here.
-
-            // Wait, my previous plan for Proxy was generic. 
-            // Better practice: Keep the System Prompt on the Server (Proxy) to hide it?
-            // "Execute the prompt" step in Proxy plan implies it just runs what's sent?
-            // The User Prompt said: "Execute the prompt." in the "The AI Call" section.
-            // But usually we want to construct the secure prompt on the server.
-            // However, to keep this client update simple and consistent with the previous logic:
-            // I will send the FULL PROMPT as the 'payload'.
-
-            /* 
-               Correction: If I send the full prompt, I am validating 'payload' length in Zod (max 1000 chars).
-               The system prompt is long. 
-               The Proxy should ideally handle the system instruction. 
-               BUT, for now, let's assume the Proxy receives the "User Input" and we might need to adjust the Proxy logic 
-               or I wrap the input here. 
-               
-                actually, the Proxy I wrote: `text: message` (or payload).
-               It just passes it through.
-               If I send the system instructions here, it might be too long.
-               
-               Let's stick to the User Request: "Execute the prompt."
-               I will construct the prompt here as before, but send it to the proxy.
-            */
-
-            const prompt = `
-            Extract intent from this text: "${input}".
-            Intents: LOG_FOOD, LOG_WORKOUT, QUERY, CHAT.
-            If LOG_FOOD, estimate calories/macros if not provided.
-            Return ONLY raw JSON: { "intent": string, "entities": { "food": string, "calories": number, "protein": number, "carbs": number, "fats": number }, "response": string }
-            `;
-
-            // Wait, Zod limit is 1000. This prompt handles it.
-
-            // Actually, for better architecture, I'll update the Proxy to prepend the System Prompt?
-            // No, I can't edit the Proxy file again easily without confusing things.
-            // I'll send the prompt from here.
-
-            const { data: proxyData, error: proxyError } = await supabase.functions.invoke('ai-proxy', {
-                body: {
-                    intent: 'log_food',
-                    payload: prompt
-                }
-            });
-
-            if (proxyError) throw proxyError;
-
-            // The Proxy returns the Gemini JSON response directly.
-            // We need to parse the text inside it.
-            // Gemini Response Structure: { candidates: [ { content: { parts: [ { text: "..." } ] } } ] }
-
-            const text = proxyData.candidates[0].content.parts[0].text;
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
             const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(jsonStr);
+            const parsed = JSON.parse(jsonStr);
+
+            if (parsed?.intents && Array.isArray(parsed.intents)) {
+                const primary = parsed.intents[0] || { type: 'UNKNOWN', parameters: {} };
+                const mappedIntent = this.mapIntentType(primary.type);
+                return {
+                    intent: mappedIntent,
+                    entities: primary.parameters,
+                    response: parsed.response || ''
+                };
+            }
+
+            return parsed;
 
         } catch (error) {
             console.error("Gemini Service Error:", error);
@@ -107,15 +59,16 @@ class GeminiService {
     }
 
     // Vision Analysis
-    async analyzeVision(base64Image: string): Promise<any> {
+    async analyzeVision(base64Image: string | string[]): Promise<any> {
         try {
             const prompt = "Identify this food and estimate calories, protein, carbs, and fat per serving. Return JSON: { name, calories, protein, carbs, fats }";
+            const isMulti = Array.isArray(base64Image);
 
             const { data, error } = await supabase.functions.invoke('ai-proxy', {
                 body: {
                     intent: 'vision',
                     payload: prompt,
-                    image: base64Image
+                    ...(isMulti ? { images: base64Image } : { image: base64Image })
                 }
             });
 
@@ -128,6 +81,27 @@ class GeminiService {
         } catch (error) {
             console.error("Gemini Vision Error:", error);
             return this.mockVision();
+        }
+    }
+
+    async transcribeAudio(base64Audio: string, mimeType: string): Promise<string> {
+        try {
+            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+                body: {
+                    intent: 'speech',
+                    payload: 'Transcribe the audio verbatim. Return only the transcript text.',
+                    audio: base64Audio,
+                    audioMimeType: mimeType
+                }
+            });
+
+            if (error) throw error;
+
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+            return text.trim();
+        } catch (error) {
+            console.error("Gemini Speech Error:", error);
+            return '';
         }
     }
 
@@ -148,6 +122,106 @@ class GeminiService {
         if (hour < 14) return "Mid-day check. Hydration levels optimal. Keep it up.";
         if (hour < 18) return "Pre-workout window. Carbs recommended for fuel.";
         return "Evening. Recovery mode active. Sleep goal: 8h.";
+    }
+
+    /**
+     * Generates contextual AI messages via Supabase proxy
+     * @param type - Message type (greeting, insight, recommendation, summary)
+     * @param prompt - The full prompt with context
+     * @returns AI-generated response string
+     */
+    async generateContextualMessage(
+        type: 'greeting' | 'insight' | 'recommendation' | 'summary',
+        prompt: string
+    ): Promise<string> {
+        try {
+            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+                body: {
+                    intent: 'contextual',
+                    messageType: type,
+                    payload: prompt
+                }
+            });
+
+            if (error) {
+                console.error("AI Context Error:", error);
+                throw error;
+            }
+
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+            return text.trim();
+
+        } catch (error) {
+            console.error("Gemini Contextual Message Error:", error);
+            throw error; // Let caller handle fallback
+        }
+    }
+
+    /**
+     * Multi-turn chat with MyMacro AI Coach
+     * @param messages - Array of {role, content} messages
+     * @param systemPrompt - Optional system instruction
+     * @returns AI response string
+     */
+    async chat(
+        messages: { role: 'user' | 'assistant'; content: string }[],
+        systemPrompt?: string
+    ): Promise<string> {
+        try {
+            // Inject user context for personalized advice
+            const userContext = getUserContextForAI();
+            const basePrompt = systemPrompt || `YOU ARE: MyMacro AI, a world-class nutrition and performance coach. Be concise, direct, and proactive. No fluff.`;
+            const fullSystemPrompt = `${basePrompt}
+
+--- USER PROFILE (Use this to personalize advice) ---
+${userContext}
+--- END USER PROFILE ---`;
+
+            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+                body: {
+                    intent: 'chat',
+                    systemPrompt: fullSystemPrompt,
+                    messages: messages
+                }
+            });
+
+            if (error) {
+                console.error("AI Chat Error:", error);
+                if (error instanceof Error && error.message.includes("429")) {
+                    return "I've reached my daily limit. Please try again tomorrow or upgrade to Pro for unlimited conversations.";
+                }
+                throw error;
+            }
+
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+            return text.trim() || "I'm having trouble responding right now.";
+
+        } catch (error) {
+            console.error("Gemini Chat Error:", error);
+            return this.mockChatResponse(messages[messages.length - 1]?.content || '');
+        }
+    }
+
+    /**
+     * Mock chat response for offline mode
+     */
+    private mockChatResponse(lastMessage: string): string {
+        const lower = lastMessage.toLowerCase();
+
+        if (lower.includes('calorie') || lower.includes('eat')) {
+            return "Based on your profile, you should aim for around 2,100 calories today. Focus on hitting your protein goal first! 💪";
+        }
+        if (lower.includes('protein')) {
+            return "Great question! Try adding Greek yogurt, chicken breast, or a protein shake to boost your intake. Each serving gets you 20-30g closer to your goal.";
+        }
+        if (lower.includes('workout') || lower.includes('exercise')) {
+            return "Your recovery looks good today! A moderate intensity workout would be perfect. Want me to suggest some exercises?";
+        }
+        if (lower.includes('sleep')) {
+            return "Sleep is crucial for recovery. Aim for 7-8 hours tonight. Try winding down 30 minutes before bed with no screens. 😴";
+        }
+
+        return "I'm here to help with nutrition, workouts, and health questions! What would you like to know? (Note: I'm in offline mode)";
     }
 
     // MOCKS
@@ -180,6 +254,19 @@ class GeminiService {
             carbs: 0,
             fats: 25
         };
+    }
+
+    private mapIntentType(type?: string): NLUResult['intent'] {
+        switch ((type || '').toUpperCase()) {
+            case 'LOG_FOOD':
+                return 'log_food';
+            case 'LOG_WORKOUT':
+                return 'log_workout';
+            case 'QUERY':
+                return 'query';
+            default:
+                return 'chat';
+        }
     }
 }
 

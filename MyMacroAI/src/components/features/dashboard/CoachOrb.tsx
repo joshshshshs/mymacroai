@@ -5,12 +5,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 
-interface JarvisOrbProps {
+interface CoachOrbProps {
     onPress?: () => void;
     state?: 'idle' | 'listening' | 'processing';
 }
 
-export const JarvisOrb: React.FC<JarvisOrbProps> = ({ onPress, state = 'idle' }) => {
+export const CoachOrb: React.FC<CoachOrbProps> = ({ onPress, state = 'idle' }) => {
     const scale = useSharedValue(1);
     const glowOpacity = useSharedValue(0.5);
     const ringScale = useSharedValue(1);

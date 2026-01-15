@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import type { HealthData, NutritionData, UserPreferences } from '@/src/types';
 import type { AIAnalysis, AIRecommendation, AIContext } from '@/src/types';
+import { supabase } from '@/src/lib/supabase';
 import {
   imageObfuscator,
   type PhysiqueAnalysisResult,
@@ -162,7 +163,7 @@ class GeminiService {
       }
 
       this.model = this.genAI.getGenerativeModel({
-        model: 'gemini-pro',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           temperature: 0.7,
           topK: 40,
@@ -581,7 +582,7 @@ Be objective. Do not be polite. Be accurate.
 Goal: ${goal}`;
 
       const visionModel = this.genAI.getGenerativeModel({
-        model: 'gemini-pro-vision',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           temperature: 0.2,
           topK: 32,
@@ -672,7 +673,7 @@ Goal: ${goal}`;
   getStatus() {
     return {
       isInitialized: this.isInitialized,
-      model: 'gemini-pro',
+      model: 'gemini-2.5-flash',
       hasApiKey: !!this.apiKey
     };
   }
@@ -690,14 +691,6 @@ Goal: ${goal}`;
    * Includes input sanitization to prevent prompt injection
    */
   async processNaturalLanguage(input: string, context?: OmniLoggerContext): Promise<Intent[]> {
-    if (!this.isInitialized) {
-      throw new AIServiceError({
-        code: ErrorCode.AI_SERVICE_ERROR,
-        message: 'Gemini service not initialized',
-        recoverable: true,
-      });
-    }
-
     // Sanitize input before processing
     let sanitizedInput: string;
     let sanitizedContext: OmniLoggerContext | undefined;
@@ -721,6 +714,18 @@ Goal: ${goal}`;
 
     await this.checkUsageLimit(sanitizedContext?.userContext?.user.id);
 
+    if (!this.isInitialized) {
+      try {
+        await this.initialize();
+      } catch (error) {
+        logger.warn('Gemini local init failed, falling back to proxy.', error);
+      }
+    }
+
+    if (!this.isInitialized) {
+      return await this.processNaturalLanguageViaProxy(sanitizedInput);
+    }
+
     try {
       const prompt = this.buildIntentRecognitionPrompt(sanitizedInput, sanitizedContext);
       const result = await this.model.generateContent(prompt);
@@ -731,6 +736,52 @@ Goal: ${goal}`;
     } catch (error) {
       logger.error('Natural language processing failed:', error);
       return this.generateFallbackIntents(sanitizedInput);
+    }
+  }
+
+  private async processNaturalLanguageViaProxy(input: string): Promise<Intent[]> {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          intent: 'nlu',
+          payload: input,
+        },
+      });
+
+      if (error) {
+        logger.warn('AI proxy error:', error);
+        return this.generateFallbackIntents(input);
+      }
+
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      return this.parseIntentResponse(text, input);
+    } catch (error) {
+      logger.error('AI proxy NLU failed:', error);
+      return this.generateFallbackIntents(input);
+    }
+  }
+
+  async transcribeAudio(base64Audio: string, mimeType: string): Promise<string> {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-proxy', {
+        body: {
+          intent: 'speech',
+          payload: 'Transcribe the audio verbatim. Return only the transcript text.',
+          audio: base64Audio,
+          audioMimeType: mimeType,
+        },
+      });
+
+      if (error) {
+        logger.warn('AI proxy speech error:', error);
+        return '';
+      }
+
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      return text.trim();
+    } catch (error) {
+      logger.error('AI proxy speech failed:', error);
+      return '';
     }
   }
 

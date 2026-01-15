@@ -8,7 +8,7 @@ import { PASTEL_COLORS } from '@/src/design-system/aesthetics';
 const ACTIONS = [
     { id: 'food', icon: 'nutrition', label: 'Food', color: PASTEL_COLORS.accents.softOrange },
     { id: 'water', icon: 'water', label: 'Water', color: PASTEL_COLORS.accents.softBlue },
-    { id: 'gym', icon: 'barbell', label: 'Gym', color: PASTEL_COLORS.accents.softPurple },
+    { id: 'exercise', icon: 'barbell', label: 'Gym', color: PASTEL_COLORS.accents.softPurple }, // Changed id from 'gym' to 'exercise' to match standard
     { id: 'weigh', icon: 'scale', label: 'Weigh', color: PASTEL_COLORS.accents.softGreen },
     { id: 'mood', icon: 'happy', label: 'Mood', color: PASTEL_COLORS.accents.softPink },
 ];

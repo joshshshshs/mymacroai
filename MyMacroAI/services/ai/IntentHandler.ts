@@ -23,25 +23,25 @@ export class IntentHandler {
       switch (intent.type) {
         case 'LOG_FOOD':
           return await this.handleLogFood(intent);
-        
+
         case 'LOG_WORKOUT':
           return await this.handleLogWorkout(intent);
-        
+
         case 'LOG_WEIGHT':
           return await this.handleLogWeight(intent);
-        
+
         case 'LOG_CYCLE':
           return await this.handleLogCycle(intent);
-        
+
         case 'ADD_PANTRY':
           return await this.handleAddPantry(intent);
-        
+
         case 'GENERAL_HELP':
           return await this.handleGeneralHelp(intent);
-        
+
         case 'UNKNOWN':
           return await this.handleUnknown(intent);
-        
+
         default:
           return {
             intent,
@@ -83,6 +83,8 @@ export class IntentHandler {
       const foodLog = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
+        timestamp: Date.now(),
+        type: 'food' as const,
         mood: 3,
         energyLevel: 5,
         notes: `记录食物: ${items.join('、')}到${this.getMealDisplayName(meal)}`,
@@ -144,6 +146,8 @@ export class IntentHandler {
       const workoutLog = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
+        timestamp: Date.now(),
+        type: 'workout' as const,
         mood: 4,
         energyLevel: 6,
         notes: `记录运动: ${type} ${duration}分钟`,
@@ -205,6 +209,8 @@ export class IntentHandler {
       const weightLog = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
+        timestamp: Date.now(),
+        type: 'weight' as const,
         mood: 3,
         energyLevel: 5,
         notes: `记录体重: ${weightInKg}kg`,
@@ -245,6 +251,8 @@ export class IntentHandler {
       const cycleLog = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
+        timestamp: Date.now(),
+        type: 'cycle' as const,
         mood: 3,
         energyLevel: 5,
         notes: `记录生理周期: ${phase}第${day}天`,
@@ -402,7 +410,7 @@ export class IntentHandler {
     };
 
     const baseCalories = calorieMap[food] || 100;
-    
+
     // 简单的数量估算
     let multiplier = 1;
     if (quantity.includes('2')) multiplier = 2;

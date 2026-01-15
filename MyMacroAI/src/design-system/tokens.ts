@@ -92,6 +92,62 @@ export const COLORS = {
     lime600: '#65A30D',
   },
 
+  // Gamification Colors (High-Energy Streak & Nutrition)
+  gamification: {
+    // Vitamin Orange - Primary Streak/Fire Color
+    vitaminOrange: '#FF5C00',
+    neonOrange: '#FF6B00',
+    orangeGlow: 'rgba(255, 92, 0, 0.4)',
+
+    // Ice Blue - Freeze/Cold Elements
+    iceBlue: '#00BFFF',
+    iceBlueDim: 'rgba(0, 191, 255, 0.2)',
+    iceGlow: 'rgba(0, 191, 255, 0.4)',
+
+    // Electric Blue - Action/CTA
+    electricBlue: '#00D2FF',
+    electricBlueDim: 'rgba(0, 210, 255, 0.3)',
+
+    // Spring Green - Success/Health
+    springGreen: '#00FF94',
+    springGreenDim: 'rgba(0, 255, 148, 0.3)',
+
+    // Fire Gradient Stages
+    fireColors: {
+      spark: { outer: '#FF8C00', inner: '#FFD700' },      // Days 1-7
+      fire: { outer: '#FF5C00', inner: '#FF8C00' },       // Days 8-14
+      inferno: { outer: '#FF4500', inner: '#FF6B00' },    // Days 15-30
+      legend: { outer: '#FF2400', inner: '#FF5500' },     // Days 30+
+    },
+
+    // Milestone Colors
+    milestones: {
+      bronze: '#CD7F32',
+      silver: '#C0C0C0',
+      gold: '#FFD700',
+      platinum: '#E5E4E2',
+      diamond: '#B9F2FF',
+    },
+
+    // Metabolic Engine Colors (Nutrition)
+    metabolic: {
+      fasted: '#00D2FF',      // Cool blue when fasting
+      eating: '#FF6B00',       // Orange when eating
+      overeating: '#FF4757',   // Warning red when over
+      protein: '#3B82F6',
+      carbs: '#22C55E',
+      fats: '#F59E0B',
+    },
+  },
+
+  // Mesh Gradient Backgrounds
+  meshGradients: {
+    warmStreak: ['#FFF0E6', '#FFFFFF'],
+    coolNutrition: ['#E6F7FF', '#FFFFFF'],
+    metabolicDark: ['#1A0A00', '#121214'],
+    icyFreeze: ['#E6FAFF', '#FFFFFF'],
+  },
+
   // Glass overlays
   glass: {
     dark: 'rgba(255, 255, 255, 0.05)',
@@ -301,6 +357,20 @@ export const TYPOGRAPHY = {
       fontWeight: '600' as const,
       letterSpacing: -0.5,
     },
+    // Mega display for streak numbers (80-100pt)
+    mega: {
+      fontSize: 96,
+      lineHeight: 104,
+      fontWeight: '900' as const,
+      letterSpacing: -3,
+    },
+    // Hero display for calories
+    hero: {
+      fontSize: 64,
+      lineHeight: 72,
+      fontWeight: '800' as const,
+      letterSpacing: -2,
+    },
   },
 
   // Heading styles
@@ -431,6 +501,20 @@ export const SHADOWS = {
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 12,
+  },
+  soft: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  glass: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 32,
+    elevation: 10,
   },
 };
 

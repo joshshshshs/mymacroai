@@ -146,7 +146,7 @@ const ProgressBar: React.FC<{ label: string; progress: string; color: string; te
   <View style={styles.progressRow}>
     <Text style={[styles.progressLabel, { color: secondaryTextColor }]}>{label}</Text>
     <View style={styles.progressBarBg}>
-      <View style={[styles.progressBarFill, { width: progress, backgroundColor: color }]} />
+      <View style={[styles.progressBarFill, { width: progress as unknown as import('react-native').DimensionValue, backgroundColor: color }]} />
     </View>
   </View>
 );

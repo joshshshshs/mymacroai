@@ -4,40 +4,71 @@ import { SoftGlassCard } from '../../ui/SoftGlassCard';
 import { ThemedText } from '../../ui/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { PASTEL_COLORS } from '@/src/design-system/aesthetics';
+import { useUserStore, useHealthMetrics, useAdjustedDailyTarget } from '@/src/store/UserStore';
 
 export const ContextRow: React.FC = () => {
+    const { currentIntake } = useUserStore();
+    const adjustedTarget = useAdjustedDailyTarget();
+    const metrics = useHealthMetrics();
+
+    // Nutrition Data (Real from store)
+    const caloriesConsumed = currentIntake.calories;
+    const caloriesTarget = adjustedTarget.calories;
+
+    // Training/Activity (Placeholder until HealthKit integration)
+    const activeMinutes = metrics.stressLevel ? Math.round(metrics.stressLevel * 6) : 0; // Proxy calculation
+
     return (
         <View style={styles.container}>
-            {/* Sleep Bank */}
+            {/* Card 1: Nutrition */}
             <SoftGlassCard variant="soft" style={styles.card}>
                 <View style={styles.header}>
-                    <Ionicons name="moon" size={20} color={PASTEL_COLORS.accents.softPurple} />
-                    <ThemedText variant="label" style={{ color: 'rgba(255,255,255,0.7)', marginLeft: 8 }}>SLEEP BANK</ThemedText>
+                    <Ionicons name="nutrition" size={18} color={PASTEL_COLORS.accents.softOrange} />
+                    <ThemedText variant="label" style={styles.label}>NUTRITION</ThemedText>
                 </View>
-                <View style={styles.content}>
-                    <ThemedText variant="h2" style={{ color: '#FFF' }}>-1.5h</ThemedText>
-                    <ThemedText variant="caption" style={{ color: '#EF4444' }}>Deficit High</ThemedText>
-                </View>
-                {/* Simple visual bar for context */}
-                <View style={styles.barBg}>
-                    <View style={[styles.barFill, { width: '40%', backgroundColor: '#EF4444' }]} />
+                <ThemedText variant="h2" style={styles.heroValue}>
+                    {caloriesConsumed.toLocaleString()}
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.subValue}>
+                    of {caloriesTarget.toLocaleString()} kcal
+                </ThemedText>
+                {/* Mini Progress Bar */}
+                <View style={styles.progressBar}>
+                    <View style={[
+                        styles.progressFill,
+                        {
+                            width: `${Math.min((caloriesConsumed / caloriesTarget) * 100, 100)}%`,
+                            backgroundColor: PASTEL_COLORS.accents.softOrange
+                        }
+                    ]} />
                 </View>
             </SoftGlassCard>
 
-            {/* Training Load */}
+            {/* Card 2: Training */}
             <SoftGlassCard variant="soft" style={styles.card}>
                 <View style={styles.header}>
-                    <Ionicons name="flame" size={20} color={PASTEL_COLORS.accents.softOrange} />
-                    <ThemedText variant="label" style={{ color: 'rgba(255,255,255,0.7)', marginLeft: 8 }}>STRAIN</ThemedText>
+                    <Ionicons name="barbell" size={18} color={PASTEL_COLORS.accents.softBlue} />
+                    <ThemedText variant="label" style={styles.label}>TRAINING</ThemedText>
                 </View>
-                <View style={styles.content}>
-                    <ThemedText variant="h2" style={{ color: '#FFF' }}>12.4</ThemedText>
-                    <ThemedText variant="caption" style={{ color: '#10B981' }}>Optimal Zone</ThemedText>
-                </View>
-                {/* Simple heatmap visual for context */}
-                <View style={styles.heatmapRow}>
-                    {[0.2, 0.4, 0.8, 0.6, 1].map((opacity, i) => (
-                        <View key={i} style={[styles.heatBox, { opacity, backgroundColor: PASTEL_COLORS.accents.softOrange }]} />
+                <ThemedText variant="h2" style={[styles.heroValue, { color: PASTEL_COLORS.accents.softBlue }]}>
+                    {activeMinutes}
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.subValue}>
+                    min active
+                </ThemedText>
+                {/* Mini Heat Indicator */}
+                <View style={styles.heatRow}>
+                    {[0.2, 0.4, 0.6, 0.8, 1].map((opacity, i) => (
+                        <View
+                            key={i}
+                            style={[
+                                styles.heatDot,
+                                {
+                                    opacity: activeMinutes > (i * 12) ? 1 : 0.2,
+                                    backgroundColor: PASTEL_COLORS.accents.softBlue
+                                }
+                            ]}
+                        />
                     ))}
                 </View>
             </SoftGlassCard>
@@ -49,40 +80,54 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         gap: 12,
-        marginBottom: 24,
     },
     card: {
         flex: 1,
         padding: 16,
-        height: 140,
+        minHeight: 140,
         justifyContent: 'space-between',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 6,
         marginBottom: 8,
     },
-    content: {
-        marginBottom: 12,
+    label: {
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 1,
+        fontSize: 10,
+        fontWeight: '700',
     },
-    barBg: {
+    heroValue: {
+        color: PASTEL_COLORS.accents.softOrange,
+        fontSize: 32,
+        fontWeight: '700',
+        lineHeight: 36,
+    },
+    subValue: {
+        color: 'rgba(255,255,255,0.5)',
+        marginTop: 2,
+    },
+    progressBar: {
         height: 4,
         backgroundColor: 'rgba(255,255,255,0.1)',
         borderRadius: 2,
-        width: '100%',
+        marginTop: 8,
         overflow: 'hidden',
     },
-    barFill: {
+    progressFill: {
         height: '100%',
         borderRadius: 2,
     },
-    heatmapRow: {
+    heatRow: {
         flexDirection: 'row',
         gap: 4,
+        marginTop: 8,
     },
-    heatBox: {
-        width: 16,
-        height: 16,
-        borderRadius: 4,
+    heatDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 3,
     }
 });

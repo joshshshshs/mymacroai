@@ -11,9 +11,12 @@ const corsHeaders = {
 
 // Input Schema Definition
 const RequestSchema = z.object({
-    intent: z.enum(['log_food', 'vision']),
-    payload: z.string().trim().min(1).max(1000), // Increased to 1000 for longer descriptions
+    intent: z.enum(['nlu', 'vision', 'speech', 'log_food']),
+    payload: z.string().trim().min(1).max(2000),
     image: z.string().optional(), // Base64 string for vision
+    images: z.array(z.string().min(1)).max(3).optional(),
+    audio: z.string().optional(), // Base64 string for speech
+    audioMimeType: z.string().optional(),
 });
 
 serve(async (req) => {
@@ -78,29 +81,104 @@ serve(async (req) => {
             });
         }
 
-        const { intent, payload, image } = validation.data;
+        const { intent, payload, image, images, audio, audioMimeType } = validation.data;
+        const normalizedIntent = intent === 'log_food' ? 'nlu' : intent;
 
         // 6. Call Gemini API
         const geminiKey = Deno.env.get("GEMINI_API_KEY");
         if (!geminiKey) throw new Error("Server Misconfiguration: Missing Gemini Key");
 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro${intent === 'vision' ? '-vision' : ''}:generateContent?key=${geminiKey}`;
+        const modelName = "gemini-2.5-flash";
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+
+        const nluPrompt = `You are a health assistant. Extract structured intents from the user input.
+
+User input: "${payload}"
+
+Supported intents:
+1. LOG_FOOD - log food intake
+2. LOG_WORKOUT - log workout/activity
+3. LOG_WEIGHT - log body weight
+4. LOG_CYCLE - log cycle phase
+5. ADD_PANTRY - add pantry item
+
+Return only JSON in this shape:
+{
+  "intents": [
+    {
+      "type": "LOG_FOOD",
+      "confidence": 0.92,
+      "parameters": {
+        "foodItems": ["eggs"],
+        "mealType": "breakfast",
+        "quantity": "2 eggs"
+      }
+    }
+  ]
+}`;
+
+        const speechPrompt = payload || "Transcribe the audio verbatim. Return only the transcript text.";
+        const visionPrompt = payload || "Identify the food items and estimate calories, protein, carbs, and fats. Return JSON: { name, calories, protein, carbs, fats }";
 
         // Construct Gemini Prompt
         let apiBody;
-        if (intent === 'vision' && image) {
-            // Vision Payload
+        if (normalizedIntent === 'vision') {
+            const visionImages = images && images.length > 0 ? images : image ? [image] : [];
+            if (visionImages.length === 0) {
+                return new Response(JSON.stringify({ error: "Missing image data for vision request." }), {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    status: 400,
+                });
+            }
+
             apiBody = {
                 contents: [{
                     parts: [
-                        { text: payload }, // e.g., "Analyze this food"
-                        { inline_data: { mime_type: "image/jpeg", data: image } }
+                        { text: visionPrompt },
+                        ...visionImages.map((data) => ({
+                            inline_data: { mime_type: "image/jpeg", data }
+                        }))
                     ]
-                }]
+                }],
+                generationConfig: {
+                    temperature: 0.4,
+                    maxOutputTokens: 512,
+                },
+            };
+        } else if (normalizedIntent === 'speech') {
+            if (!audio) {
+                return new Response(JSON.stringify({ error: "Missing audio data for speech request." }), {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    status: 400,
+                });
+            }
+
+            apiBody = {
+                contents: [{
+                    parts: [
+                        { text: speechPrompt },
+                        {
+                            inline_data: {
+                                mime_type: audioMimeType || "audio/m4a",
+                                data: audio,
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    maxOutputTokens: 512,
+                },
             };
         } else {
-            // Text Payload
-            apiBody = { contents: [{ parts: [{ text: payload }] }] };
+            // NLU/Text Payload
+            apiBody = {
+                contents: [{ parts: [{ text: nluPrompt }] }],
+                generationConfig: {
+                    temperature: 0.3,
+                    maxOutputTokens: 512,
+                },
+            };
         }
 
         const geminiRes = await fetch(endpoint, {

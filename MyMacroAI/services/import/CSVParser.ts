@@ -79,13 +79,13 @@ export class CSVParserService {
 
       // 跳过标题行（如果存在）
       let startIndex = this.config.hasHeaders ? 1 : 0;
-      
+
       for (let i = startIndex; i < lines.length; i++) {
         const line = lines[i].trim();
-        
+
         // 跳过空行
         if (this.config.skipEmptyLines && !line) continue;
-        
+
         try {
           const dailyLog = this.parseLine(line, i);
           if (dailyLog) {
@@ -111,7 +111,7 @@ export class CSVParserService {
    */
   private parseLine(line: string, lineNumber: number): DailyLog | null {
     const values = this.splitCSVLine(line);
-    
+
     if (values.length < 5) {
       throw new ValidationError({
         code: ErrorCode.VALIDATION_INVALID_FORMAT,
@@ -141,10 +141,10 @@ export class CSVParserService {
     const result: string[] = [];
     let current = '';
     let inQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      
+
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === this.config.delimiter && !inQuotes) {
@@ -154,7 +154,7 @@ export class CSVParserService {
         current += char;
       }
     }
-    
+
     result.push(current.trim());
     return result;
   }
@@ -199,6 +199,7 @@ export class CSVParserService {
     return {
       id: `mfp_${date}_${lineNumber}`,
       date: date,
+      timestamp: Date.now(),
       type: 'nutrition',
       mood: 3,
       energyLevel: 5,
@@ -219,16 +220,16 @@ export class CSVParserService {
       // 支持多种日期格式
       const formats = [
         'MM/DD/YYYY',
-        'DD/MM/YYYY', 
+        'DD/MM/YYYY',
         'YYYY-MM-DD',
         'MM-DD-YYYY'
       ];
-      
+
       for (const format of formats) {
         const date = this.tryParseDate(dateStr, format);
         if (date) return date.toISOString().split('T')[0];
       }
-      
+
       return null;
     } catch {
       return null;
@@ -260,11 +261,11 @@ export class CSVParserService {
    */
   private parseNumber(numStr: string | undefined): number {
     if (!numStr) return 0;
-    
+
     // 移除非数字字符并解析
     const cleanStr = numStr.replace(/[^\d.-]/g, '');
     const num = parseFloat(cleanStr);
-    
+
     return isNaN(num) ? 0 : Math.max(0, num);
   }
 
@@ -273,12 +274,12 @@ export class CSVParserService {
    */
   validateCSVFormat(csvContent: string): boolean {
     const lines = csvContent.split('\n').filter(line => line.trim());
-    
+
     if (lines.length < 2) return false;
-    
+
     const firstLine = lines[0].toLowerCase();
     const requiredHeaders = ['date', 'calories'];
-    
+
     return requiredHeaders.every(header => firstLine.includes(header));
   }
 
@@ -288,7 +289,7 @@ export class CSVParserService {
   generateImportReport(result: CSVParserResult): string {
     const { stats, errors } = result;
     const successRate = ((stats.validRows / stats.totalRows) * 100).toFixed(1);
-    
+
     return `
 ## MyFitnessPal数据导入报告
 

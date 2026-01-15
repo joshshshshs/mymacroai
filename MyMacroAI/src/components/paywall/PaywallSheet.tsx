@@ -54,15 +54,8 @@ export const PaywallSheet: React.FC<PaywallSheetProps> = ({ visible, onClose }) 
                     Alert.alert("Purchase Canceled");
                 }
             } else {
-                // Fallback for Mock/Dev if no offerings configured
-                console.log("No offerings found. Using Mock Purchase Flow.");
-                setProStatus(true);
-                await founderService.claimFounderStatus("mock_founder@mymacro.ai");
-                Alert.alert(
-                    "WELCOME FOUNDER (MOCK)",
-                    "Pro unlocked. Founder Email triggered.",
-                    [{ text: "Let's Go", onPress: onClose }]
-                );
+                // No offerings configured - show error
+                Alert.alert("Setup Required", "Please configure RevenueCat offerings.");
             }
 
         } catch (error) {

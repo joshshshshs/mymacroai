@@ -19,8 +19,10 @@ const { width } = Dimensions.get('window');
 export const SoftStreakHub: React.FC = () => {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
-    const textColor = isDark ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.8)';
+    const textColor = isDark ? '#FFFFFF' : '#000000';
     const secondaryTextColor = isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)';
+    const cardBg = isDark ? '#1C1C1E' : '#FFFFFF';
+    const accentColor = '#2DD4BF';
 
     // Mock User Data
     const userName = "Josh"; // Ideally from store
@@ -89,21 +91,21 @@ export const SoftStreakHub: React.FC = () => {
             showsVerticalScrollIndicator={false}
         >
             {/* Header Section */}
-            <SoftGlassCard variant="prominent" gradient="purpleDream" style={styles.headerCard}>
+            <SoftGlassCard variant="prominent" gradient="ice" style={styles.headerCard}>
                 <View style={styles.headerContent}>
                     <View style={styles.headerTextContainer}>
-                        <Text style={styles.welcomeText}>Welcome back, <Text style={styles.userNameText}>{userName}</Text></Text>
-                        <Text style={styles.subText}>Complete 3/4 tasks today</Text>
+                        <Text style={[styles.welcomeText, { color: '#FFFFFF' }]}>Welcome back, <Text style={styles.userNameText}>{userName}</Text></Text>
+                        <Text style={[styles.subText, { color: 'rgba(255, 255, 255, 0.8)' }]}>Complete 3/4 tasks today</Text>
 
                         {/* Progress Bar */}
                         <View style={styles.progressContainer}>
                             <LinearGradient
-                                colors={['#FF00CC', '#333399']}
+                                colors={['#2DD4BF', '#14B8A6']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={[styles.progressBar, { width: '75%' }]}
                             />
-                            <View style={styles.progressThumb} />
+                            <View style={[styles.progressThumb, { borderColor: '#0F766E' }]} />
                         </View>
                     </View>
 
@@ -140,13 +142,16 @@ export const SoftStreakHub: React.FC = () => {
                             }}
                         >
                             <SoftGlassCard
-                                variant={isSelected ? "soft" : "ultra-soft"}
-                                style={[styles.dateCard, isSelected ? styles.activeDateCard : undefined]}
+                                variant={isSelected ? "prominent" : "soft"}
+                                style={[
+                                    styles.dateCard,
+                                    isSelected ? styles.activeDateCard : { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)' }
+                                ]}
                             >
-                                <Text style={[styles.dayText, isSelected ? { color: '#6A00F4' } : { color: secondaryTextColor }]}>
+                                <Text style={[styles.dayText, isSelected ? { color: accentColor } : { color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
                                     {item.day}
                                 </Text>
-                                <Text style={[styles.dateText, isSelected ? { color: '#6A00F4' } : { color: textColor }]}>
+                                <Text style={[styles.dateText, isSelected ? { color: accentColor } : { color: textColor }]}>
                                     {item.date}
                                 </Text>
                             </SoftGlassCard>
@@ -160,58 +165,49 @@ export const SoftStreakHub: React.FC = () => {
                 {challenges.map((challenge, index) => {
                     const isCompleted = challenge.status === 'completed';
 
-                    if (isCompleted) {
-                        // Completed Style
-                        return (
+                    return (
+                        <TouchableOpacity
+                            key={index}
+                            activeOpacity={0.8}
+                            onPress={() => light()}
+                        >
                             <LinearGradient
-                                key={index}
-                                colors={challenge.id === 1 ? ['#FFDEE9', '#B5FFFC'] : ['#E0C3FC', '#8EC5FC']} // Soft gradients
+                                colors={isCompleted
+                                    ? (challenge.id === 1 ? ['#FFDEFF', '#B5FFFC'] : ['#E0C3FC', '#8EC5FC'])
+                                    : [isDark ? '#1C1C1E' : '#FFFFFF', isDark ? '#1C1C1E' : '#FFFFFF']
+                                }
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
-                                style={styles.completedCard}
+                                style={[styles.challengeCard, !isCompleted && { borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
                             >
-                                <View style={styles.glassOverlay} />
                                 <View style={styles.challengeRow}>
-                                    <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
-                                        {/* Colored Icon */}
+                                    <View style={[styles.iconCircle, { backgroundColor: isCompleted ? 'rgba(255,255,255,0.4)' : `${challenge.iconColor}15` }]}>
                                         <Ionicons name={challenge.icon as any} size={24} color={challenge.iconColor} />
                                     </View>
                                     <View style={styles.challengeInfo}>
-                                        <Text style={[styles.challengeTitle, { color: '#4A4A4A' }]}>{challenge.title}</Text>
-                                        <Text style={[styles.challengeSubtitle, { color: 'rgba(74, 74, 74, 0.6)' }]}>{challenge.subtitle}</Text>
+                                        <Text style={[styles.challengeTitle, { color: isCompleted ? '#4A4A4A' : textColor }]}>{challenge.title}</Text>
+                                        <Text style={[styles.challengeSubtitle, { color: isCompleted ? 'rgba(74, 74, 74, 0.6)' : secondaryTextColor }]}>{challenge.subtitle}</Text>
 
                                         <View style={styles.statusRow}>
-                                            <View style={styles.checkCircle}>
-                                                <Ionicons name="checkmark" size={12} color="#FFF" />
-                                            </View>
-                                            <Text style={styles.completedText}>Complete</Text>
+                                            {isCompleted ? (
+                                                <>
+                                                    <View style={[styles.checkCircle, { backgroundColor: accentColor }]}>
+                                                        <Ionicons name="checkmark" size={12} color="#FFF" />
+                                                    </View>
+                                                    <Text style={[styles.statusText, { color: accentColor }]}>Complete</Text>
+                                                </>
+                                            ) : (
+                                                <View style={styles.startRow}>
+                                                    <Text style={[styles.startText, { color: accentColor }]}>Start</Text>
+                                                    <Ionicons name="arrow-forward" size={16} color={accentColor} />
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 </View>
                             </LinearGradient>
-                        );
-                    } else {
-                        // Active/Incomplete Style
-                        return (
-                            <SoftGlassCard key={index} variant="medium" style={styles.activeCard}>
-                                <View style={styles.challengeRow}>
-                                    <View style={[styles.iconCircle, { backgroundColor: '#E0E7FF' }]}>
-                                        {/* Icon */}
-                                        <Ionicons name={challenge.icon as any} size={24} color={challenge.iconColor} />
-                                    </View>
-                                    <View style={styles.challengeInfo}>
-                                        <Text style={[styles.challengeTitle, { color: textColor }]}>{challenge.title}</Text>
-                                        <Text style={[styles.challengeSubtitle, { color: secondaryTextColor }]}>{challenge.subtitle}</Text>
-
-                                        <TouchableOpacity style={styles.startRow}>
-                                            <Text style={styles.startText}>Start</Text>
-                                            <Ionicons name="arrow-forward" size={16} color="#6A00F4" />
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </SoftGlassCard>
-                        )
-                    }
+                        </TouchableOpacity>
+                    );
                 })}
             </View>
 
@@ -336,62 +332,60 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.xl,
     },
     dateCard: {
-        width: (width - 60) / 5, // Divide accessible width by 5 items
-        height: 70,
+        width: 64,
+        height: 84,
+        borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
     },
     activeDateCard: {
-        backgroundColor: '#FFF', // Make it pop
+        backgroundColor: '#FFF',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
     },
     dayText: {
-        fontSize: 12,
-        fontWeight: '500',
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'none',
     },
     dateText: {
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: 20,
+        fontWeight: '800',
     },
     challengesContainer: {
-        gap: SPACING.lg,
+        gap: 16,
     },
-    completedCard: {
-        borderRadius: 20,
-        padding: SPACING.md,
+    challengeCard: {
+        borderRadius: 28,
+        padding: 20,
         overflow: 'hidden',
-    },
-    glassOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    activeCard: {
-        padding: SPACING.md,
-        backgroundColor: '#FFF',
     },
     challengeRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.md,
+        gap: 16,
     },
     iconCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         alignItems: 'center',
         justifyContent: 'center',
     },
     challengeInfo: {
         flex: 1,
-        justifyContent: 'center',
     },
     challengeTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
         marginBottom: 2,
     },
     challengeSubtitle: {
-        fontSize: 14,
+        fontSize: 13,
         marginBottom: 8,
     },
     statusRow: {
@@ -400,26 +394,23 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     checkCircle: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: '#6A00F4', // Deep Purple
+        width: 18,
+        height: 18,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    completedText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#6A00F4',
+    statusText: {
+        fontSize: 13,
+        fontWeight: '700',
     },
     startRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 4,
     },
     startText: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#6A00F4', // Deep Purple
     },
 });

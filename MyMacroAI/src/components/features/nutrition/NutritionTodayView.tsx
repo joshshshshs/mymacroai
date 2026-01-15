@@ -58,8 +58,7 @@ export const NutritionTodayView: React.FC = () => {
   };
 
   const handleAddFood = (method: string) => {
-    console.log(`Add food via: ${method}`);
-    // TODO: Open respective food logging flow
+    // TODO: Open respective food logging flow based on method
   };
 
   return (

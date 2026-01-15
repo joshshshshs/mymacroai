@@ -23,8 +23,7 @@ export const MealList = () => {
 
     const handleAdd = (mealId: string) => {
         haptics.light();
-        console.log(`Add to ${mealId}`);
-        // TODO: Open AI Hub or Search
+        // TODO: Open AI Hub or Search for mealId
     };
 
     return (
