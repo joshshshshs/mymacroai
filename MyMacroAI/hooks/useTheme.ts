@@ -97,7 +97,7 @@ const DARK_COLORS: ThemeColors = {
 export function useTheme() {
   const systemColorScheme = useColorScheme();
   const themePreference = useUserStore((s) => s.preferences?.theme || 'system');
-  const setPreferences = useUserStore((s) => s.setPreferences);
+  const updatePreferences = useUserStore((s) => s.actions.updatePreferences);
 
   // Determine actual theme based on preference
   const resolvedTheme = themePreference === 'system'
@@ -109,7 +109,13 @@ export function useTheme() {
 
   // Theme setter function
   const setTheme = (mode: ThemeMode) => {
-    setPreferences({ theme: mode });
+    updatePreferences({ theme: mode });
+  };
+
+  // Toggle between light and dark (ignores system)
+  const toggleTheme = () => {
+    const newTheme = isDark ? 'light' : 'dark';
+    updatePreferences({ theme: newTheme });
   };
 
   return {
@@ -118,6 +124,7 @@ export function useTheme() {
     isDark,
     colors,
     setTheme,
+    toggleTheme,
   };
 }
 

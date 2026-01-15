@@ -255,6 +255,56 @@ export type TrainingStyle =
     | 'yoga';
 
 // ============================================================================
+// Bio-Optimization / Peptide Protocol Types
+// ============================================================================
+
+/**
+ * User's peptide disclosure status
+ * Privacy-first: Users can acknowledge use without disclosing specifics
+ */
+export type PeptideStatus =
+    | 'ACTIVE_DISCLOSED'    // User lists specific compounds
+    | 'ACTIVE_UNDISCLOSED'  // User says yes but keeps details private
+    | 'NONE'                // Not taking anything
+    | 'PREFER_NOT_TO_SAY';  // Privacy mode - don't ask
+
+/**
+ * Individual compound entry (if user chooses to disclose)
+ * Note: We treat these as user text strings to avoid medical liability
+ */
+export interface ActiveCompound {
+    id: string;
+    name: string;
+    dosage: string;          // e.g., "250mcg", "2mg", etc.
+    frequency: string;       // e.g., "daily", "3x/week", "as needed"
+    startDate?: string;      // ISO date string
+    notes?: string;          // Optional user notes
+    source: 'user_input';    // Always user-provided, never AI-suggested
+}
+
+/**
+ * Bio-optimization profile stored in user state
+ */
+export interface BioOptimizationProfile {
+    peptideStatus: PeptideStatus;
+    activeCompounds: ActiveCompound[];
+    disclaimerAcknowledged: boolean;
+    disclaimerAcknowledgedAt: string | null;
+    lastUpdated: string | null;
+}
+
+/**
+ * Default bio-optimization profile
+ */
+export const DEFAULT_BIO_OPTIMIZATION_PROFILE: BioOptimizationProfile = {
+    peptideStatus: 'PREFER_NOT_TO_SAY',
+    activeCompounds: [],
+    disclaimerAcknowledged: false,
+    disclaimerAcknowledgedAt: null,
+    lastUpdated: null,
+};
+
+// ============================================================================
 // Unified Store State
 // ============================================================================
 
@@ -325,6 +375,12 @@ export interface UserState {
     // Training Identity
     trainingStyles: TrainingStyle[];
 
+    // Bio-Optimization Profile
+    bioOptimizationProfile: BioOptimizationProfile;
+
+    // AI Personalization
+    coachIntensity: number; // 0 (Gentle) to 100 (David Goggins)
+
     // Actions
     updateIntake: (intake: Partial<MacroTarget>) => void;
     setDailyTargetAdjustment: (adjustment: Partial<MacroTarget>) => void;
@@ -361,6 +417,17 @@ export interface UserState {
 
     // Training Identity
     setTrainingStyles: (styles: TrainingStyle[]) => void;
+
+    // Bio-Optimization Actions
+    updateBioOptimizationProfile: (profile: Partial<BioOptimizationProfile>) => void;
+    setPeptideStatus: (status: PeptideStatus) => void;
+    addActiveCompound: (compound: ActiveCompound) => void;
+    removeActiveCompound: (compoundId: string) => void;
+    updateActiveCompound: (compoundId: string, updates: Partial<ActiveCompound>) => void;
+    acknowledgePeptideDisclaimer: () => void;
+
+    // AI Personalization Actions
+    setCoachIntensity: (intensity: number) => void;
 
     // Consolidated Action Groups
     actions: {

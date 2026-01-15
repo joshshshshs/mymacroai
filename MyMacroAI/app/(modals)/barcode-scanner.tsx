@@ -75,7 +75,7 @@ export default function BarcodeScannerScreen() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             setTimeout(() => {
                 router.replace({
-                    pathname: '/(modals)/search-food',
+                    pathname: '/(modals)/log-meal',
                 } as any);
             }, 1500);
         }
@@ -86,7 +86,7 @@ export default function BarcodeScannerScreen() {
     };
 
     const handleManualSearch = () => {
-        router.replace('/(modals)/search-food' as any);
+        router.replace('/(modals)/log-meal' as any);
     };
 
     // Permission handling

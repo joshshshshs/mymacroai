@@ -12,7 +12,11 @@ import {
     Squad,
     Reaction,
     AthleteProfile,
-    DEFAULT_ATHLETE_PROFILE
+    DEFAULT_ATHLETE_PROFILE,
+    BioOptimizationProfile,
+    PeptideStatus,
+    ActiveCompound,
+    DEFAULT_BIO_OPTIMIZATION_PROFILE,
 } from '../types';
 
 // ============================================================================
@@ -239,6 +243,12 @@ export const useUserStore = create<UserState>()(
             // Training Identity System
             trainingStyles: [] as TrainingStyle[],
 
+            // Bio-Optimization Profile
+            bioOptimizationProfile: DEFAULT_BIO_OPTIMIZATION_PROFILE,
+
+            // AI Personalization
+            coachIntensity: 50, // Default: balanced (0=Gentle, 100=Spartan)
+
             // ----------------------------------------------------------------
             // Core Actions
             // ----------------------------------------------------------------
@@ -426,6 +436,80 @@ export const useUserStore = create<UserState>()(
             setTrainingStyles: (styles: TrainingStyle[]) => set({ trainingStyles: styles }),
 
             // ----------------------------------------------------------------
+            // Bio-Optimization Actions
+            // ----------------------------------------------------------------
+
+            updateBioOptimizationProfile: (profile: Partial<BioOptimizationProfile>) =>
+                set((state) => ({
+                    bioOptimizationProfile: {
+                        ...state.bioOptimizationProfile,
+                        ...profile,
+                        lastUpdated: new Date().toISOString(),
+                    }
+                })),
+
+            setPeptideStatus: (status: PeptideStatus) =>
+                set((state) => ({
+                    bioOptimizationProfile: {
+                        ...state.bioOptimizationProfile,
+                        peptideStatus: status,
+                        // Clear compounds if switching to NONE or PREFER_NOT_TO_SAY
+                        activeCompounds: (status === 'NONE' || status === 'PREFER_NOT_TO_SAY')
+                            ? []
+                            : state.bioOptimizationProfile.activeCompounds,
+                        lastUpdated: new Date().toISOString(),
+                    }
+                })),
+
+            addActiveCompound: (compound: ActiveCompound) =>
+                set((state) => ({
+                    bioOptimizationProfile: {
+                        ...state.bioOptimizationProfile,
+                        activeCompounds: [...state.bioOptimizationProfile.activeCompounds, compound],
+                        peptideStatus: 'ACTIVE_DISCLOSED' as PeptideStatus,
+                        lastUpdated: new Date().toISOString(),
+                    }
+                })),
+
+            removeActiveCompound: (compoundId: string) =>
+                set((state) => ({
+                    bioOptimizationProfile: {
+                        ...state.bioOptimizationProfile,
+                        activeCompounds: state.bioOptimizationProfile.activeCompounds.filter(
+                            (c) => c.id !== compoundId
+                        ),
+                        lastUpdated: new Date().toISOString(),
+                    }
+                })),
+
+            updateActiveCompound: (compoundId: string, updates: Partial<ActiveCompound>) =>
+                set((state) => ({
+                    bioOptimizationProfile: {
+                        ...state.bioOptimizationProfile,
+                        activeCompounds: state.bioOptimizationProfile.activeCompounds.map((c) =>
+                            c.id === compoundId ? { ...c, ...updates } : c
+                        ),
+                        lastUpdated: new Date().toISOString(),
+                    }
+                })),
+
+            acknowledgePeptideDisclaimer: () =>
+                set((state) => ({
+                    bioOptimizationProfile: {
+                        ...state.bioOptimizationProfile,
+                        disclaimerAcknowledged: true,
+                        disclaimerAcknowledgedAt: new Date().toISOString(),
+                    }
+                })),
+
+            // ----------------------------------------------------------------
+            // AI Personalization Actions
+            // ----------------------------------------------------------------
+
+            setCoachIntensity: (intensity: number) =>
+                set({ coachIntensity: Math.max(0, Math.min(100, intensity)) }),
+
+            // ----------------------------------------------------------------
             // Action Groups
             // ----------------------------------------------------------------
 
@@ -495,6 +579,7 @@ export const useUserStore = create<UserState>()(
                     economy: persistedState.economy || INITIAL_ECONOMY,
                     social: persistedState.social || INITIAL_SOCIAL,
                     dailyTargetAdjustment: persistedState.dailyTargetAdjustment || DEFAULT_TARGET_ADJUSTMENT,
+                    bioOptimizationProfile: persistedState.bioOptimizationProfile || DEFAULT_BIO_OPTIMIZATION_PROFILE,
                 };
             },
         }
@@ -562,6 +647,15 @@ export const useAthleteType = () => {
     const styles = useUserStore(state => state.trainingStyles);
     return styles.length > 1 ? 'HYBRID' : styles.length === 1 ? 'FOCUSED' : 'UNDEFINED';
 };
+
+// Bio-Optimization Hooks
+export const useBioOptimizationProfile = () => useUserStore(state => state.bioOptimizationProfile);
+export const usePeptideStatus = () => useUserStore(state => state.bioOptimizationProfile.peptideStatus);
+export const useActiveCompounds = () => useUserStore(state => state.bioOptimizationProfile.activeCompounds);
+export const usePeptideDisclaimerAcknowledged = () => useUserStore(state => state.bioOptimizationProfile.disclaimerAcknowledged);
+
+// AI Personalization Hooks
+export const useCoachIntensity = () => useUserStore(state => state.coachIntensity);
 
 // Shim for useUserActions to return bound actions
 export const useUserActions = () => {
@@ -633,6 +727,18 @@ export const getUserContextForAI = (): string => {
     if (health?.sleepMinutes) lines.push(`Sleep: ${Math.round((health.sleepMinutes || 0) / 60)}h`);
     if (health?.steps) lines.push(`Steps: ${health.steps}`);
     if (health?.stressLevel) lines.push(`Stress Level: ${health.stressLevel}`);
+
+    // Bio-Optimization Context (Privacy-Aware)
+    const bioProfile = state.bioOptimizationProfile;
+    if (bioProfile.peptideStatus === 'ACTIVE_DISCLOSED' && bioProfile.activeCompounds.length > 0) {
+        lines.push(`Bio-Optimization Status: ACTIVE_DISCLOSED`);
+        lines.push(`Active Compounds: ${bioProfile.activeCompounds.map(c => `${c.name} (${c.dosage}, ${c.frequency})`).join('; ')}`);
+    } else if (bioProfile.peptideStatus === 'ACTIVE_UNDISCLOSED') {
+        lines.push(`Bio-Optimization Status: ACTIVE_UNDISCLOSED (user has confirmed peptide use but details are private)`);
+    } else if (bioProfile.peptideStatus === 'NONE') {
+        lines.push(`Bio-Optimization Status: NONE`);
+    }
+    // Note: PREFER_NOT_TO_SAY results in no context injection - complete privacy
 
     // Preferences
     lines.push(`Units: ${prefs.measurementSystem || 'metric'}`);

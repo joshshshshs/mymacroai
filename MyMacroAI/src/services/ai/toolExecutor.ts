@@ -295,6 +295,9 @@ export function executeTool(toolName: AIToolName, args: any): ToolResult {
         case 'get_food_details':
             return getFoodDetails(args as GetFoodDetailsParams);
 
+        case 'search_verified_fitness_knowledge':
+            return searchVerifiedFitnessKnowledge(args as SearchFitnessKnowledgeParams);
+
         default:
             return {
                 success: false,
@@ -302,4 +305,35 @@ export function executeTool(toolName: AIToolName, args: any): ToolResult {
                 error: `Unknown tool: ${toolName}`,
             };
     }
+}
+
+// ============================================================================
+// TOOL: SEARCH VERIFIED FITNESS KNOWLEDGE (Peptide Research)
+// ============================================================================
+
+interface SearchFitnessKnowledgeParams {
+    query: string;
+    compoundName?: string;
+    topic?: 'mechanism' | 'clinical_trials' | 'safety' | 'pharmacokinetics' | 'interactions';
+}
+
+/**
+ * Search verified fitness knowledge base for peptide/compound research
+ * For MVP, returns a placeholder response indicating database not yet implemented
+ * Future: Connect to curated PubMed/NIH research database
+ */
+function searchVerifiedFitnessKnowledge(params: SearchFitnessKnowledgeParams): ToolResult {
+    // MVP Placeholder - In production, this would query a curated research database
+    return {
+        success: true,
+        data: {
+            query: params.query,
+            compoundName: params.compoundName || null,
+            topic: params.topic || 'general',
+            message: 'Peptide research database is currently being curated. Providing general guidance only.',
+            disclaimer: 'Always consult peer-reviewed literature and qualified healthcare professionals.',
+            sources: [],
+            note: 'For accurate dosage and protocol information, please refer to published clinical studies on PubMed (pubmed.ncbi.nlm.nih.gov) or consult a healthcare provider.',
+        },
+    };
 }

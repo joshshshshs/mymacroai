@@ -654,7 +654,7 @@ export default function NutritionScreen() {
                             icon="search"
                             label="Search Foods"
                             color={COLORS.searchGray}
-                            onPress={() => handleNavigate('/(modals)/search-food')}
+                            onPress={() => handleNavigate('/(modals)/log-meal')}
                         />
                         <QuickActionButton
                             icon="barcode-outline"

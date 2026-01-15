@@ -3,21 +3,40 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import Slider from '@react-native-community/slider';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 import { SPACING } from '@/src/design-system/tokens';
 import { ProfileMenuItem } from '@/src/components/profile';
-import { useUserStore, TRAINING_STYLES } from '@/src/store/UserStore';
+import { useUserStore, TRAINING_STYLES, useBioOptimizationProfile, useCoachIntensity } from '@/src/store/UserStore';
+import { useTheme, ThemeMode, getThemeLabel } from '@/hooks/useTheme';
+import { PeptideStatus } from '@/src/types';
+
+// Helper function for peptide status label
+const getPeptideStatusLabel = (status: PeptideStatus, compoundCount: number): string => {
+  switch (status) {
+    case 'ACTIVE_DISCLOSED':
+      return compoundCount > 0 ? `Active (${compoundCount} compound${compoundCount > 1 ? 's' : ''})` : 'Active (Disclosed)';
+    case 'ACTIVE_UNDISCLOSED':
+      return 'Active (Private)';
+    case 'NONE':
+      return 'Not using';
+    case 'PREFER_NOT_TO_SAY':
+    default:
+      return 'Not configured';
+  }
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark, themePreference, setTheme, colors: themeColors } = useTheme();
   const preferences = useUserStore(s => s.preferences);
   const trainingStyles = useUserStore(s => s.trainingStyles) || [];
+  const bioProfile = useBioOptimizationProfile();
 
   // Get display text for training styles
   const trainingStylesText = trainingStyles.length === 0
@@ -26,8 +45,20 @@ export default function SettingsScreen() {
       ? `Hybrid (${trainingStyles.length} styles)`
       : TRAINING_STYLES.find(s => s.id === trainingStyles[0])?.label || 'Not set';
 
-  const [aiPersona, setAiPersona] = useState(0.5); // 0 = Gentle, 1 = Spartan
-  const [haptics, setHaptics] = useState(true);
+  // Coach Intensity from store (0-100)
+  const coachIntensity = useCoachIntensity();
+  const setCoachIntensity = useUserStore(s => s.setCoachIntensity);
+
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
+
+  // Get intensity label for display
+  const getIntensityLabel = (val: number): string => {
+    if (val < 20) return "Zen Monk";
+    if (val < 40) return "Supportive";
+    if (val < 60) return "Balanced";
+    if (val < 80) return "Intense";
+    return "Spartan";
+  };
 
   const colors = {
     bg: isDark ? '#121214' : '#F5F5F7',
@@ -35,6 +66,24 @@ export default function SettingsScreen() {
     textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
     card: isDark ? '#1C1C1E' : '#FFFFFF',
     accent: '#FF5C00',
+  };
+
+  // Cycle through theme options
+  const handleThemeChange = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const modes: ThemeMode[] = ['system', 'light', 'dark'];
+    const currentIndex = modes.indexOf(themePreference as ThemeMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    setTheme(modes[nextIndex]);
+  };
+
+  // Get theme icon
+  const getThemeIcon = (): keyof typeof Ionicons.glyphMap => {
+    switch (themePreference) {
+      case 'dark': return 'moon';
+      case 'light': return 'sunny';
+      default: return 'phone-portrait-outline';
+    }
   };
 
   return (
@@ -104,25 +153,48 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* Bio-Optimization */}
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>BIO-OPTIMIZATION</Text>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <ProfileMenuItem
+            icon="flask-outline"
+            label="Peptide Protocols"
+            subtitle={getPeptideStatusLabel(bioProfile.peptideStatus, bioProfile.activeCompounds.length)}
+            onPress={() => router.push('/(modals)/bio-optimization')}
+          />
+        </View>
+
         {/* AI Persona */}
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>AI PERSONA</Text>
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <View style={styles.sliderRow}>
-            <Text style={[styles.sliderLabel, { color: colors.text }]}>Coach Intensity</Text>
+            <View style={styles.sliderHeader}>
+              <Text style={[styles.sliderLabel, { color: colors.text }]}>Coach Intensity</Text>
+              <Text style={[styles.intensityBadge, { color: colors.accent }]}>
+                {getIntensityLabel(coachIntensity)}
+              </Text>
+            </View>
             <View style={styles.sliderContainer}>
               <Text style={[styles.sliderEnd, { color: colors.textSecondary }]}>Gentle</Text>
               <Slider
                 style={styles.slider}
                 minimumValue={0}
-                maximumValue={1}
-                value={aiPersona}
-                onValueChange={setAiPersona}
+                maximumValue={100}
+                step={1}
+                value={coachIntensity}
+                onSlidingComplete={(val) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setCoachIntensity(val);
+                }}
                 minimumTrackTintColor={colors.accent}
                 maximumTrackTintColor={colors.textSecondary}
                 thumbTintColor={colors.accent}
               />
               <Text style={[styles.sliderEnd, { color: colors.textSecondary }]}>Spartan</Text>
             </View>
+            <Text style={[styles.sliderHint, { color: colors.textSecondary }]}>
+              Syncs instantly with AI
+            </Text>
           </View>
           <ProfileMenuItem
             icon="volume-high-outline"
@@ -136,10 +208,10 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APP EXPERIENCE</Text>
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <ProfileMenuItem
-            icon="moon-outline"
+            icon={getThemeIcon()}
             label="Theme"
-            subtitle="System"
-            onPress={() => { }}
+            subtitle={getThemeLabel(themePreference as ThemeMode)}
+            onPress={handleThemeChange}
           />
           <ProfileMenuItem
             icon="scale-outline"
@@ -151,8 +223,8 @@ export default function SettingsScreen() {
             icon="phone-portrait-outline"
             label="Haptics"
             rightElement="toggle"
-            toggleValue={haptics}
-            onToggle={setHaptics}
+            toggleValue={hapticsEnabled}
+            onToggle={setHapticsEnabled}
           />
         </View>
 
@@ -184,10 +256,19 @@ const styles = StyleSheet.create({
   sliderRow: {
     padding: 14,
   },
+  sliderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sliderLabel: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 12,
+  },
+  intensityBadge: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   sliderContainer: {
     flexDirection: 'row',
@@ -200,5 +281,10 @@ const styles = StyleSheet.create({
   sliderEnd: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  sliderHint: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

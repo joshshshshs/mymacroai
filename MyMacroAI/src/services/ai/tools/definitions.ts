@@ -119,6 +119,38 @@ micronutrients. Use this when the user asks about specific nutrients in a food.`
 };
 
 // ============================================================================
+// TOOL: SEARCH VERIFIED FITNESS KNOWLEDGE
+// ============================================================================
+
+export const SEARCH_VERIFIED_FITNESS_KNOWLEDGE: FunctionDeclaration = {
+    name: 'search_verified_fitness_knowledge',
+    description: `Search the verified fitness knowledge base for peer-reviewed research on peptides,
+supplements, and bio-optimization compounds. Use this tool BEFORE providing any information about
+research compounds. Returns summaries from published clinical literature only.
+
+MANDATORY: Call this tool before answering ANY question about peptides, research compounds,
+or bio-optimization substances. Do not rely on training data for dosages or protocols.`,
+    parameters: {
+        type: SchemaType.OBJECT,
+        properties: {
+            query: {
+                type: SchemaType.STRING,
+                description: 'Search term for compound or topic (e.g., "BPC-157 tendon healing", "TB-500 mechanism", "Semax cognitive effects")',
+            },
+            compoundName: {
+                type: SchemaType.STRING,
+                description: 'Specific compound name if searching for a particular substance (e.g., "BPC-157", "TB-500", "Semaglutide")',
+            },
+            topic: {
+                type: SchemaType.STRING,
+                description: 'Research topic filter: "mechanism", "clinical_trials", "safety", "pharmacokinetics", "interactions"',
+            },
+        },
+        required: ['query'],
+    },
+};
+
+// ============================================================================
 // ALL TOOLS EXPORT
 // ============================================================================
 
@@ -127,6 +159,7 @@ export const AI_TOOLS: FunctionDeclaration[] = [
     GET_USER_STATUS,
     LOG_VERIFIED_FOOD,
     GET_FOOD_DETAILS,
+    SEARCH_VERIFIED_FITNESS_KNOWLEDGE,
 ];
 
 // Tool name type for type safety
@@ -134,4 +167,5 @@ export type AIToolName =
     | 'search_food_database'
     | 'get_user_status'
     | 'log_verified_food'
-    | 'get_food_details';
+    | 'get_food_details'
+    | 'search_verified_fitness_knowledge';
