@@ -21,6 +21,7 @@ import { SPACING } from '@/src/design-system/tokens';
 import { ProfileMenuItem } from '@/src/components/profile';
 import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useTheme, getThemeLabel } from '@/hooks/useTheme';
 
 export default function ProfileScreen() {
     const colorScheme = useColorScheme();
@@ -28,6 +29,7 @@ export default function ProfileScreen() {
     const router = useRouter();
     const { light } = useHaptics();
     const preferences = useUserStore(s => s.preferences);
+    const { themePreference } = useTheme();
 
     // Mock user data
     const user = {
@@ -197,6 +199,16 @@ export default function ProfileScreen() {
                             label="Support & About"
                             subtitle="Roadmap, legal, version"
                             onPress={() => navigate('/(modals)/support')}
+                        />
+                    </View>
+
+                    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APPEARANCE</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <ProfileMenuItem
+                            icon="contrast-outline"
+                            label="Theme"
+                            subtitle={getThemeLabel(themePreference)}
+                            onPress={() => navigate('/(modals)/edit-theme')}
                         />
                     </View>
 

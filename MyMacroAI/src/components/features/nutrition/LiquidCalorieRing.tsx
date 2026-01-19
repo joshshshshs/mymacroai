@@ -1,10 +1,11 @@
 /**
  * LiquidCalorieRing - "The Metabolic Engine" Hero
- * 
+ *
  * Features:
  * - Pulsing glow animation (2% scale every 3s)
  * - Color transitions (Fasted→Eating→Over)
  * - 3D flip toggle (Remaining ↔ Eaten/Burned)
+ * - Dynamic theme colors from Chromatosphere
  */
 
 import React, { useEffect, useState } from 'react';
@@ -23,13 +24,12 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 
 import { SPACING, RADIUS } from '@/src/design-system/tokens';
+import { useCombinedTheme } from '@/src/design-system/theme';
 
-// Color palette
-const COLORS = {
+// Static colors (status states - not themed)
+const STATUS_COLORS = {
     fastedBlue: '#00D2FF',
     fastedBlueDark: '#0099CC',
-    eatingOrange: '#FF6B00',
-    eatingOrangeDark: '#E55A00',
     overRed: '#FF4757',
     overRedDark: '#E63946',
     springGreen: '#00FF94',
@@ -61,16 +61,21 @@ export const LiquidCalorieRing: React.FC<Props> = ({
     const isDark = colorScheme === 'dark';
     const [showEaten, setShowEaten] = useState(false);
 
+    // Get dynamic theme colors
+    const theme = useCombinedTheme();
+    const { primary, secondary, gradientStart, gradientEnd } = theme.colors;
+
     // Calculate progress
     const remaining = Math.max(0, target - consumed);
     const progressRatio = Math.min(consumed / target, 1);
     const overEating = consumed > target;
 
-    // Determine ring color based on state
+    // Determine ring color based on state (uses theme colors for normal eating)
     const getGradientColors = () => {
-        if (overEating) return [COLORS.overRed, COLORS.overRedDark];
-        if (isFasted) return [COLORS.fastedBlue, COLORS.fastedBlueDark];
-        return [COLORS.eatingOrange, COLORS.eatingOrangeDark];
+        if (overEating) return [STATUS_COLORS.overRed, STATUS_COLORS.overRedDark];
+        if (isFasted) return [STATUS_COLORS.fastedBlue, STATUS_COLORS.fastedBlueDark];
+        // Use theme colors for normal eating state
+        return [gradientStart, gradientEnd];
     };
 
     const gradientColors = getGradientColors();
@@ -126,7 +131,7 @@ export const LiquidCalorieRing: React.FC<Props> = ({
 
     const textColor = isDark ? '#FFFFFF' : '#1A1A1A';
     const secondaryColor = isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93';
-    const trackColor = isDark ? COLORS.track : COLORS.trackLight;
+    const trackColor = isDark ? STATUS_COLORS.track : STATUS_COLORS.trackLight;
 
     return (
         <View style={styles.container}>
@@ -190,7 +195,7 @@ export const LiquidCalorieRing: React.FC<Props> = ({
                             <View style={styles.centerText}>
                                 <View style={styles.splitRow}>
                                     <View style={styles.splitItem}>
-                                        <Text style={[styles.splitValue, { color: COLORS.eatingOrange }]}>
+                                        <Text style={[styles.splitValue, { color: primary }]}>
                                             {consumed.toLocaleString()}
                                         </Text>
                                         <Text style={[styles.splitLabel, { color: secondaryColor }]}>
@@ -199,7 +204,7 @@ export const LiquidCalorieRing: React.FC<Props> = ({
                                     </View>
                                     <View style={styles.splitDivider} />
                                     <View style={styles.splitItem}>
-                                        <Text style={[styles.splitValue, { color: COLORS.springGreen }]}>
+                                        <Text style={[styles.splitValue, { color: STATUS_COLORS.springGreen }]}>
                                             {burned.toLocaleString()}
                                         </Text>
                                         <Text style={[styles.splitLabel, { color: secondaryColor }]}>
@@ -215,16 +220,16 @@ export const LiquidCalorieRing: React.FC<Props> = ({
 
             {/* Status Badge */}
             {isFasted && (
-                <View style={[styles.statusBadge, { backgroundColor: `${COLORS.fastedBlue}20` }]}>
-                    <Text style={[styles.statusText, { color: COLORS.fastedBlue }]}>
-                        ⚡ Fasted Mode
+                <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLORS.fastedBlue}20` }]}>
+                    <Text style={[styles.statusText, { color: STATUS_COLORS.fastedBlue }]}>
+                        Fasted Mode
                     </Text>
                 </View>
             )}
             {overEating && (
-                <View style={[styles.statusBadge, { backgroundColor: `${COLORS.overRed}20` }]}>
-                    <Text style={[styles.statusText, { color: COLORS.overRed }]}>
-                        ⚠️ Over Target
+                <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLORS.overRed}20` }]}>
+                    <Text style={[styles.statusText, { color: STATUS_COLORS.overRed }]}>
+                        Over Target
                     </Text>
                 </View>
             )}

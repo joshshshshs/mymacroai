@@ -522,7 +522,7 @@ export default function NutritionScreen() {
 
         dateLogs
             .filter(l => l.type === 'food' || l.type === 'nutrition')
-            .forEach(l => {
+            .forEach((l, index) => {
                 const hour = new Date(l.timestamp || Date.now()).getHours();
                 let mealType: MealType = 'snacks';
                 if (hour >= 6 && hour < 11) mealType = 'breakfast';
@@ -530,7 +530,7 @@ export default function NutritionScreen() {
                 else if (hour >= 17 && hour < 22) mealType = 'dinner';
 
                 map[mealType].items.push({
-                    id: l.timestamp?.toString() || Math.random().toString(),
+                    id: l.id || `${l.timestamp}-${index}`,
                     name: l.foodName || l.notes || 'Food item',
                     calories: l.calories || 0,
                     time: new Date(l.timestamp || Date.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),

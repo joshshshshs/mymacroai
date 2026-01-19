@@ -16,8 +16,8 @@ export default function TabsLayout() {
     if (pathname.includes('/ai')) return 'ai-hub';
     if (pathname.includes('/dashboard')) return 'dashboard';
     if (pathname.includes('/nutrition')) return 'nutrition';
+    if (pathname.includes('/community')) return 'community';
     if (pathname.includes('/health')) return 'health';
-    if (pathname.includes('/squad')) return 'squad';
     return 'dashboard';
   };
 
@@ -66,6 +66,11 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="health"
           options={{ title: 'Health' }}
+        />
+
+        <Tabs.Screen
+          name="community"
+          options={{ title: 'Community' }}
         />
 
         <Tabs.Screen

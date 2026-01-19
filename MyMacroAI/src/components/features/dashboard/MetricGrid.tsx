@@ -2,17 +2,25 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
-import { PASTEL_COLORS } from '@/src/design-system/aesthetics';
+import { useCombinedTheme } from '@/src/design-system/theme';
 
+/**
+ * MetricGrid - Dashboard Health Metrics
+ * 
+ * Now uses dynamic theme colors for the Macros card
+ * to match the active theme palette.
+ */
 export const MetricGrid = () => {
+    const { colors } = useCombinedTheme();
+
     return (
         <View style={styles.gridContainer}>
             <View style={styles.row}>
-                {/* 1. Recovery Score */}
+                {/* 1. Recovery Score - Always green (health indicator) */}
                 <SoftGlassCard
                     variant="soft"
                     style={styles.card}
-                    glowColor="#10B981" // Green glow
+                    glowColor="#10B981"
                 >
                     <View style={styles.cardHeader}>
                         <Ionicons name="fitness" size={16} color="#4ADE80" />
@@ -24,11 +32,11 @@ export const MetricGrid = () => {
                     </View>
                 </SoftGlassCard>
 
-                {/* 2. Sleep Debt */}
+                {/* 2. Sleep Debt - Always purple (sleep indicator) */}
                 <SoftGlassCard
                     variant="soft"
                     style={styles.card}
-                    glowColor="#8B5CF6" // Purple glow
+                    glowColor="#8B5CF6"
                 >
                     <View style={styles.cardHeader}>
                         <Ionicons name="moon" size={16} color="#A78BFA" />
@@ -42,11 +50,11 @@ export const MetricGrid = () => {
             </View>
 
             <View style={styles.row}>
-                {/* 3. Hydration */}
+                {/* 3. Hydration - Always blue (water indicator) */}
                 <SoftGlassCard
                     variant="soft"
                     style={styles.card}
-                    glowColor="#3B82F6" // Blue glow
+                    glowColor="#3B82F6"
                 >
                     <View style={styles.cardHeader}>
                         <Ionicons name="water" size={16} color="#60A5FA" />
@@ -60,22 +68,22 @@ export const MetricGrid = () => {
                     </View>
                 </SoftGlassCard>
 
-                {/* 4. Macros Remaining */}
+                {/* 4. Macros Remaining - THEMED (uses dynamic palette) */}
                 <SoftGlassCard
                     variant="soft"
                     style={styles.card}
-                    glowColor="#F97316" // Orange glow
+                    glowColor={colors.primary}
                 >
                     <View style={styles.cardHeader}>
-                        <Ionicons name="pie-chart" size={16} color="#FB923C" />
+                        <Ionicons name="pie-chart" size={16} color={colors.primary} />
                         <Text style={styles.cardTitle}>Macros Left</Text>
                     </View>
                     <View style={styles.cardContent}>
                         <View style={styles.macroRow}>
-                            <Text style={styles.macroTag}>P: 55g</Text>
-                            <Text style={styles.macroTag}>C: 120g</Text>
+                            <Text style={[styles.macroTag, { color: colors.macros.protein }]}>P: 55g</Text>
+                            <Text style={[styles.macroTag, { color: colors.macros.carbs }]}>C: 120g</Text>
                         </View>
-                        <Text style={styles.macroTag}>F: 30g</Text>
+                        <Text style={[styles.macroTag, { color: colors.macros.fats }]}>F: 30g</Text>
                     </View>
                 </SoftGlassCard>
             </View>

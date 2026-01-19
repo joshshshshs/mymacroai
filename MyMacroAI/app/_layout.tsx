@@ -15,7 +15,32 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 import { View, ActivityIndicator } from 'react-native';
 import { AuthProvider } from '../contexts/AuthContext';
+import { ThemeProvider, useThemeContext } from '../contexts/ThemeContext';
 import { ErrorBoundary } from '@/src/components/ui/ErrorBoundary';
+
+// Inner component that uses theme context for status bar
+function AppContent() {
+  const { isDark } = useThemeContext();
+
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(modals)"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+            gestureEnabled: true
+          }}
+        />
+        <Stack.Screen name="index" />
+      </Stack>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -40,20 +65,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ErrorBoundary>
           <AuthProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="(modals)"
-                options={{
-                  headerShown: false,
-                  presentation: 'modal',
-                  gestureEnabled: true
-                }}
-              />
-              <Stack.Screen name="index" />
-            </Stack>
-            <StatusBar style="light" />
+            <ThemeProvider>
+              <AppContent />
+            </ThemeProvider>
           </AuthProvider>
         </ErrorBoundary>
       </SafeAreaProvider>

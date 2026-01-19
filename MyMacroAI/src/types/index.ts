@@ -164,6 +164,9 @@ export interface UserPreferences {
     };
     // Custom reaction emojis for social feed (4 slots)
     customReactionEmojis: string[];
+    // App experience
+    haptics: boolean;
+    aiVoice: 'coach_alex' | 'coach_maya' | 'coach_marcus' | 'coach_sophia';
 }
 
 export interface FounderStatus {

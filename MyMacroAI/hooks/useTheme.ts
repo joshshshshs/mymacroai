@@ -1,11 +1,13 @@
 /**
  * useTheme - Theme Management Hook
- * 
+ *
  * Provides themed colors and theme toggling functionality.
  * Respects user preference from UserStore (system, light, dark).
+ * Uses Appearance.setColorScheme() to force the theme app-wide.
  */
 
-import { useColorScheme } from 'react-native';
+import { useEffect } from 'react';
+import { useColorScheme, Appearance } from 'react-native';
 import { useUserStore } from '@/src/store/UserStore';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
@@ -98,6 +100,17 @@ export function useTheme() {
   const systemColorScheme = useColorScheme();
   const themePreference = useUserStore((s) => s.preferences?.theme || 'system');
   const updatePreferences = useUserStore((s) => s.actions.updatePreferences);
+
+  // Apply theme preference to Appearance API when it changes
+  useEffect(() => {
+    if (themePreference === 'system') {
+      // Reset to system default
+      Appearance.setColorScheme(null);
+    } else {
+      // Force light or dark
+      Appearance.setColorScheme(themePreference);
+    }
+  }, [themePreference]);
 
   // Determine actual theme based on preference
   const resolvedTheme = themePreference === 'system'

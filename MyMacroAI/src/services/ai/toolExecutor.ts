@@ -1,14 +1,19 @@
 /**
  * Tool Executor - Handles AI Function Call Execution
- * 
+ *
  * This is the "Neural Bridge" that connects AI decisions to real data.
  * Each tool maps to actual database queries and state access.
+ *
+ * Now powered by the Hybrid Food Engine (FoodDataService) for:
+ * - USDA verified data (Tier 1)
+ * - OpenFoodFacts API (Tier 2)
  */
 
-import { searchFoods, getFoodById, MOCK_FOOD_DB } from '../../data/mockFoodDB';
+import { getFoodById } from '../../data/mockFoodDB';
 import { FoodItem, calculatePortionNutrients } from '../../types/food';
 import { useUserStore } from '../../store/UserStore';
 import { AIToolName } from './tools/definitions';
+import { FoodDataService, FoodItemWithSource } from '../food/FoodDataService';
 
 // ============================================================================
 // TOOL RESULT TYPES
@@ -101,16 +106,17 @@ export function getUserStatus(): ToolResult {
 }
 
 // ============================================================================
-// FOOD DATABASE SEARCH
+// FOOD DATABASE SEARCH (Hybrid Engine)
 // ============================================================================
 
-export function searchFoodDatabase(params: SearchFoodParams): ToolResult {
+export async function searchFoodDatabase(params: SearchFoodParams): Promise<ToolResult> {
     try {
-        let results = searchFoods(params.query || '');
+        // Use the Hybrid Food Engine for search
+        let results = await FoodDataService.search(params.query || '');
 
         // Apply filters
-        if (params.verifiedOnly !== false) {
-            results = results.filter(food => food.isVerified);
+        if (params.verifiedOnly) {
+            results = results.filter(food => food.isVerified && food.dataSource === 'usda');
         }
 
         if (params.minProtein !== undefined) {
@@ -135,19 +141,27 @@ export function searchFoodDatabase(params: SearchFoodParams): ToolResult {
             );
         }
 
-        // Sort by protein density (protein per calorie)
+        // Sort: Verified USDA first, then by protein density
         results.sort((a, b) => {
+            // Verified USDA items always come first
+            if (a.dataSource === 'usda' && b.dataSource !== 'usda') return -1;
+            if (a.dataSource !== 'usda' && b.dataSource === 'usda') return 1;
+
+            // Within same source, sort by protein density
             const densityA = a.macros.calories > 0 ? a.macros.protein / a.macros.calories : 0;
             const densityB = b.macros.calories > 0 ? b.macros.protein / b.macros.calories : 0;
             return densityB - densityA;
         });
 
-        // Format for AI consumption
+        // Format for AI consumption (top 5 results)
         const formattedResults = results.slice(0, 5).map(food => ({
             id: food.id,
             name: food.name,
+            brand: food.brand,
             category: food.category,
             isVerified: food.isVerified,
+            dataSource: food.dataSource,
+            sourceLabel: FoodDataService.getSourceLabel(food),
             servingSize: `${food.servingSize}${food.servingUnit}`,
             servingDescription: food.servingDescription,
             calories: food.macros.calories,
@@ -165,9 +179,11 @@ export function searchFoodDatabase(params: SearchFoodParams): ToolResult {
                 count: formattedResults.length,
                 foods: formattedResults,
                 searchCriteria: params,
+                note: 'Results sorted by: USDA verified first, then by protein density.',
             },
         };
     } catch (error) {
+        console.error('[searchFoodDatabase] Error:', error);
         return {
             success: false,
             data: null,
@@ -177,12 +193,13 @@ export function searchFoodDatabase(params: SearchFoodParams): ToolResult {
 }
 
 // ============================================================================
-// LOG FOOD TO DIARY
+// LOG FOOD TO DIARY (Hybrid Engine)
 // ============================================================================
 
-export function logVerifiedFood(params: LogFoodParams): ToolResult {
+export async function logVerifiedFood(params: LogFoodParams): Promise<ToolResult> {
     try {
-        const food = getFoodById(params.foodId);
+        // Use Hybrid Engine to fetch food (supports both USDA and OpenFoodFacts)
+        const food = await FoodDataService.getById(params.foodId);
 
         if (!food) {
             return {
@@ -211,8 +228,11 @@ export function logVerifiedFood(params: LogFoodParams): ToolResult {
             data: {
                 logged: true,
                 food: food.name,
+                brand: food.brand,
                 portion: `${portionGrams}g`,
                 mealSlot: params.mealSlot || 'unspecified',
+                dataSource: food.dataSource,
+                sourceLabel: FoodDataService.getSourceLabel(food),
                 nutrition: {
                     calories: adjustedFood.macros.calories,
                     protein: adjustedFood.macros.protein,
@@ -222,6 +242,7 @@ export function logVerifiedFood(params: LogFoodParams): ToolResult {
             },
         };
     } catch (error) {
+        console.error('[logVerifiedFood] Error:', error);
         return {
             success: false,
             data: null,
@@ -231,12 +252,13 @@ export function logVerifiedFood(params: LogFoodParams): ToolResult {
 }
 
 // ============================================================================
-// GET FOOD DETAILS
+// GET FOOD DETAILS (Hybrid Engine)
 // ============================================================================
 
-export function getFoodDetails(params: GetFoodDetailsParams): ToolResult {
+export async function getFoodDetails(params: GetFoodDetailsParams): Promise<ToolResult> {
     try {
-        const food = getFoodById(params.foodId);
+        // Use Hybrid Engine to fetch food details
+        const food = await FoodDataService.getById(params.foodId);
 
         if (!food) {
             return {
@@ -256,8 +278,11 @@ export function getFoodDetails(params: GetFoodDetailsParams): ToolResult {
             data: {
                 id: food.id,
                 name: food.name,
+                brand: food.brand,
                 category: food.category,
                 isVerified: food.isVerified,
+                dataSource: food.dataSource,
+                sourceLabel: FoodDataService.getSourceLabel(food),
                 servingSize: `${food.servingSize}${food.servingUnit}`,
                 servingDescription: food.servingDescription,
                 macros: food.macros,
@@ -266,9 +291,13 @@ export function getFoodDetails(params: GetFoodDetailsParams): ToolResult {
                     minerals: minerals.map(n => ({ name: n.name, amount: `${n.amount}${n.unit}`, dv: n.dailyValuePercentage })),
                     other: other.map(n => ({ name: n.name, amount: `${n.amount}${n.unit}`, dv: n.dailyValuePercentage })),
                 },
+                note: food.dataSource === 'usda'
+                    ? 'This is USDA-verified data with comprehensive micronutrient information.'
+                    : 'This data is from OpenFoodFacts (crowd-sourced). Micronutrient data may be limited.',
             },
         };
     } catch (error) {
+        console.error('[getFoodDetails] Error:', error);
         return {
             success: false,
             data: null,
@@ -278,22 +307,22 @@ export function getFoodDetails(params: GetFoodDetailsParams): ToolResult {
 }
 
 // ============================================================================
-// MASTER EXECUTOR
+// MASTER EXECUTOR (Async for Hybrid Engine)
 // ============================================================================
 
-export function executeTool(toolName: AIToolName, args: any): ToolResult {
+export async function executeTool(toolName: AIToolName, args: any): Promise<ToolResult> {
     switch (toolName) {
         case 'search_food_database':
-            return searchFoodDatabase(args as SearchFoodParams);
+            return await searchFoodDatabase(args as SearchFoodParams);
 
         case 'get_user_status':
             return getUserStatus();
 
         case 'log_verified_food':
-            return logVerifiedFood(args as LogFoodParams);
+            return await logVerifiedFood(args as LogFoodParams);
 
         case 'get_food_details':
-            return getFoodDetails(args as GetFoodDetailsParams);
+            return await getFoodDetails(args as GetFoodDetailsParams);
 
         case 'search_verified_fitness_knowledge':
             return searchVerifiedFitnessKnowledge(args as SearchFitnessKnowledgeParams);

@@ -156,8 +156,8 @@ class CoachService {
         const { name, arguments: args } = aiResponse.functionCall;
         toolsUsed.push(name);
 
-        // Execute the tool
-        const toolResult = executeTool(name as AIToolName, args || {});
+        // Execute the tool (async for Hybrid Food Engine)
+        const toolResult = await executeTool(name as AIToolName, args || {});
 
         // Track suggested foods
         let foodsSuggested: any[] = [];
@@ -229,22 +229,14 @@ class CoachService {
     private generateFallbackResponse(userMessage: string, context: UserContext): CoachResponse {
         const lowerMessage = userMessage.toLowerCase();
 
-        // Check for food suggestion intent
+        // Check for food suggestion intent (sync fallback - uses local data only)
         if (lowerMessage.includes('hungry') || lowerMessage.includes('eat') || lowerMessage.includes('snack')) {
-            const searchResult = executeTool('search_food_database', {
-                maxCalories: context.caloriesRemaining,
-                minProtein: 10,
-                verifiedOnly: true,
-            });
-
-            if (searchResult.success && searchResult.data.foods.length > 0) {
-                const food = searchResult.data.foods[0];
-                return {
-                    text: `Based on your remaining ${context.caloriesRemaining} calories, I recommend **${food.name}** (P: ${food.protein}g, C: ${food.carbs}g, F: ${food.fat}g, ${food.calories} cal). It has excellent protein density. Want me to log it?`,
-                    toolsUsed: ['search_food_database'],
-                    foodsSuggested: searchResult.data.foods,
-                };
-            }
+            // For fallback, we use a simplified sync approach
+            // The full async search is used in the main flow
+            return {
+                text: `You have ${context.caloriesRemaining} calories remaining. I recommend checking our food database for high-protein options. What are you in the mood for?`,
+                toolsUsed: [],
+            };
         }
 
         // Check for status intent
@@ -322,11 +314,12 @@ class CoachService {
 
     /**
      * Quick suggestion without full AI call
+     * Uses the Hybrid Food Engine for comprehensive search
      */
     async quickSuggest(params: { maxCalories?: number; minProtein?: number; category?: string }): Promise<any[]> {
-        const result = executeTool('search_food_database', {
+        const result = await executeTool('search_food_database', {
             ...params,
-            verifiedOnly: true,
+            verifiedOnly: false, // Include OpenFoodFacts for wider coverage
         });
 
         return result.success ? result.data.foods : [];

@@ -1,8 +1,11 @@
 import { useColorScheme } from 'react-native';
+import { useActiveTheme } from '../store/UserStore';
+import { ThemePalette, getThemePalette } from './themes';
 
 /**
  * Semantic Theme Engine
  * Defines the contract for Light/Dark mode colors.
+ * Now integrated with the Dynamic Theme System (Chromatosphere).
  */
 
 // Base Palettes
@@ -112,7 +115,158 @@ export const DarkTheme = {
 
 export type Theme = typeof LightTheme;
 
+/**
+ * Combined theme result that merges light/dark mode with dynamic palette
+ */
+export interface CombinedTheme {
+    // Light/Dark mode theme
+    mode: Theme;
+    isDark: boolean;
+
+    // Dynamic palette from Chromatosphere
+    palette: ThemePalette;
+
+    // Convenience accessors for the most common colors
+    colors: {
+        // From mode (light/dark)
+        background: string;
+        surface: string;
+        surfaceHighlight: string;
+        textPrimary: string;
+        textSecondary: string;
+        textMuted: string;
+        textInverse: string;
+        border: string;
+        borderSubtle: string;
+        glassTint: 'light' | 'dark';
+        glassBorder: string;
+
+        // From dynamic palette
+        primary: string;
+        primaryLight: string;
+        secondary: string;
+        accent: string;
+        surfaceTint: string;
+        textContrast: string;
+        shadow: string;
+        shadowRgb: string;
+        gradientStart: string;
+        gradientEnd: string;
+        charts: [string, string, string, string];
+        macros: {
+            protein: string;
+            carbs: string;
+            fats: string;
+        };
+
+        // Status colors (from mode, can be overridden by palette)
+        success: string;
+        warning: string;
+        error: string;
+        gold: string;
+    };
+}
+
+/**
+ * Legacy hook - returns light/dark theme only
+ * @deprecated Use useCombinedTheme for full palette access
+ */
 export function useAppTheme() {
     const colorScheme = useColorScheme();
     return colorScheme === 'dark' ? DarkTheme : LightTheme;
+}
+
+/**
+ * Primary theme hook - combines light/dark mode with dynamic palette
+ * Use this for full access to all theme colors
+ */
+export function useCombinedTheme(): CombinedTheme {
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === 'dark';
+    const mode = isDark ? DarkTheme : LightTheme;
+    const palette = useActiveTheme();
+
+    return {
+        mode,
+        isDark,
+        palette,
+        colors: {
+            // From mode (light/dark)
+            background: mode.colors.background,
+            surface: mode.colors.surface,
+            surfaceHighlight: mode.colors.surfaceHighlight,
+            textPrimary: mode.colors.textPrimary,
+            textSecondary: mode.colors.textSecondary,
+            textMuted: mode.colors.textMuted,
+            textInverse: mode.colors.textInverse,
+            border: mode.colors.border,
+            borderSubtle: mode.colors.borderSubtle,
+            glassTint: mode.colors.glassTint as 'light' | 'dark',
+            glassBorder: mode.colors.glassBorder,
+
+            // From dynamic palette
+            primary: palette.colors.primary,
+            primaryLight: palette.colors.primaryLight,
+            secondary: palette.colors.secondary,
+            accent: palette.colors.accent,
+            surfaceTint: palette.colors.surfaceTint,
+            textContrast: palette.colors.textContrast,
+            shadow: palette.colors.shadow,
+            shadowRgb: palette.colors.shadowRgb,
+            gradientStart: palette.colors.gradient.start,
+            gradientEnd: palette.colors.gradient.end,
+            charts: palette.colors.charts,
+            macros: palette.colors.macros,
+
+            // Status colors (from mode, can be overridden by palette)
+            success: palette.colors.success || mode.colors.success,
+            warning: palette.colors.warning || mode.colors.warning,
+            error: palette.colors.error || mode.colors.error,
+            gold: mode.colors.gold,
+        },
+    };
+}
+
+/**
+ * Non-hook version for use outside React components
+ * Requires passing the active theme ID
+ */
+export function getCombinedTheme(isDark: boolean, themeId: string = 'vitamin-orange'): CombinedTheme {
+    const mode = isDark ? DarkTheme : LightTheme;
+    const palette = getThemePalette(themeId);
+
+    return {
+        mode,
+        isDark,
+        palette,
+        colors: {
+            background: mode.colors.background,
+            surface: mode.colors.surface,
+            surfaceHighlight: mode.colors.surfaceHighlight,
+            textPrimary: mode.colors.textPrimary,
+            textSecondary: mode.colors.textSecondary,
+            textMuted: mode.colors.textMuted,
+            textInverse: mode.colors.textInverse,
+            border: mode.colors.border,
+            borderSubtle: mode.colors.borderSubtle,
+            glassTint: mode.colors.glassTint as 'light' | 'dark',
+            glassBorder: mode.colors.glassBorder,
+            primary: palette.colors.primary,
+            primaryLight: palette.colors.primaryLight,
+            secondary: palette.colors.secondary,
+            accent: palette.colors.accent,
+            surfaceTint: palette.colors.surfaceTint,
+            textContrast: palette.colors.textContrast,
+            shadow: palette.colors.shadow,
+            shadowRgb: palette.colors.shadowRgb,
+            gradientStart: palette.colors.gradient.start,
+            gradientEnd: palette.colors.gradient.end,
+            charts: palette.colors.charts,
+            macros: palette.colors.macros,
+            success: palette.colors.success || mode.colors.success,
+            warning: palette.colors.warning || mode.colors.warning,
+            error: palette.colors.error || mode.colors.error,
+            gold: mode.colors.gold,
+        },
+    };
 }

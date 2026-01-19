@@ -43,7 +43,7 @@ export default function AddFriendModal() {
         cardAlt: isDark ? '#2C2C2E' : '#E8E8EA',
         text: isDark ? '#FFFFFF' : '#000000',
         textSecondary: isDark ? '#9CA3AF' : '#6B7280',
-        accent: '#EA6842',
+        accent: '#FF5C00', // Vitamin Orange - consistent with app design
         success: '#10B981',
         error: '#EF4444',
         border: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',

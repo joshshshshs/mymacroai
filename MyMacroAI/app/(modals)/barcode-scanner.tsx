@@ -28,7 +28,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-import { findFoodByBarcode } from '@/src/data/mockFoodDB';
+import { FoodDataService } from '@/src/services/food/FoodDataService';
 import { SPACING, RADIUS } from '@/src/design-system/tokens';
 import { MacroCoinIcon } from '@/src/components/ui/MacroCoinIcon';
 
@@ -54,25 +54,39 @@ export default function BarcodeScannerScreen() {
         top: `${scanLinePosition.value * 100}%`,
     }));
 
-    const handleBarcodeScanned = ({ data }: { data: string }) => {
+    const handleBarcodeScanned = async ({ data }: { data: string }) => {
         if (!isScanning || isProcessing) return;
 
         setIsScanning(false);
         setIsProcessing(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-        // Look up the barcode
-        const food = findFoodByBarcode(data);
+        try {
+            // Use Hybrid Food Engine to look up barcode
+            // Tier 1: Checks local USDA database first
+            // Tier 2: Falls back to OpenFoodFacts API
+            const food = await FoodDataService.getByBarcode(data);
 
-        if (food) {
-            // Found - navigate to food detail
-            router.replace({
-                pathname: '/(modals)/food-detail',
-                params: { foodId: food.id },
-            } as any);
-        } else {
-            // Not found - show message and redirect to search
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            if (food) {
+                // Found - navigate to food detail
+                router.replace({
+                    pathname: '/(modals)/food-detail',
+                    params: { foodId: food.id },
+                } as any);
+            } else {
+                // Not found in any database - offer Bounty Hunter Protocol
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                setTimeout(() => {
+                    router.replace({
+                        pathname: '/(modals)/food-contribute',
+                        params: { barcode: data },
+                    } as any);
+                }, 1500);
+            }
+        } catch (error) {
+            console.error('[BarcodeScanner] Lookup failed:', error);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            // On error, redirect to manual search
             setTimeout(() => {
                 router.replace({
                     pathname: '/(modals)/log-meal',

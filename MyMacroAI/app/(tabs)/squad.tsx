@@ -108,7 +108,7 @@ export default function SocialHubScreen() {
     cardAlt: isDark ? '#2C2C2E' : '#E8E8EA',
     text: isDark ? '#FFFFFF' : '#000000',
     textSecondary: isDark ? '#9CA3AF' : '#6B7280',
-    accent: '#EA6842', // Orange accent
+    accent: '#FF5C00', // Vitamin Orange - consistent with app design
     gold: '#FFC107',
     silver: '#C0C0C0',
     bronze: '#CD7F32',

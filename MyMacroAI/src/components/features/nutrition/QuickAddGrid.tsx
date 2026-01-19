@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useAppTheme } from '@/src/design-system/theme';
 
 export const QuickAddGrid = () => {
     const haptics = useHaptics();
+    const { colors } = useAppTheme();
 
     const actions = [
         { id: 'search', label: 'Search', icon: 'search-outline' as const },
@@ -31,8 +33,8 @@ export const QuickAddGrid = () => {
                             onPress={() => handlePress(action.id)}
                             activeOpacity={0.7}
                         >
-                            <View style={styles.iconBox}>
-                                <Ionicons name={action.icon} size={24} color="#F97316" />
+                            <View style={[styles.iconBox, { backgroundColor: `${colors.primary}10` }]}>
+                                <Ionicons name={action.icon} size={24} color={colors.primary} />
                             </View>
                             <Text style={styles.label}>{action.label}</Text>
                         </TouchableOpacity>

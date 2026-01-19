@@ -32,8 +32,8 @@ const TABS: Tab[] = [
   { name: 'dashboard', label: 'Home', icon: 'home-outline', iconFilled: 'home' },
   { name: 'nutrition', label: 'Food', icon: 'restaurant-outline', iconFilled: 'restaurant' },
   { name: 'ai-hub', label: 'AI', icon: 'sparkles-outline', iconFilled: 'sparkles' },
+  { name: 'community', label: 'Kitchen', icon: 'globe-outline', iconFilled: 'globe' },
   { name: 'health', label: 'Health', icon: 'heart-outline', iconFilled: 'heart' },
-  { name: 'squad', label: 'Social', icon: 'people-outline', iconFilled: 'people' },
 ];
 
 interface ProtrudingTabBarProps {

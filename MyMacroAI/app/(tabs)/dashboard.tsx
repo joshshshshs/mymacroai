@@ -270,7 +270,7 @@ export default function DashboardScreen() {
     if (id === 'workout') router.push('/(modals)/import' as any);
     if (id === 'meal') router.push('/(tabs)/nutrition');
     if (id === 'water') router.push('/(tabs)/health');
-    if (id === 'voice') router.push('/(modals)/scan' as any);
+    if (id === 'voice') router.push('/(tabs)/ai');
   };
 
   const GlassCard = ({

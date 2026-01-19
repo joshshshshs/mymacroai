@@ -46,7 +46,7 @@ export default function ReferralsModal() {
         glass: isDark ? 'rgba(30, 30, 32, 0.65)' : 'rgba(255, 255, 255, 0.65)',
         text: isDark ? '#FFFFFF' : '#000000',
         textSecondary: isDark ? '#9CA3AF' : '#6B7280',
-        accent: '#EA6842',
+        accent: '#FF5C00', // Vitamin Orange - consistent with app design
         success: '#10B981',
         border: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
     };
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
         borderRadius: 44,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#EA6842',
+        shadowColor: '#FF5C00',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 12,
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 16,
         gap: 8,
-        shadowColor: '#EA6842',
+        shadowColor: '#FF5C00',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.25,
         shadowRadius: 8,

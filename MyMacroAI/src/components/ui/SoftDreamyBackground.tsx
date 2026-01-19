@@ -1,11 +1,16 @@
 import { View, StyleSheet, useColorScheme, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useCombinedTheme } from '@/src/design-system/theme';
 
 /**
- * SoftDreamyBackground - Zentra-style
- * - Light Mode: Soft cream/beige gradient matching the mockup
- * - Dark Mode: Deep forest theme with bioluminescent accents
+ * SoftDreamyBackground - Dynamic Theme Aware
+ * 
+ * Now uses the active theme palette to color the ambient blobs,
+ * creating a cohesive "branded" atmosphere.
+ * 
+ * - Light Mode: Soft cream/beige gradient with themed accent blobs
+ * - Dark Mode: Deep forest theme with themed bioluminescent accents
  */
 
 const { width, height } = Dimensions.get('window');
@@ -13,9 +18,10 @@ const { width, height } = Dimensions.get('window');
 export const SoftDreamyBackground: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { colors } = useCombinedTheme();
 
   if (isDark) {
-    // Deep Forest Theme with subtle gradients
+    // Deep Forest Theme with themed gradient blobs
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -25,20 +31,30 @@ export const SoftDreamyBackground: React.FC = () => {
           style={StyleSheet.absoluteFill}
         />
 
-        {/* Bioluminescent Bloom 1 (Teal) */}
+        {/* Bioluminescent Bloom 1 - Primary Theme Color */}
         <View style={[styles.bloom, {
           top: -100,
           left: -50,
-          backgroundColor: '#2DD4BF',
+          backgroundColor: colors.primary,
           opacity: 0.08
         }]} />
 
-        {/* Bioluminescent Bloom 2 (Violet) */}
+        {/* Bioluminescent Bloom 2 - Secondary Theme Color */}
         <View style={[styles.bloom, {
           bottom: -100,
           right: -50,
-          backgroundColor: '#A78BFA',
+          backgroundColor: colors.secondary,
           opacity: 0.06
+        }]} />
+
+        {/* Subtle accent bloom - center right */}
+        <View style={[styles.bloom, {
+          top: height * 0.3,
+          right: -80,
+          backgroundColor: colors.charts[2],
+          opacity: 0.04,
+          width: width * 0.6,
+          height: width * 0.6,
         }]} />
 
         <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
@@ -46,7 +62,7 @@ export const SoftDreamyBackground: React.FC = () => {
     );
   }
 
-  // Light Mode - Zentra-style soft cream/beige gradient (matching mockup)
+  // Light Mode - Zentra-style soft cream/beige with themed accent blobs
   return (
     <View style={styles.container}>
       {/* Main gradient - soft cream to light gray */}
@@ -57,30 +73,38 @@ export const SoftDreamyBackground: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Soft warm accent blob - top right */}
+      {/* Soft accent blob - top right - PRIMARY THEME COLOR */}
       <View style={[styles.softBlob, {
         top: -80,
         right: -60,
-        backgroundColor: '#FFE4C4',
-        opacity: 0.4,
+        backgroundColor: colors.primaryLight,
+        opacity: 0.6,
       }]} />
 
-      {/* Soft cool accent blob - bottom left */}
+      {/* Soft accent blob - bottom left - SURFACE TINT */}
       <View style={[styles.softBlob, {
         bottom: 100,
         left: -80,
-        backgroundColor: '#E8E4F0',
+        backgroundColor: colors.primaryLight,
         opacity: 0.5,
       }]} />
 
-      {/* Subtle pink accent - center */}
+      {/* Subtle secondary accent - center right */}
       <View style={[styles.softBlob, {
         top: height * 0.4,
         right: -100,
-        backgroundColor: '#FFE4E8',
-        opacity: 0.3,
+        backgroundColor: colors.charts[3],
+        opacity: 0.4,
         width: width * 0.6,
         height: width * 0.6,
+      }]} />
+
+      {/* Gradient glow behind ring area - SECONDARY COLOR */}
+      <View style={[styles.glowBlob, {
+        top: height * 0.15,
+        left: width * 0.1,
+        backgroundColor: colors.secondary,
+        opacity: 0.08,
       }]} />
 
       {/* Light blur overlay for dreaminess */}
@@ -106,5 +130,11 @@ const styles = StyleSheet.create({
     width: width * 0.7,
     height: width * 0.7,
     borderRadius: (width * 0.7) / 2,
+  },
+  glowBlob: {
+    position: 'absolute',
+    width: width * 0.8,
+    height: width * 0.8,
+    borderRadius: (width * 0.8) / 2,
   },
 });

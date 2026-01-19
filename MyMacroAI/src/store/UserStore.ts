@@ -18,6 +18,13 @@ import {
     ActiveCompound,
     DEFAULT_BIO_OPTIMIZATION_PROFILE,
 } from '../types';
+import {
+    ThemePalette,
+    getThemePalette,
+    getDefaultTheme,
+    isThemeAvailable,
+    getEffectivePrice,
+} from '../design-system/themes';
 
 // ============================================================================
 // MMKV Setup (Lazy Initialization with Fallback)
@@ -138,6 +145,12 @@ const INITIAL_SOCIAL = {
 
 const INITIAL_ATHLETE_PROFILE: AthleteProfile = DEFAULT_ATHLETE_PROFILE;
 
+// Theme System Defaults
+const INITIAL_THEME_STATE = {
+    activeThemeId: 'vitamin-orange',
+    ownedThemes: ['vitamin-orange'], // Default theme is always owned
+};
+
 // Training Style Types
 export type TrainingStyle =
     | 'bodybuilding'
@@ -248,6 +261,10 @@ export const useUserStore = create<UserState>()(
 
             // AI Personalization
             coachIntensity: 50, // Default: balanced (0=Gentle, 100=Spartan)
+
+            // Theme System (Chromatosphere)
+            activeThemeId: INITIAL_THEME_STATE.activeThemeId,
+            ownedThemes: INITIAL_THEME_STATE.ownedThemes,
 
             // ----------------------------------------------------------------
             // Core Actions
@@ -510,6 +527,59 @@ export const useUserStore = create<UserState>()(
                 set({ coachIntensity: Math.max(0, Math.min(100, intensity)) }),
 
             // ----------------------------------------------------------------
+            // Theme System Actions (Chromatosphere)
+            // ----------------------------------------------------------------
+
+            setActiveTheme: (themeId: string) => {
+                const state = get();
+                // Only allow setting if theme is available
+                if (isThemeAvailable(themeId, state.ownedThemes, state.isPro)) {
+                    set({ activeThemeId: themeId });
+                    return true;
+                }
+                return false;
+            },
+
+            purchaseTheme: (themeId: string) => {
+                const state = get();
+                const theme = getThemePalette(themeId);
+                const effectivePrice = getEffectivePrice(theme, state.isPro);
+
+                // Already owned?
+                if (state.ownedThemes.includes(themeId)) {
+                    return { success: false, reason: 'already_owned' };
+                }
+
+                // Free for Pro users?
+                if (theme.isPro && state.isPro) {
+                    set({
+                        ownedThemes: [...state.ownedThemes, themeId],
+                        activeThemeId: themeId, // Auto-equip on purchase
+                    });
+                    return { success: true, reason: 'pro_unlock' };
+                }
+
+                // Check coin balance
+                if (state.economy.macroCoins < effectivePrice) {
+                    return { success: false, reason: 'insufficient_funds' };
+                }
+
+                // Execute purchase
+                set({
+                    ownedThemes: [...state.ownedThemes, themeId],
+                    activeThemeId: themeId, // Auto-equip on purchase
+                    coins: state.coins - effectivePrice,
+                    economy: {
+                        ...state.economy,
+                        macroCoins: state.economy.macroCoins - effectivePrice,
+                        totalSpent: state.economy.totalSpent + effectivePrice,
+                        unlockedThemes: [...state.economy.unlockedThemes, themeId],
+                    },
+                });
+                return { success: true, reason: 'purchased' };
+            },
+
+            // ----------------------------------------------------------------
             // Action Groups
             // ----------------------------------------------------------------
 
@@ -580,6 +650,9 @@ export const useUserStore = create<UserState>()(
                     social: persistedState.social || INITIAL_SOCIAL,
                     dailyTargetAdjustment: persistedState.dailyTargetAdjustment || DEFAULT_TARGET_ADJUSTMENT,
                     bioOptimizationProfile: persistedState.bioOptimizationProfile || DEFAULT_BIO_OPTIMIZATION_PROFILE,
+                    // Theme System migration
+                    activeThemeId: persistedState.activeThemeId || INITIAL_THEME_STATE.activeThemeId,
+                    ownedThemes: persistedState.ownedThemes || INITIAL_THEME_STATE.ownedThemes,
                 };
             },
         }
@@ -656,6 +729,30 @@ export const usePeptideDisclaimerAcknowledged = () => useUserStore(state => stat
 
 // AI Personalization Hooks
 export const useCoachIntensity = () => useUserStore(state => state.coachIntensity);
+
+// Theme System Hooks (Chromatosphere)
+export const useActiveThemeId = () => useUserStore(state => state.activeThemeId);
+export const useOwnedThemes = () => useUserStore(state => state.ownedThemes);
+export const useSetActiveTheme = () => useUserStore(state => state.setActiveTheme);
+export const usePurchaseTheme = () => useUserStore(state => state.purchaseTheme);
+
+/**
+ * Primary theme hook - returns the full theme palette for the active theme
+ * Use this in components to get all theme colors
+ */
+export const useActiveTheme = (): ThemePalette => {
+    const activeThemeId = useUserStore(state => state.activeThemeId);
+    return getThemePalette(activeThemeId);
+};
+
+/**
+ * Check if a specific theme is owned/available to the current user
+ */
+export const useIsThemeOwned = (themeId: string): boolean => {
+    const ownedThemes = useUserStore(state => state.ownedThemes);
+    const isPro = useUserStore(state => state.isPro);
+    return isThemeAvailable(themeId, ownedThemes, isPro);
+};
 
 // Shim for useUserActions to return bound actions
 export const useUserActions = () => {
