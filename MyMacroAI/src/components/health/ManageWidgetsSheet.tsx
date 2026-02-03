@@ -2,7 +2,7 @@
  * ManageWidgetsSheet - Bottom sheet for widget customization
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -11,6 +11,7 @@ import { WIDGET_REGISTRY, isWidgetUnlocked, getRequirementText } from '@/src/con
 import { useWidgetPreferences } from '@/hooks/useWidgetPreferences';
 import { useConnectedDevices } from '@/hooks/useConnectedDevices';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useTabBarStore } from '@/src/store/tabBarStore';
 
 interface Props {
     visible: boolean;
@@ -23,6 +24,16 @@ export const ManageWidgetsSheet: React.FC<Props> = ({ visible, onClose }) => {
     const { light } = useHaptics();
     const { preferences, toggleWidget } = useWidgetPreferences();
     const { connectedDevices } = useConnectedDevices();
+    const { hideTabBar, showTabBar } = useTabBarStore();
+
+    // Hide tab bar when sheet opens, show when it closes
+    useEffect(() => {
+        if (visible) {
+            hideTabBar();
+        } else {
+            showTabBar();
+        }
+    }, [visible, hideTabBar, showTabBar]);
 
     const colors = {
         bg: isDark ? '#1C1C1E' : '#FFFFFF',

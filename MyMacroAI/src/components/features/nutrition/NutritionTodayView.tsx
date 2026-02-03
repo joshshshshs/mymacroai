@@ -4,11 +4,14 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../../../design-system/tokens';
 import { useUserStore } from '@/src/store/UserStore';
+import { haptics } from '@/src/utils/haptics';
+import { useCombinedTheme } from '@/src/design-system/theme';
 
 interface Meal {
   id: string;
@@ -18,8 +21,8 @@ interface Meal {
 }
 
 export const NutritionTodayView: React.FC = () => {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { colors, isDark } = useCombinedTheme();
+  const router = useRouter();
 
   // Mock data - replace with actual store data
   const todayIntake = {
@@ -49,16 +52,32 @@ export const NutritionTodayView: React.FC = () => {
     { id: '4', name: 'Snacks', calories: 50, foods: ['Almonds', 'Apple Slice'] },
   ];
 
-  const textColor = isDark ? '#FFFFFF' : '#000000';
-  const secondaryTextColor = isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
-  const cardBg = isDark ? COLORS.forest.card : COLORS.mist.card;
+  const textColor = colors.textPrimary;
+  const secondaryTextColor = colors.textSecondary;
 
   const getProgressWidth = (current: number, goal: number) => {
     return Math.min((current / goal) * 100, 100);
   };
 
   const handleAddFood = (method: string) => {
-    // TODO: Open respective food logging flow based on method
+    haptics.light();
+
+    switch (method) {
+      case 'scan':
+        router.push('/(modals)/scan' as any);
+        break;
+      case 'voice':
+        router.push('/(modals)/voice-log' as any);
+        break;
+      case 'search':
+        router.push('/(modals)/search-food' as any);
+        break;
+      case 'barcode':
+        router.push('/(modals)/barcode' as any);
+        break;
+      default:
+        router.push('/(modals)/log-food' as any);
+    }
   };
 
   return (
@@ -95,7 +114,7 @@ export const NutritionTodayView: React.FC = () => {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${getProgressWidth(todayIntake.protein, goals.protein)}%`, backgroundColor: '#FB923C' }
+                  { width: `${getProgressWidth(todayIntake.protein, goals.protein)}%`, backgroundColor: colors.macros.protein }
                 ]}
               />
             </View>
@@ -108,7 +127,7 @@ export const NutritionTodayView: React.FC = () => {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${getProgressWidth(todayIntake.carbs, goals.carbs)}%`, backgroundColor: '#FB923C' }
+                  { width: `${getProgressWidth(todayIntake.carbs, goals.carbs)}%`, backgroundColor: colors.macros.carbs }
                 ]}
               />
             </View>
@@ -121,7 +140,7 @@ export const NutritionTodayView: React.FC = () => {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${getProgressWidth(todayIntake.fats, goals.fats)}%`, backgroundColor: '#FB923C' }
+                  { width: `${getProgressWidth(todayIntake.fats, goals.fats)}%`, backgroundColor: colors.macros.fats }
                 ]}
               />
             </View>
@@ -146,7 +165,7 @@ export const NutritionTodayView: React.FC = () => {
             </View>
 
             <TouchableOpacity style={styles.addButton}>
-              <Text style={[styles.addButtonText, { color: COLORS.accent.lime500 }]}>+ Add</Text>
+              <Text style={[styles.addButtonText, { color: colors.primary }]}>+ Add</Text>
             </TouchableOpacity>
           </View>
         </SoftGlassCard>
@@ -162,7 +181,7 @@ export const NutritionTodayView: React.FC = () => {
             onPress={() => handleAddFood('search')}
           >
             <View style={[styles.addFoodIconContainer, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' }]}>
-              <Ionicons name="search-outline" size={24} color={COLORS.accent.lime500} />
+              <Ionicons name="search-outline" size={24} color={colors.primary} />
             </View>
             <Text style={[styles.addFoodMethodLabel, { color: textColor }]}>Search</Text>
           </TouchableOpacity>
@@ -172,7 +191,7 @@ export const NutritionTodayView: React.FC = () => {
             onPress={() => handleAddFood('barcode')}
           >
             <View style={[styles.addFoodIconContainer, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' }]}>
-              <Ionicons name="barcode-outline" size={24} color={COLORS.accent.lime500} />
+              <Ionicons name="barcode-outline" size={24} color={colors.primary} />
             </View>
             <Text style={[styles.addFoodMethodLabel, { color: textColor }]}>Barcode</Text>
           </TouchableOpacity>
@@ -182,7 +201,7 @@ export const NutritionTodayView: React.FC = () => {
             onPress={() => handleAddFood('photo')}
           >
             <View style={[styles.addFoodIconContainer, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' }]}>
-              <Ionicons name="camera-outline" size={24} color={COLORS.accent.lime500} />
+              <Ionicons name="camera-outline" size={24} color={colors.primary} />
             </View>
             <Text style={[styles.addFoodMethodLabel, { color: textColor }]}>Photo</Text>
           </TouchableOpacity>
@@ -192,7 +211,7 @@ export const NutritionTodayView: React.FC = () => {
             onPress={() => handleAddFood('manual')}
           >
             <View style={[styles.addFoodIconContainer, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)' }]}>
-              <Ionicons name="create-outline" size={24} color={COLORS.accent.lime500} />
+              <Ionicons name="create-outline" size={24} color={colors.primary} />
             </View>
             <Text style={[styles.addFoodMethodLabel, { color: textColor }]}>Manual</Text>
           </TouchableOpacity>
@@ -203,7 +222,7 @@ export const NutritionTodayView: React.FC = () => {
       <View style={styles.footerNote}>
         <Text style={[styles.footerNoteText, { color: secondaryTextColor }]}>
           Targets auto-adjusted from activity today.{' '}
-          <Text style={{ color: COLORS.accent.lime500 }}>View details</Text>
+          <Text style={{ color: colors.primary }}>View details</Text>
         </Text>
       </View>
 

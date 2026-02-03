@@ -233,7 +233,7 @@ export default function FoodDetailScreen() {
         return (
             <View style={[styles.container, { backgroundColor: isDark ? '#0A0A0C' : '#F5F5F7' }]}>
                 <Stack.Screen options={{ headerShown: false }} />
-                <SafeAreaView style={styles.errorContainer}>
+                <SafeAreaView style={styles.errorContainer} edges={['top']}>
                     <Ionicons name="alert-circle" size={48} color="#8E8E93" />
                     <Text style={styles.errorText}>Food not found</Text>
                     <TouchableOpacity onPress={handleClose} style={styles.errorButton}>

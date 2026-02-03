@@ -18,23 +18,61 @@ import { useUserStore } from '../../store/UserStore';
 // TYPES
 // ============================================================================
 
+interface FoodSuggestion {
+    id?: string;
+    name: string;
+    calories: number;
+    protein: number;
+    carbs?: number;
+    fat?: number;
+    servingSize?: string;
+    source?: string;
+}
+
+interface FunctionCallArgs {
+    [key: string]: string | number | boolean | undefined;
+}
+
 interface ChatMessage {
     role: 'user' | 'assistant' | 'function';
     content: string;
     functionCall?: {
         name: string;
-        arguments: any;
+        arguments: FunctionCallArgs;
     };
     functionResponse?: {
         name: string;
-        response: any;
+        response: Record<string, unknown>;
     };
+}
+
+interface AIProxyResponse {
+    text?: string;
+    response?: string;
+    functionCall?: {
+        name: string;
+        arguments: FunctionCallArgs;
+    };
+}
+
+interface GeminiMessage {
+    role: 'user' | 'model' | 'assistant' | 'function';
+    parts?: Array<{ text: string }>;
+    content?: string;
+    name?: string;
+    functionCall?: { name: string; arguments: FunctionCallArgs };
+}
+
+interface ToolResult {
+    success: boolean;
+    data?: Record<string, unknown>;
+    error?: string;
 }
 
 interface CoachResponse {
     text: string;
     toolsUsed?: string[];
-    foodsSuggested?: any[];
+    foodsSuggested?: FoodSuggestion[];
 }
 
 // ============================================================================
@@ -81,7 +119,7 @@ class CoachService {
         const context = this.buildUserContext();
         const systemPrompt = generateMasterPrompt(context);
         const toolsUsed: string[] = [];
-        let foodsSuggested: any[] = [];
+        let foodsSuggested: FoodSuggestion[] = [];
 
         // Build messages array
         const messages = [
@@ -114,7 +152,7 @@ class CoachService {
             });
 
             if (error) {
-                console.error('AI Proxy error:', error);
+                if (__DEV__) console.error('[CoachService] AI Proxy error:', error);
                 return this.generateFallbackResponse(userMessage, context);
             }
 
@@ -130,7 +168,7 @@ class CoachService {
                 foodsSuggested,
             };
         } catch (err) {
-            console.error('CoachService error:', err);
+            if (__DEV__) console.error('[CoachService] Error:', err);
             return this.generateFallbackResponse(userMessage, context);
         }
     }
@@ -139,10 +177,10 @@ class CoachService {
      * Handle tool call recursively
      */
     private async handleToolCall(
-        aiResponse: any,
+        aiResponse: AIProxyResponse,
         originalMessage: string,
         systemPrompt: string,
-        messages: any[],
+        messages: GeminiMessage[],
         toolsUsed: string[],
         depth: number
     ): Promise<CoachResponse> {
@@ -160,9 +198,10 @@ class CoachService {
         const toolResult = await executeTool(name as AIToolName, args || {});
 
         // Track suggested foods
-        let foodsSuggested: any[] = [];
-        if (name === 'search_food_database' && toolResult.success) {
-            foodsSuggested = toolResult.data.foods || [];
+        let foodsSuggested: FoodSuggestion[] = [];
+        if (name === 'search_food_database' && toolResult.success && toolResult.data) {
+            const foods = toolResult.data.foods as FoodSuggestion[] | undefined;
+            foodsSuggested = foods || [];
         }
 
         // Send result back to AI
@@ -257,7 +296,7 @@ class CoachService {
     /**
      * Summarize tool result when AI can't respond
      */
-    private summarizeToolResult(toolName: string, result: any, toolsUsed: string[]): CoachResponse {
+    private summarizeToolResult(toolName: string, result: ToolResult, toolsUsed: string[]): CoachResponse {
         if (!result.success) {
             return {
                 text: `I tried to help but encountered an issue: ${result.error}. Please try again.`,
@@ -267,14 +306,15 @@ class CoachService {
 
         switch (toolName) {
             case 'search_food_database':
-                if (result.data.foods.length === 0) {
+                const foodsData = result.data?.foods as FoodSuggestion[] | undefined;
+                if (!foodsData || foodsData.length === 0) {
                     return {
                         text: 'I searched the database but couldn\'t find foods matching those criteria. Try adjusting your filters.',
                         toolsUsed,
                     };
                 }
-                const foods = result.data.foods.slice(0, 3);
-                const suggestions = foods.map((f: any) =>
+                const foods = foodsData.slice(0, 3);
+                const suggestions = foods.map((f: FoodSuggestion) =>
                     `• **${f.name}** - ${f.calories} cal (P: ${f.protein}g)`
                 ).join('\n');
                 return {
@@ -316,13 +356,13 @@ class CoachService {
      * Quick suggestion without full AI call
      * Uses the Hybrid Food Engine for comprehensive search
      */
-    async quickSuggest(params: { maxCalories?: number; minProtein?: number; category?: string }): Promise<any[]> {
+    async quickSuggest(params: { maxCalories?: number; minProtein?: number; category?: string }): Promise<FoodSuggestion[]> {
         const result = await executeTool('search_food_database', {
             ...params,
             verifiedOnly: false, // Include OpenFoodFacts for wider coverage
         });
 
-        return result.success ? result.data.foods : [];
+        return result.success && result.data ? (result.data.foods as FoodSuggestion[]) || [] : [];
     }
 }
 

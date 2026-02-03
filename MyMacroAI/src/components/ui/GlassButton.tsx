@@ -8,7 +8,7 @@ import Animated, {
     withSpring
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { VISCOUS_SPRING, SNAPPY_SPRING } from '../../utils/physics';
+import { VISCOUS_SPRING, SNAPPY_SPRING } from '../../utils/animations';
 import { haptics } from '../../utils/haptics';
 import { useCombinedTheme } from '../../design-system/theme';
 

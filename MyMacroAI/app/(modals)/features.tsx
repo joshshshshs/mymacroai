@@ -91,14 +91,6 @@ export default function FeaturesScreen() {
           iconBg: featureColors.green.bg,
           iconColor: featureColors.green.icon,
         },
-        {
-          icon: 'moon',
-          title: 'Sleep Analysis',
-          description: 'Deep sleep, REM, and recovery insights',
-          route: '/(tabs)/health',
-          iconBg: featureColors.purple.bg,
-          iconColor: featureColors.purple.icon,
-        },
       ],
     },
     {

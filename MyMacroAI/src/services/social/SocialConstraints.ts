@@ -38,13 +38,15 @@ export interface Reaction {
 }
 
 export interface ConsistencyMetrics {
-  userId: string;
-  logsThisWeek: number;
-  logsLastWeek: number;
-  currentStreak: number;
-  longestStreak: number;
+  userId?: string;
+  logsThisWeek?: number;
+  logsLastWeek?: number;
+  currentStreak?: number;
+  longestStreak?: number;
   consistencyScore: number; // 0-100, weighted formula
   rank?: number; // Rank within squad
+  totalLogs?: number;
+  logFrequency?: number;
 }
 
 class SocialConstraintsService {

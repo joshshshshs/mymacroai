@@ -13,6 +13,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -219,15 +220,43 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
             setActiveTheme(theme.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onThemeChange?.(theme.id);
+            Alert.alert(
+                `🎨 ${theme.name} Equipped!`,
+                'Your app theme has been updated. Enjoy your new look!',
+                [{ text: 'Nice!' }]
+            );
         } else if (economy.macroCoins >= effectivePrice) {
-            // Purchase theme
-            purchaseTheme(theme.id);
-            setActiveTheme(theme.id);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            onPurchase?.(theme.id);
+            // Confirm purchase
+            Alert.alert(
+                `Purchase ${theme.name}?`,
+                `This will cost ${effectivePrice.toLocaleString()} MacroCoins.\n\n${theme.description}`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Buy & Equip',
+                        style: 'default',
+                        onPress: () => {
+                            purchaseTheme(theme.id);
+                            setActiveTheme(theme.id);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            onPurchase?.(theme.id);
+                            Alert.alert(
+                                `🎨 ${theme.name} Unlocked!`,
+                                'Theme purchased and equipped! Your app now has a fresh new look.',
+                                [{ text: 'Awesome!' }]
+                            );
+                        },
+                    },
+                ]
+            );
         } else {
             // Not enough coins
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            Alert.alert(
+                'Insufficient Coins',
+                `You need ${(effectivePrice - economy.macroCoins).toLocaleString()} more MacroCoins to purchase ${theme.name}.`,
+                [{ text: 'OK' }]
+            );
         }
     };
 

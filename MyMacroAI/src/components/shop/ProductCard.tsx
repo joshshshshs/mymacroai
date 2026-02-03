@@ -47,7 +47,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
-    const iconData = getItemIcon(item.id, item.category, isDark);
+    const iconData = getItemIcon(item.id, item.category || 'utility', isDark);
 
     const colors = {
         card: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',

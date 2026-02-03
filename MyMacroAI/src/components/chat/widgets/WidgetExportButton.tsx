@@ -23,20 +23,20 @@ export const WidgetExportButton: React.FC<ExportButtonProps> = ({ data, type }) 
             case 'MACRO_PIE': {
                 const { p, c, f } = data;
                 const total = p * 4 + c * 4 + f * 9;
-                return `📊 Macro Breakdown\n\nProtein: ${p}g (${Math.round((p * 4 / total) * 100)}%)\nCarbs: ${c}g (${Math.round((c * 4 / total) * 100)}%)\nFat: ${f}g (${Math.round((f * 9 / total) * 100)}%)\n\nTotal: ${total} kcal\n\n— Exported from MyMacro AI`;
+                return `📊 Macro Breakdown\n\nProtein: ${p}g (${Math.round((p * 4 / total) * 100)}%)\nCarbs: ${c}g (${Math.round((c * 4 / total) * 100)}%)\nFat: ${f}g (${Math.round((f * 9 / total) * 100)}%)\n\nTotal: ${total} kcal\n\nExported from MyMacro AI`;
             }
 
             case 'PROGRESS_BAR': {
                 const { label, current, target, unit } = data;
                 const percent = Math.round((current / target) * 100);
-                return `📈 ${label}\n\nProgress: ${current}${unit} / ${target}${unit} (${percent}%)\n\n— Exported from MyMacro AI`;
+                return `📈 ${label}\n\nProgress: ${current}${unit} / ${target}${unit} (${percent}%)\n\nExported from MyMacro AI`;
             }
 
             case 'DATA_TABLE': {
                 const { title, headers, rows } = data;
                 const csvHeader = headers.join(',');
                 const csvRows = rows.map((row: string[]) => row.join(',')).join('\n');
-                return `📋 ${title}\n\n${csvHeader}\n${csvRows}\n\n— Exported from MyMacro AI`;
+                return `📋 ${title}\n\n${csvHeader}\n${csvRows}\n\nExported from MyMacro AI`;
             }
 
             default:

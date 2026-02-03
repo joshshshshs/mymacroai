@@ -1,6 +1,6 @@
 /**
- * Squad Ranking - Consistency leaderboard for squad members
- * Shows consistency scores and achievements
+ * Squad Ranking - Premium Leaderboard Redesign
+ * Global & Friends tabs with animated podium and modern design
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -11,13 +11,20 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  useColorScheme,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { SoftDreamyBackground } from '@/src/components/ui/SoftDreamyBackground';
+
+import { SPACING } from '@/src/design-system/tokens';
 import { socialConstraints, ConsistencyMetrics } from '@/src/services/social/SocialConstraints';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface RankedMember {
   id: string;
@@ -29,271 +36,297 @@ interface RankedMember {
   trend: 'up' | 'down' | 'same';
 }
 
-// Mock data - in production, fetched from socialConstraints service
-const MOCK_RANKINGS: RankedMember[] = [
-  {
-    id: '1',
-    username: 'FitWarrior',
-    score: 94,
-    rank: 1,
-    trend: 'same',
-    metrics: {
-      consistencyScore: 94,
-      currentStreak: 21,
-      longestStreak: 45,
-      logsThisWeek: 7,
-      totalLogs: 312,
-      logFrequency: 0.95,
-    },
-  },
-  {
-    id: '2',
-    username: 'MacroMaster',
-    score: 89,
-    rank: 2,
-    trend: 'up',
-    metrics: {
-      consistencyScore: 89,
-      currentStreak: 14,
-      longestStreak: 30,
-      logsThisWeek: 7,
-      totalLogs: 245,
-      logFrequency: 0.88,
-    },
-  },
-  {
-    id: '3',
-    username: 'HealthHero',
-    score: 82,
-    rank: 3,
-    trend: 'down',
-    metrics: {
-      consistencyScore: 82,
-      currentStreak: 8,
-      longestStreak: 22,
-      logsThisWeek: 5,
-      totalLogs: 189,
-      logFrequency: 0.72,
-    },
-  },
-  {
-    id: '4',
-    username: 'NutritionNinja',
-    score: 76,
-    rank: 4,
-    trend: 'up',
-    metrics: {
-      consistencyScore: 76,
-      currentStreak: 5,
-      longestStreak: 18,
-      logsThisWeek: 6,
-      totalLogs: 156,
-      logFrequency: 0.65,
-    },
-  },
-  {
-    id: 'current',
-    username: 'You',
-    score: 71,
-    rank: 5,
-    trend: 'up',
-    metrics: {
-      consistencyScore: 71,
-      currentStreak: 7,
-      longestStreak: 14,
-      logsThisWeek: 5,
-      totalLogs: 98,
-      logFrequency: 0.60,
-    },
-  },
-];
+type TabType = 'global' | 'friends';
 
 export default function SquadRankingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const [refreshing, setRefreshing] = useState(false);
-  const [rankings, setRankings] = useState<RankedMember[]>(MOCK_RANKINGS);
-  const [selectedMember, setSelectedMember] = useState<string | null>(null);
+  const [rankings, setRankings] = useState<RankedMember[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>('global');
+
+  const colors = {
+    bg: isDark ? '#0A0A0C' : '#F8F9FA',
+    card: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.9)',
+    cardBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255,255,255,0.6)' : '#6B7280',
+    textMuted: isDark ? 'rgba(255,255,255,0.4)' : '#9CA3AF',
+    tabActive: '#FF5C00',
+    tabInactive: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // In production, fetch real rankings from socialConstraints
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setRefreshing(false);
   }, []);
 
-  const handleMemberPress = useCallback((memberId: string) => {
+  const handleTabChange = (tab: TabType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedMember(selectedMember === memberId ? null : memberId);
-  }, [selectedMember]);
+    setActiveTab(tab);
+  };
 
-  const getRankBadge = (rank: number) => {
+  const getRankStyle = (rank: number) => {
     switch (rank) {
-      case 1: return { emoji: '🥇', color: '#FFD700' };
-      case 2: return { emoji: '🥈', color: '#C0C0C0' };
-      case 3: return { emoji: '🥉', color: '#CD7F32' };
-      default: return { emoji: `#${rank}`, color: 'rgba(255,255,255,0.3)' };
+      case 1: return { gradient: ['#FFD700', '#FFA500'], icon: 'trophy', size: 'large' };
+      case 2: return { gradient: ['#C0C0C0', '#A8A8A8'], icon: 'medal', size: 'medium' };
+      case 3: return { gradient: ['#CD7F32', '#A0522D'], icon: 'ribbon', size: 'small' };
+      default: return { gradient: ['#6B7280', '#4B5563'], icon: null, size: 'normal' };
     }
   };
 
   const getTrendIcon = (trend: 'up' | 'down' | 'same') => {
     switch (trend) {
-      case 'up': return { icon: 'arrow-up', color: '#10B981' };
-      case 'down': return { icon: 'arrow-down', color: '#EF4444' };
-      default: return { icon: 'remove', color: 'rgba(255,255,255,0.3)' };
+      case 'up': return { icon: 'caret-up', color: '#10B981' };
+      case 'down': return { icon: 'caret-down', color: '#EF4444' };
+      default: return { icon: 'remove', color: colors.textMuted };
     }
   };
 
-  const currentUser = rankings.find(r => r.id === 'current');
+  // Top 3 for podium
+  const topThree = rankings.slice(0, 3);
+  const restOfRankings = rankings.slice(3);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <SoftDreamyBackground />
+
+      <LinearGradient
+        colors={isDark ? ['#0A0A0C', '#141418', '#0A0A0C'] : ['#F8F9FA', '#FFFFFF', '#F8F9FA']}
+        style={StyleSheet.absoluteFill}
+      />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.backButton}
+            style={[styles.headerButton, { backgroundColor: colors.card }]}
           >
-            <Ionicons name="chevron-back" size={24} color="#FFF" />
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Squad Ranking</Text>
-          <View style={styles.backButton} />
+          <Text style={[styles.title, { color: colors.text }]}>Leaderboard</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/(modals)/add-friend' as any)}
+            style={[styles.headerButton, { backgroundColor: colors.card }]}
+          >
+            <Ionicons name="person-add-outline" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabContainer}>
+          <View style={[styles.tabBackground, { backgroundColor: colors.tabInactive }]}>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'global' && { backgroundColor: colors.tabActive }
+              ]}
+              onPress={() => handleTabChange('global')}
+            >
+              <Ionicons
+                name="globe-outline"
+                size={16}
+                color={activeTab === 'global' ? '#FFF' : colors.textMuted}
+              />
+              <Text style={[
+                styles.tabText,
+                { color: activeTab === 'global' ? '#FFF' : colors.textMuted }
+              ]}>Global</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'friends' && { backgroundColor: colors.tabActive }
+              ]}
+              onPress={() => handleTabChange('friends')}
+            >
+              <Ionicons
+                name="people-outline"
+                size={16}
+                color={activeTab === 'friends' ? '#FFF' : colors.textMuted}
+              />
+              <Text style={[
+                styles.tabText,
+                { color: activeTab === 'friends' ? '#FFF' : colors.textMuted }
+              ]}>Friends</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text} />
           }
         >
-          {currentUser && (
-            <View style={styles.yourRankCard}>
-              <View style={styles.yourRankLeft}>
-                <Text style={styles.yourRankLabel}>Your Ranking</Text>
-                <View style={styles.yourRankRow}>
-                  <Text style={styles.yourRankNumber}>#{currentUser.rank}</Text>
-                  <View style={[
-                    styles.trendBadge,
-                    { backgroundColor: `${getTrendIcon(currentUser.trend).color}20` }
-                  ]}>
-                    <Ionicons
-                      name={getTrendIcon(currentUser.trend).icon as any}
-                      size={12}
-                      color={getTrendIcon(currentUser.trend).color}
-                    />
-                  </View>
-                </View>
+          {rankings.length === 0 ? (
+            <Animated.View entering={FadeIn.duration(400)} style={styles.emptyState}>
+              <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
+                <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
               </View>
-              <View style={styles.yourScoreCircle}>
-                <Text style={styles.yourScore}>{currentUser.score}</Text>
-                <Text style={styles.yourScoreLabel}>Score</Text>
-              </View>
-            </View>
-          )}
-
-          <View style={styles.formulaCard}>
-            <Text style={styles.formulaTitle}>Consistency Score Formula</Text>
-            <View style={styles.formulaRow}>
-              <View style={styles.formulaItem}>
-                <Text style={styles.formulaWeight}>40%</Text>
-                <Text style={styles.formulaLabel}>Streak</Text>
-              </View>
-              <View style={styles.formulaItem}>
-                <Text style={styles.formulaWeight}>30%</Text>
-                <Text style={styles.formulaLabel}>Weekly</Text>
-              </View>
-              <View style={styles.formulaItem}>
-                <Text style={styles.formulaWeight}>20%</Text>
-                <Text style={styles.formulaLabel}>Frequency</Text>
-              </View>
-              <View style={styles.formulaItem}>
-                <Text style={styles.formulaWeight}>10%</Text>
-                <Text style={styles.formulaLabel}>Best</Text>
-              </View>
-            </View>
-          </View>
-
-          <Text style={styles.sectionTitle}>Leaderboard</Text>
-
-          <View style={styles.rankingList}>
-            {rankings.map((member) => {
-              const badge = getRankBadge(member.rank);
-              const trend = getTrendIcon(member.trend);
-              const isExpanded = selectedMember === member.id;
-              const isYou = member.id === 'current';
-
-              return (
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                {activeTab === 'global' ? 'No Global Rankings Yet' : 'No Friends Added'}
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                {activeTab === 'global'
+                  ? 'Start logging consistently to appear on the leaderboard'
+                  : 'Add friends to compete on the leaderboard'}
+              </Text>
+              {activeTab === 'friends' && (
                 <TouchableOpacity
-                  key={member.id}
-                  style={[
-                    styles.memberCard,
-                    isYou && styles.memberCardYou,
-                    isExpanded && styles.memberCardExpanded,
-                  ]}
-                  onPress={() => handleMemberPress(member.id)}
-                  activeOpacity={0.7}
+                  style={styles.addFriendButton}
+                  onPress={() => router.push('/(modals)/add-friend' as any)}
                 >
-                  <View style={styles.memberRow}>
-                    <View style={[styles.rankBadge, { backgroundColor: `${badge.color}20` }]}>
-                      <Text style={[styles.rankText, { color: badge.color }]}>
-                        {badge.emoji}
-                      </Text>
+                  <LinearGradient
+                    colors={['#FF5C00', '#FF8A50']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.addFriendGradient}
+                  >
+                    <Ionicons name="person-add" size={18} color="#FFF" />
+                    <Text style={styles.addFriendText}>Add Friends</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </Animated.View>
+          ) : (
+            <>
+              {/* Podium for Top 3 */}
+              {topThree.length >= 3 && (
+                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.podiumContainer}>
+                  {/* 2nd Place */}
+                  <View style={styles.podiumItem}>
+                    <View style={[styles.podiumAvatar, styles.podiumSecond, { borderColor: '#C0C0C0' }]}>
+                      <Text style={styles.podiumInitial}>{topThree[1].username.charAt(0)}</Text>
                     </View>
-
-                    <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, isYou && styles.memberNameYou]}>
-                        {member.username}
-                      </Text>
-                      <Text style={styles.memberStreak}>
-                        🔥 {member.metrics.currentStreak} day streak
-                      </Text>
-                    </View>
-
-                    <View style={styles.memberScore}>
-                      <Text style={styles.scoreValue}>{member.score}</Text>
-                      <View style={[styles.trendIcon, { backgroundColor: `${trend.color}15` }]}>
-                        <Ionicons name={trend.icon as any} size={12} color={trend.color} />
-                      </View>
+                    <Text style={[styles.podiumName, { color: colors.text }]} numberOfLines={1}>
+                      {topThree[1].username}
+                    </Text>
+                    <Text style={[styles.podiumScore, { color: '#C0C0C0' }]}>{topThree[1].score}</Text>
+                    <View style={[styles.podiumBase, styles.podiumBaseSecond, { backgroundColor: colors.card }]}>
+                      <Text style={[styles.podiumRank, { color: '#C0C0C0' }]}>2</Text>
                     </View>
                   </View>
 
-                  {isExpanded && (
-                    <View style={styles.expandedStats}>
-                      <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Logs This Week</Text>
-                        <Text style={styles.statValue}>{member.metrics.logsThisWeek}/7</Text>
-                      </View>
-                      <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Total Logs</Text>
-                        <Text style={styles.statValue}>{member.metrics.totalLogs}</Text>
-                      </View>
-                      <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Best Streak</Text>
-                        <Text style={styles.statValue}>{member.metrics.longestStreak} days</Text>
-                      </View>
-                      <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Frequency</Text>
-                        <Text style={styles.statValue}>
-                          {Math.round(member.metrics.logFrequency * 100)}%
+                  {/* 1st Place */}
+                  <View style={styles.podiumItem}>
+                    <View style={[styles.podiumCrown]}>
+                      <Ionicons name="trophy" size={24} color="#FFD700" />
+                    </View>
+                    <View style={[styles.podiumAvatar, styles.podiumFirst, { borderColor: '#FFD700' }]}>
+                      <Text style={[styles.podiumInitial, styles.podiumInitialFirst]}>
+                        {topThree[0].username.charAt(0)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.podiumName, { color: colors.text }]} numberOfLines={1}>
+                      {topThree[0].username}
+                    </Text>
+                    <Text style={[styles.podiumScore, { color: '#FFD700' }]}>{topThree[0].score}</Text>
+                    <View style={[styles.podiumBase, styles.podiumBaseFirst]}>
+                      <LinearGradient
+                        colors={['#FFD700', '#FFA500']}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <Text style={[styles.podiumRank, { color: '#FFF' }]}>1</Text>
+                    </View>
+                  </View>
+
+                  {/* 3rd Place */}
+                  <View style={styles.podiumItem}>
+                    <View style={[styles.podiumAvatar, styles.podiumThird, { borderColor: '#CD7F32' }]}>
+                      <Text style={styles.podiumInitial}>{topThree[2].username.charAt(0)}</Text>
+                    </View>
+                    <Text style={[styles.podiumName, { color: colors.text }]} numberOfLines={1}>
+                      {topThree[2].username}
+                    </Text>
+                    <Text style={[styles.podiumScore, { color: '#CD7F32' }]}>{topThree[2].score}</Text>
+                    <View style={[styles.podiumBase, styles.podiumBaseThird, { backgroundColor: colors.card }]}>
+                      <Text style={[styles.podiumRank, { color: '#CD7F32' }]}>3</Text>
+                    </View>
+                  </View>
+                </Animated.View>
+              )}
+
+              {/* Rest of Rankings */}
+              <Animated.View entering={FadeInDown.delay(200).springify()}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>FULL RANKINGS</Text>
+                {rankings.map((member, index) => {
+                  const trend = getTrendIcon(member.trend);
+                  const isTopThree = member.rank <= 3;
+
+                  return (
+                    <TouchableOpacity
+                      key={member.id}
+                      style={[styles.rankCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
+                      activeOpacity={0.8}
+                      onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+                    >
+                      <View style={[
+                        styles.rankNumber,
+                        isTopThree && { backgroundColor: `${getRankStyle(member.rank).gradient[0]}20` }
+                      ]}>
+                        <Text style={[
+                          styles.rankText,
+                          { color: isTopThree ? getRankStyle(member.rank).gradient[0] : colors.textSecondary }
+                        ]}>
+                          {member.rank}
                         </Text>
                       </View>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
 
-          <View style={styles.infoCard}>
-            <Ionicons name="information-circle" size={20} color="#3B82F6" />
-            <Text style={styles.infoText}>
-              Rankings update daily. Keep logging consistently to climb the leaderboard!
-            </Text>
-          </View>
+                      <View style={styles.rankAvatar}>
+                        <Text style={[styles.rankInitial, { color: colors.text }]}>
+                          {member.username.charAt(0)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.rankInfo}>
+                        <Text style={[styles.rankName, { color: colors.text }]}>{member.username}</Text>
+                        <View style={styles.rankStreak}>
+                          <Ionicons name="flame" size={12} color="#FF5C00" />
+                          <Text style={[styles.rankStreakText, { color: colors.textMuted }]}>
+                            {member.metrics.currentStreak} day streak
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.rankScore}>
+                        <Text style={[styles.scoreValue, { color: colors.text }]}>{member.score}</Text>
+                        <View style={[styles.trendBadge, { backgroundColor: `${trend.color}15` }]}>
+                          <Ionicons name={trend.icon as any} size={12} color={trend.color} />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </Animated.View>
+
+              {/* How Scoring Works */}
+              <Animated.View entering={FadeInDown.delay(300).springify()}>
+                <TouchableOpacity
+                  style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.infoIcon, { backgroundColor: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.1)' }]}>
+                    <Ionicons name="help-circle" size={20} color="#3B82F6" />
+                  </View>
+                  <View style={styles.infoContent}>
+                    <Text style={[styles.infoTitle, { color: colors.text }]}>How Scoring Works</Text>
+                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                      40% Streak + 30% Weekly logs + 20% Frequency + 10% Best streak
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              </Animated.View>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -303,7 +336,6 @@ export default function SquadRankingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
   },
   safeArea: {
     flex: 1,
@@ -315,48 +347,216 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backButton: {
-    width: 44,
-    height: 44,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFF',
+  },
+  tabContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  tabBackground: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 8,
   },
-  yourRankCard: {
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 69, 0, 0.15)',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 69, 0, 0.3)',
+    paddingVertical: 60,
   },
-  yourRankLeft: {},
-  yourRankLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  yourRankRow: {
-    flexDirection: 'row',
+  emptyIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
+    marginBottom: 24,
   },
-  yourRankNumber: {
-    fontSize: 32,
+  emptyTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FF4500',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  addFriendButton: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  addFriendGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  addFriendText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  podiumContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    marginBottom: 32,
+    paddingTop: 40,
+  },
+  podiumItem: {
+    alignItems: 'center',
+    width: (SCREEN_WIDTH - 40) / 3,
+  },
+  podiumCrown: {
+    marginBottom: 8,
+  },
+  podiumAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    marginBottom: 8,
+  },
+  podiumFirst: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  podiumSecond: {},
+  podiumThird: {},
+  podiumInitial: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  podiumInitialFirst: {
+    fontSize: 28,
+  },
+  podiumName: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    maxWidth: 80,
+  },
+  podiumScore: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  podiumBase: {
+    width: '90%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    overflow: 'hidden',
+  },
+  podiumBaseFirst: {
+    height: 80,
+  },
+  podiumBaseSecond: {
+    height: 60,
+  },
+  podiumBaseThird: {
+    height: 45,
+  },
+  podiumRank: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 14,
+    marginLeft: 4,
+  },
+  rankCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+  },
+  rankNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rankText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rankAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 92, 0, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rankInitial: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  rankInfo: {
+    flex: 1,
+  },
+  rankName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  rankStreak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  rankStreakText: {
+    fontSize: 12,
+  },
+  rankScore: {
+    alignItems: 'flex-end',
+  },
+  scoreValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   trendBadge: {
     width: 24,
@@ -365,159 +565,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  yourScoreCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255, 69, 0, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  yourScore: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FF4500',
-  },
-  yourScoreLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
-  },
-  formulaCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-  },
-  formulaTitle: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  formulaRow: {
+  infoCard: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  formulaItem: {
     alignItems: 'center',
-  },
-  formulaWeight: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-    marginBottom: 2,
-  },
-  formulaLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.4)',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
-    marginBottom: 16,
-  },
-  rankingList: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  memberCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     padding: 16,
-  },
-  memberCardYou: {
-    backgroundColor: 'rgba(255, 69, 0, 0.1)',
+    marginTop: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 0, 0.3)',
+    gap: 12,
   },
-  memberCardExpanded: {
-    paddingBottom: 20,
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rankBadge: {
+  infoIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rankText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  memberInfo: {
+  infoContent: {
     flex: 1,
-    marginLeft: 14,
   },
-  memberName: {
-    fontSize: 16,
+  infoTitle: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
     marginBottom: 2,
-  },
-  memberNameYou: {
-    color: '#FF4500',
-  },
-  memberStreak: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-  },
-  memberScore: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  scoreValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  trendIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  expandedStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-    gap: 12,
-  },
-  statItem: {
-    width: '45%',
-  },
-  statLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.4)',
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFF',
-  },
-  infoCard: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 12,
-    padding: 14,
-    gap: 12,
-    alignItems: 'flex-start',
   },
   infoText: {
-    flex: 1,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
-    lineHeight: 18,
+    lineHeight: 16,
   },
 });

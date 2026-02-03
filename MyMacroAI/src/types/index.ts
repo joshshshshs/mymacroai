@@ -1,3 +1,9 @@
+// Re-export types from other files first (to ensure they're available before use)
+export * from './AthleteProfile';
+
+// Import AthleteProfile for use within this file
+import type { AthleteProfile } from './AthleteProfile';
+
 // ============================================================================
 // Core Data Types
 // ============================================================================
@@ -11,11 +17,16 @@ export type DailyLogType =
     | 'cycle'
     | 'weight';
 
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+
 export interface DailyLog {
     id: string;
     date: string; // ISO string
     timestamp: number;
     type: DailyLogType;
+
+    // Meal category for food logs
+    mealType?: MealType;
 
     // Core Food Data (Backward Compat with LogEntry)
     foodName?: string;
@@ -167,6 +178,13 @@ export interface UserPreferences {
     // App experience
     haptics: boolean;
     aiVoice: 'coach_alex' | 'coach_maya' | 'coach_marcus' | 'coach_sophia';
+    // Sleep scheduling preferences
+    unwindEnabled?: boolean;
+    dndEnabled?: boolean;
+    unwindTime?: string;
+    bedtime?: string;
+    wakeTime?: string;
+    sleepReminder?: boolean;
 }
 
 export interface FounderStatus {
@@ -181,10 +199,11 @@ export interface FounderStatus {
 export interface StoreItem {
     id: string;
     name: string;
-    description: string;
+    description?: string;
     price: number;
-    category: 'liquid_skins' | 'deep_dives' | 'streak_freeze' | 'avatars' | 'featured' | 'social' | 'utility' | 'aesthetics' | 'cosmetic';
-    rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    category?: 'liquid_skins' | 'deep_dives' | 'streak_freeze' | 'avatars' | 'featured' | 'social' | 'utility' | 'aesthetics' | 'cosmetic';
+    type?: 'skin' | 'freeze' | 'intel' | 'utility' | 'cosmetic';
+    rarity?: 'common' | 'rare' | 'epic' | 'legendary';
     isPurchased: boolean;
     effect?: string;
     icon?: string;
@@ -196,10 +215,13 @@ export interface UserEconomy {
     totalEarned: number;
     purchaseHistory: StoreItem[];
     unlockedThemes: string[];
+    streakFreezes?: number;
 }
 
 // ============================================================================
-// Social
+// Social (Local State Types)
+// Note: SocialConstraints.ts has service-layer types with different field names.
+// These types are used for local state management in UserStore.
 // ============================================================================
 
 export interface SquadMember {
@@ -246,6 +268,8 @@ export interface ConsistencyMetrics {
         completed: boolean;
         score: number;
     }[];
+    totalLogs?: number;
+    logFrequency?: number; // percentage
 }
 
 // Training Identity Types
@@ -354,6 +378,7 @@ export interface UserState {
 
     // Gamification & Social
     streak: number;
+    longestStreak: number;
     coins: number;
     purchaseHistory: StoreItem[];
     economy: UserEconomy;
@@ -384,10 +409,32 @@ export interface UserState {
     // AI Personalization
     coachIntensity: number; // 0 (Gentle) to 100 (David Goggins)
 
+    // Water Tracking
+    waterIntake: number;
+    waterGoal: number;
+    waterHistory: { id: string; amount: number; time: string; type: string }[];
+
+    // Theme System
+    activeThemeId: string;
+    ownedThemes: string[];
+
+    // Theme Actions
+    setActiveTheme: (themeId: string) => boolean;
+    purchaseTheme: (themeId: string) => { success: boolean; reason: string };
+
+    // Water Actions
+    logWater: (amount: number, type?: string) => void;
+    setWaterGoal: (goal: number) => void;
+    resetWaterIntake: () => void;
+
+    // Free Adjustment Actions
+    incrementFreeAdjustments: () => void;
+    syncHealthData: () => Promise<boolean>;
+
     // Actions
     updateIntake: (intake: Partial<MacroTarget>) => void;
     setDailyTargetAdjustment: (adjustment: Partial<MacroTarget>) => void;
-    logFood: (calories: number, protein: number, carbs: number, fats: number, name?: string) => void;
+    logFood: (calories: number, protein: number, carbs: number, fats: number, name?: string, mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snacks') => void;
     addDailyLog: (log: DailyLog) => void; // Added for IntentHandler
     updatePantry: (items: string[]) => void;
     addToPantry: (item: string) => void;
@@ -467,4 +514,4 @@ export function calculateConsistencyScore(
 
 export * from './ai';
 export * from './nutrition';
-export * from './AthleteProfile';
+export * from './food';

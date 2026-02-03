@@ -64,12 +64,24 @@ class HealthSyncService {
     });
   }
 
+  // Store last error for debugging
+  private lastError: Error | null = null;
+
+  /**
+   * Get the last error that occurred during initialization
+   */
+  getLastError(): Error | null {
+    return this.lastError;
+  }
+
   /**
    * 初始化健康数据同步服务
    */
   async initialize(): Promise<boolean> {
     try {
       if (this.isInitialized) return true;
+
+      this.lastError = null;
 
       if (Platform.OS === 'ios') {
         await this.initializeHealthKit();
@@ -82,6 +94,18 @@ class HealthSyncService {
       return true;
     } catch (error) {
       logger.error('HealthSync initialization failed:', error);
+      this.lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check for common iOS HealthKit errors and provide user-friendly messages
+      const errorMsg = String(error);
+      if (errorMsg.includes('not available')) {
+        this.lastError = new Error('Health data is not available on this device. Please ensure you have granted permissions in Settings > Privacy > Health.');
+      } else if (errorMsg.includes('permission') || errorMsg.includes('denied')) {
+        this.lastError = new Error('Health permissions were denied. Please go to Settings > Privacy > Health and enable access for MyMacroAI.');
+      } else if (errorMsg.includes('Authorization not determined')) {
+        this.lastError = new Error('Please allow MyMacroAI to access your health data when prompted.');
+      }
+
       return false;
     }
   }
@@ -443,11 +467,9 @@ class HealthSyncService {
    * 检查权限状态
    */
   async checkPermissions(): Promise<{ [key: string]: boolean }> {
+    // Return empty permissions if not initialized (graceful degradation)
     if (!this.isInitialized) {
-      throw new HealthError({
-        code: ErrorCode.HEALTH_NOT_INITIALIZED,
-        message: 'HealthSync service not initialized',
-      });
+      return {};
     }
 
     const permissions: { [key: string]: boolean } = {};

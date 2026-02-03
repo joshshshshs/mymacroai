@@ -1,6 +1,7 @@
 /**
  * Body Scan Briefing Screen - Educational setup before camera
  * Establishes trust and ensures proper positioning
+ * Supports dark and light mode
  */
 
 import React from 'react';
@@ -11,18 +12,18 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+    useColorScheme,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import Svg, { Path, Circle, Rect, G, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, G, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 import { SoftDreamyBackground } from '@/src/components/ui/SoftDreamyBackground';
-import { SPACING, RADIUS, SHADOWS, COLORS } from '@/src/design-system/tokens';
+import { SPACING, SHADOWS } from '@/src/design-system/tokens';
 
 const { width, height } = Dimensions.get('window');
 
@@ -67,17 +68,32 @@ interface ChecklistItemProps {
     title: string;
     description: string;
     delay: number;
+    colors: ReturnType<typeof getColors>;
 }
 
-const ChecklistItem: React.FC<ChecklistItemProps> = ({ icon, iconColor, title, description, delay }) => (
+const getColors = (isDark: boolean) => ({
+    bg: isDark ? '#0F0F0F' : '#F8F9FA',
+    text: isDark ? '#FFFFFF' : '#1F2937',
+    textSecondary: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+    textMuted: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+    card: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)',
+    cardBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.9)',
+    icon: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)',
+    privacyBg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)',
+    privacyBorder: isDark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.2)',
+    privacyTitle: isDark ? '#34D399' : '#065F46',
+    bottomBg: isDark ? 'rgba(15, 15, 15, 0.95)' : 'rgba(248, 249, 250, 0.95)',
+});
+
+const ChecklistItem: React.FC<ChecklistItemProps> = ({ icon, iconColor, title, description, delay, colors }) => (
     <Animated.View entering={FadeInDown.delay(delay).springify()}>
-        <View style={styles.checklistItem}>
+        <View style={[styles.checklistItem, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <View style={[styles.checklistIcon, { backgroundColor: `${iconColor}20` }]}>
                 <Ionicons name={icon as any} size={22} color={iconColor} />
             </View>
             <View style={styles.checklistContent}>
-                <Text style={styles.checklistTitle}>{title}</Text>
-                <Text style={styles.checklistDescription}>{description}</Text>
+                <Text style={[styles.checklistTitle, { color: colors.text }]}>{title}</Text>
+                <Text style={[styles.checklistDescription, { color: colors.textSecondary }]}>{description}</Text>
             </View>
         </View>
     </Animated.View>
@@ -86,6 +102,9 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({ icon, iconColor, title, d
 export default function BodyScanBriefingScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === 'dark';
+    const colors = getColors(isDark);
 
     const handleStartSequence = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -98,7 +117,7 @@ export default function BodyScanBriefingScreen() {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.bg }]}>
             <Stack.Screen options={{ headerShown: false }} />
             <SoftDreamyBackground />
 
@@ -106,9 +125,9 @@ export default function BodyScanBriefingScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                        <Ionicons name="chevron-back" size={24} color="rgba(0,0,0,0.7)" />
+                        <Ionicons name="chevron-back" size={24} color={colors.icon} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Body Composition Scan</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>Body Composition Scan</Text>
                     <View style={styles.backButton} />
                 </View>
 
@@ -125,13 +144,13 @@ export default function BodyScanBriefingScreen() {
                             <View style={styles.wireframeGlow} />
                             <WireframeBody />
                         </View>
-                        <Text style={styles.heroSubtitle}>
+                        <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
                             AI-Powered Body Analysis
                         </Text>
                     </Animated.View>
 
                     {/* Section Title */}
-                    <Text style={styles.sectionTitle}>PROTOCOL CHECKLIST</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>PROTOCOL CHECKLIST</Text>
 
                     {/* Checklist Cards */}
                     <View style={styles.checklistContainer}>
@@ -141,6 +160,7 @@ export default function BodyScanBriefingScreen() {
                             title="Light & Background"
                             description="Use consistent, even lighting. Stand against a plain wall or neutral background."
                             delay={200}
+                            colors={colors}
                         />
                         <ChecklistItem
                             icon="body"
@@ -148,6 +168,7 @@ export default function BodyScanBriefingScreen() {
                             title="Clothing"
                             description="Wear tight-fitting activewear or underwear. Baggy clothes confuse the AI analysis."
                             delay={300}
+                            colors={colors}
                         />
                         <ChecklistItem
                             icon="resize"
@@ -155,21 +176,22 @@ export default function BodyScanBriefingScreen() {
                             title="Positioning"
                             description="Place phone at waist height on a stable surface. Stand 2 meters (6 feet) back."
                             delay={400}
+                            colors={colors}
                         />
                     </View>
 
                     {/* Privacy Seal */}
                     <Animated.View entering={FadeInDown.delay(500).springify()}>
-                        <View style={styles.privacySeal}>
+                        <View style={[styles.privacySeal, { backgroundColor: colors.privacyBg, borderColor: colors.privacyBorder }]}>
                             <View style={styles.privacyIconContainer}>
                                 <View style={styles.shieldIcon}>
                                     <Ionicons name="shield-checkmark" size={24} color="#10B981" />
                                 </View>
                             </View>
                             <View style={styles.privacyContent}>
-                                <Text style={styles.privacyTitle}>Privacy-First Processing</Text>
-                                <Text style={styles.privacyDescription}>
-                                    Images are processed locally on your device. Only mathematical wireframes and measurements are saved — never your photos.
+                                <Text style={[styles.privacyTitle, { color: colors.privacyTitle }]}>Privacy-First Processing</Text>
+                                <Text style={[styles.privacyDescription, { color: colors.textSecondary }]}>
+                                    Images are processed locally on your device. Only mathematical wireframes and measurements are saved, never your photos.
                                 </Text>
                             </View>
                         </View>
@@ -177,35 +199,35 @@ export default function BodyScanBriefingScreen() {
 
                     {/* What to Expect */}
                     <Animated.View entering={FadeInDown.delay(600).springify()}>
-                        <View style={styles.expectCard}>
-                            <Text style={styles.expectTitle}>What to Expect</Text>
+                        <View style={[styles.expectCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+                            <Text style={[styles.expectTitle, { color: colors.text }]}>What to Expect</Text>
                             <View style={styles.expectSteps}>
                                 <View style={styles.expectStep}>
                                     <View style={styles.stepNumber}>
                                         <Text style={styles.stepNumberText}>1</Text>
                                     </View>
-                                    <Text style={styles.stepText}>Front pose</Text>
+                                    <Text style={[styles.stepText, { color: colors.textSecondary }]}>Front pose</Text>
                                 </View>
                                 <View style={styles.stepArrow}>
-                                    <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
+                                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                                 </View>
                                 <View style={styles.expectStep}>
                                     <View style={styles.stepNumber}>
                                         <Text style={styles.stepNumberText}>2</Text>
                                     </View>
-                                    <Text style={styles.stepText}>Side pose</Text>
+                                    <Text style={[styles.stepText, { color: colors.textSecondary }]}>Side pose</Text>
                                 </View>
                                 <View style={styles.stepArrow}>
-                                    <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
+                                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                                 </View>
                                 <View style={styles.expectStep}>
                                     <View style={styles.stepNumber}>
                                         <Text style={styles.stepNumberText}>3</Text>
                                     </View>
-                                    <Text style={styles.stepText}>Back pose</Text>
+                                    <Text style={[styles.stepText, { color: colors.textSecondary }]}>Back pose</Text>
                                 </View>
                             </View>
-                            <Text style={styles.expectNote}>
+                            <Text style={[styles.expectNote, { color: colors.textMuted }]}>
                                 5-second countdown timer allows you to get into position
                             </Text>
                         </View>
@@ -213,7 +235,7 @@ export default function BodyScanBriefingScreen() {
                 </ScrollView>
 
                 {/* Bottom Action */}
-                <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + 16 }]}>
+                <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + 16, backgroundColor: colors.bottomBg }]}>
                     <TouchableOpacity
                         style={styles.startButton}
                         onPress={handleStartSequence}
@@ -226,7 +248,7 @@ export default function BodyScanBriefingScreen() {
                             style={styles.startGradient}
                         >
                             <Ionicons name="camera" size={22} color="#FFF" />
-                            <Text style={styles.startText}>I'm Ready — Start Sequence</Text>
+                            <Text style={styles.startText}>I'm Ready - Start Sequence</Text>
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>
@@ -238,7 +260,6 @@ export default function BodyScanBriefingScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
     },
     safeArea: {
         flex: 1,
@@ -259,7 +280,6 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 17,
         fontWeight: '600',
-        color: '#1F2937',
     },
     scrollContent: {
         paddingHorizontal: 20,
@@ -287,13 +307,11 @@ const styles = StyleSheet.create({
     heroSubtitle: {
         fontSize: 14,
         fontWeight: '500',
-        color: 'rgba(0, 0, 0, 0.5)',
         letterSpacing: 0.5,
     },
     sectionTitle: {
         fontSize: 11,
         fontWeight: '800',
-        color: 'rgba(0, 0, 0, 0.4)',
         letterSpacing: 1.5,
         marginBottom: 16,
         marginLeft: 4,
@@ -305,11 +323,9 @@ const styles = StyleSheet.create({
     checklistItem: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.9)',
         ...SHADOWS.soft,
     },
     checklistIcon: {
@@ -326,23 +342,19 @@ const styles = StyleSheet.create({
     checklistTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#1F2937',
         marginBottom: 4,
     },
     checklistDescription: {
         fontSize: 13,
-        color: 'rgba(0, 0, 0, 0.5)',
         lineHeight: 18,
     },
     privacySeal: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(16, 185, 129, 0.08)',
         borderRadius: 16,
         padding: 16,
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: 'rgba(16, 185, 129, 0.2)',
     },
     privacyIconContainer: {
         marginRight: 14,
@@ -361,26 +373,21 @@ const styles = StyleSheet.create({
     privacyTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#065F46',
         marginBottom: 4,
     },
     privacyDescription: {
         fontSize: 12,
-        color: 'rgba(0, 0, 0, 0.5)',
         lineHeight: 16,
     },
     expectCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
         borderRadius: 16,
         padding: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.9)',
         ...SHADOWS.soft,
     },
     expectTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#1F2937',
         marginBottom: 16,
         textAlign: 'center',
     },
@@ -410,7 +417,6 @@ const styles = StyleSheet.create({
     stepText: {
         fontSize: 11,
         fontWeight: '500',
-        color: 'rgba(0, 0, 0, 0.6)',
     },
     stepArrow: {
         marginHorizontal: 16,
@@ -418,7 +424,6 @@ const styles = StyleSheet.create({
     },
     expectNote: {
         fontSize: 11,
-        color: 'rgba(0, 0, 0, 0.4)',
         textAlign: 'center',
     },
     bottomContainer: {
@@ -428,7 +433,6 @@ const styles = StyleSheet.create({
         right: 0,
         paddingHorizontal: 20,
         paddingTop: 16,
-        backgroundColor: 'rgba(248, 249, 250, 0.95)',
     },
     startButton: {
         borderRadius: 16,

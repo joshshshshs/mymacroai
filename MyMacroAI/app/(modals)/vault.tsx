@@ -6,9 +6,10 @@
  * 3. AI Wireframe scan with privacy blur
  * 4. Time-Lapse slider comparison with spring physics
  * 5. Controlled export with watermarks
+ * 6. Full light/dark mode support
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,6 +18,7 @@ import {
   Image,
   Dimensions,
   Alert,
+  useColorScheme,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,7 +35,6 @@ import Animated, {
   withSequence,
   interpolate,
   runOnJS,
-  Extrapolation,
 } from 'react-native-reanimated';
 import {
   Gesture,
@@ -46,34 +47,45 @@ import { WireframeScan } from '@/src/components/features/vault/WireframeScan';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Mock progress data - would come from secure storage
-const PROGRESS_DATA = {
-  day1: {
-    date: 'Day 1',
-    weight: 120,
-    image: 'https://via.placeholder.com/400x600/E5E7EB/6B7280?text=Day+1',
-  },
-  today: {
-    date: 'Today',
-    weight: 77,
-    image: 'https://via.placeholder.com/400x600/FFF/FF4500?text=Current',
-  },
-  metrics: {
-    fatLoss: 43,
-    muscleGain: 4.2,
-    monthsElapsed: 8,
-    dayNumber: 240,
-  },
+// Progress data loaded from secure storage - no mock data in production
+interface ProgressData {
+  day1: { date: string; weight: number; image: string | null } | null;
+  today: { date: string; weight: number; image: string | null } | null;
+  metrics: { fatLoss: number; muscleGain: number; monthsElapsed: number; dayNumber: number } | null;
+}
+
+const INITIAL_PROGRESS_DATA: ProgressData = {
+  day1: null,
+  today: null,
+  metrics: null,
 };
 
 type ViewMode = 'compare' | 'camera' | 'history' | 'analysis';
 
 export default function VaultScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('compare');
   const [showWireframe, setShowWireframe] = useState(true);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
+  const [progressData, setProgressData] = useState<ProgressData>(INITIAL_PROGRESS_DATA);
+
+  const colors = {
+    bg: isDark ? '#0A0A0A' : '#F5F5F7',
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255,255,255,0.6)' : '#6B7280',
+    textTertiary: isDark ? 'rgba(255,255,255,0.4)' : '#9CA3AF',
+    card: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.9)',
+    cardBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+    buttonBg: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+    accent: '#FF4500',
+    success: '#10B981',
+    navBg: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
+    navBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+    navIcon: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+  };
 
   // Animation values
   const sliderPosition = useSharedValue(SCREEN_WIDTH / 2);
@@ -158,7 +170,6 @@ export default function VaultScreen() {
   }));
 
   const afterImageStyle = useAnimatedStyle(() => {
-    // Use width-based clipping since clipPath isn't supported in React Native
     const widthPercent = ((SCREEN_WIDTH - sliderPosition.value) / SCREEN_WIDTH) * 100;
     return {
       width: `${widthPercent}%`,
@@ -166,10 +177,6 @@ export default function VaultScreen() {
       position: 'absolute' as const,
     };
   });
-
-  const authContainerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(authBlur.value, [0, 100], [0, 1]),
-  }));
 
   const lockPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: lockPulse.value }],
@@ -231,21 +238,21 @@ export default function VaultScreen() {
   // Authentication screen
   if (!isAuthenticated) {
     return (
-      <View style={styles.authContainer}>
+      <View style={[styles.authContainer, { backgroundColor: colors.bg }]}>
         <SoftDreamyBackground />
-        <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill}>
+        <BlurView intensity={isDark ? 80 : 60} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
           <View style={styles.authContent}>
             <Animated.View style={lockPulseStyle}>
-              <View style={styles.lockIconContainer}>
-                <Ionicons name="lock-closed" size={48} color="#FF4500" />
+              <View style={[styles.lockIconContainer, { backgroundColor: `${colors.accent}15`, borderColor: `${colors.accent}30` }]}>
+                <Ionicons name="lock-closed" size={48} color={colors.accent} />
               </View>
             </Animated.View>
-            <Text style={styles.authTitle}>Biometric Vault</Text>
-            <Text style={styles.authSubtitle}>Verifying your identity...</Text>
+            <Text style={[styles.authTitle, { color: colors.text }]}>Biometric Vault</Text>
+            <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>Verifying your identity...</Text>
             <View style={styles.authIndicator}>
-              <View style={styles.authIndicatorDot} />
-              <View style={[styles.authIndicatorDot, styles.authIndicatorDotDelay1]} />
-              <View style={[styles.authIndicatorDot, styles.authIndicatorDotDelay2]} />
+              <View style={[styles.authIndicatorDot, { backgroundColor: colors.accent, opacity: 0.3 }]} />
+              <View style={[styles.authIndicatorDot, { backgroundColor: colors.accent, opacity: 0.6 }]} />
+              <View style={[styles.authIndicatorDot, { backgroundColor: colors.accent, opacity: 1 }]} />
             </View>
           </View>
         </BlurView>
@@ -257,10 +264,10 @@ export default function VaultScreen() {
   if (viewMode === 'camera') {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.bg }]}>
           <Stack.Screen options={{ headerShown: false }} />
           <GhostCamera
-            ghostImageUri={PROGRESS_DATA.today.image}
+            ghostImageUri={progressData.today?.image ?? undefined}
             onCapture={handleCameraCapture}
             onCancel={() => setViewMode('compare')}
           />
@@ -273,14 +280,14 @@ export default function VaultScreen() {
   if (viewMode === 'analysis' && capturedPhotoUri) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.bg }]}>
           <Stack.Screen options={{ headerShown: false }} />
           <SafeAreaView style={styles.safeArea} edges={['top']}>
             <WireframeScan
               photoUri={capturedPhotoUri}
               onClose={handleAnalysisClose}
               onShare={handleAnalysisShare}
-              dayNumber={PROGRESS_DATA.metrics.dayNumber}
+              dayNumber={progressData.metrics?.dayNumber ?? 0}
             />
           </SafeAreaView>
         </View>
@@ -291,7 +298,7 @@ export default function VaultScreen() {
   // Main comparison view
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
         <Stack.Screen options={{ headerShown: false }} />
         <SoftDreamyBackground />
 
@@ -300,58 +307,58 @@ export default function VaultScreen() {
           <View style={styles.header}>
             <TouchableOpacity
               onPress={() => router.back()}
-              style={styles.backButton}
+              style={[styles.backButton, { backgroundColor: colors.buttonBg }]}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={24} color="#FFF" />
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             <View style={styles.headerRight}>
-              <View style={styles.lockBadge}>
-                <Ionicons name="lock-closed" size={12} color="#FF4500" />
-                <Text style={styles.lockText}>BIOMETRIC VAULT</Text>
+              <View style={[styles.lockBadge, { backgroundColor: `${colors.accent}15`, borderColor: `${colors.accent}30` }]}>
+                <Ionicons name="lock-closed" size={12} color={colors.accent} />
+                <Text style={[styles.lockText, { color: colors.accent }]}>BIOMETRIC VAULT</Text>
               </View>
             </View>
           </View>
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Transformation</Text>
-            <Text style={styles.title}>Time-Lapse</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Transformation</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Time-Lapse</Text>
           </View>
 
           {/* Comparison View */}
           <View style={styles.content}>
             {/* Main Comparison Container */}
-            <View style={styles.comparisonContainer}>
+            <View style={[styles.comparisonContainer, { backgroundColor: isDark ? '#1A1A1A' : '#E5E7EB' }]}>
               {/* Before Image (Left - Full) */}
-              <View style={[StyleSheet.absoluteFill, styles.beforeContainer]}>
+              <View style={[StyleSheet.absoluteFill, styles.beforeContainer, { backgroundColor: isDark ? '#1A1A1A' : '#E5E7EB' }]}>
                 <Image
-                  source={{ uri: PROGRESS_DATA.day1.image }}
+                  source={{ uri: progressData.day1?.image ?? undefined }}
                   style={styles.comparisonImage}
                   resizeMode="cover"
                 />
                 <LinearGradient
-                  colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.1)']}
+                  colors={isDark ? ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.1)'] : ['rgba(0,0,0,0.02)', 'rgba(0,0,0,0.05)']}
                   style={StyleSheet.absoluteFill}
                 />
-                <View style={[styles.dataBadge, styles.dataBadgeLeft]}>
-                  <Text style={styles.badgeLabel}>Day 1</Text>
-                  <Text style={styles.badgeValue}>{PROGRESS_DATA.day1.weight}kg</Text>
+                <View style={[styles.dataBadge, styles.dataBadgeLeft, { backgroundColor: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.95)' }]}>
+                  <Text style={[styles.badgeLabel, { color: colors.textSecondary }]}>Day 1</Text>
+                  <Text style={[styles.badgeValue, { color: isDark ? '#000' : '#1A1A1A' }]}>{progressData.day1?.weight ?? '--'}kg</Text>
                 </View>
               </View>
 
               {/* After Image (Right - Clipped) */}
               <Animated.View style={[StyleSheet.absoluteFill, afterImageStyle]}>
-                <View style={styles.afterContainer}>
+                <View style={[styles.afterContainer, { backgroundColor: isDark ? '#FFF' : '#FFFFFF' }]}>
                   {showWireframe && (
-                    <View style={[StyleSheet.absoluteFill, styles.wireframeOverlay]}>
+                    <View style={[StyleSheet.absoluteFill, styles.wireframeOverlay, { backgroundColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(255,69,0,0.05)' }]}>
                       {/* Grid pattern */}
                       {[...Array(8)].map((_, i) => (
                         <View
                           key={`h-${i}`}
                           style={[
                             styles.gridLine,
-                            { top: `${(i + 1) * 12.5}%`, left: 0, right: 0, height: 1 }
+                            { top: `${(i + 1) * 12.5}%`, left: 0, right: 0, height: 1, backgroundColor: `${colors.accent}20` }
                           ]}
                         />
                       ))}
@@ -360,23 +367,23 @@ export default function VaultScreen() {
                           key={`v-${i}`}
                           style={[
                             styles.gridLine,
-                            { left: `${(i + 1) * 20}%`, top: 0, bottom: 0, width: 1 }
+                            { left: `${(i + 1) * 20}%`, top: 0, bottom: 0, width: 1, backgroundColor: `${colors.accent}20` }
                           ]}
                         />
                       ))}
                     </View>
                   )}
                   <Image
-                    source={{ uri: PROGRESS_DATA.today.image }}
+                    source={{ uri: progressData.today?.image ?? undefined }}
                     style={[
                       styles.comparisonImage,
                       showWireframe && styles.wireframeImage,
                     ]}
                     resizeMode="cover"
                   />
-                  <View style={[styles.dataBadge, styles.dataBadgeRight]}>
-                    <Text style={[styles.badgeLabel, { color: '#FF4500' }]}>Today</Text>
-                    <Text style={styles.badgeValue}>{PROGRESS_DATA.today.weight}kg</Text>
+                  <View style={[styles.dataBadge, styles.dataBadgeRight, { backgroundColor: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.95)' }]}>
+                    <Text style={[styles.badgeLabel, { color: colors.accent }]}>Today</Text>
+                    <Text style={[styles.badgeValue, { color: isDark ? '#000' : '#1A1A1A' }]}>{progressData.today?.weight ?? '--'}kg</Text>
                   </View>
                 </View>
               </Animated.View>
@@ -392,24 +399,24 @@ export default function VaultScreen() {
                   <BlurView intensity={60} tint="light" style={styles.handleBlur}>
                     <Ionicons name="swap-horizontal" size={20} color="#666" />
                   </BlurView>
-                  <View style={styles.handlePulse} />
+                  <View style={[styles.handlePulse, { borderColor: `${colors.accent}30` }]} />
                 </Animated.View>
               </GestureDetector>
 
               {/* Bottom Action Buttons */}
               <View style={styles.comparisonActions}>
                 <TouchableOpacity style={styles.actionButton} onPress={handleMorphMode}>
-                  <BlurView intensity={40} tint="light" style={styles.actionButtonBlur}>
-                    <Ionicons name="play-circle-outline" size={18} color="#333" />
-                    <Text style={styles.actionButtonText}>Morph Mode</Text>
+                  <BlurView intensity={isDark ? 40 : 60} tint="light" style={styles.actionButtonBlur}>
+                    <Ionicons name="play-circle-outline" size={18} color={isDark ? '#333' : '#1A1A1A'} />
+                    <Text style={[styles.actionButtonText, { color: isDark ? '#333' : '#1A1A1A' }]}>Morph Mode</Text>
                   </BlurView>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.actionButton} onPress={handleSquadShare}>
-                  <BlurView intensity={40} tint="light" style={styles.actionButtonBlur}>
-                    <Ionicons name="share-social-outline" size={18} color="#999" />
-                    <Text style={[styles.actionButtonText, { color: '#999' }]}>Squad Share</Text>
-                    <View style={styles.shareIndicator} />
+                  <BlurView intensity={isDark ? 40 : 60} tint="light" style={styles.actionButtonBlur}>
+                    <Ionicons name="share-social-outline" size={18} color={isDark ? '#666' : '#6B7280'} />
+                    <Text style={[styles.actionButtonText, { color: isDark ? '#666' : '#6B7280' }]}>Squad Share</Text>
+                    <View style={[styles.shareIndicator, { backgroundColor: colors.accent }]} />
                   </BlurView>
                 </TouchableOpacity>
               </View>
@@ -417,49 +424,49 @@ export default function VaultScreen() {
 
             {/* Metrics Grid */}
             <View style={styles.metricsGrid}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>FAT LOSS</Text>
-                <Text style={styles.metricValue}>
-                  -{PROGRESS_DATA.metrics.fatLoss}
-                  <Text style={styles.metricUnit}>kg</Text>
+              <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>FAT LOSS</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>
+                  -{progressData.metrics?.fatLoss ?? 0}
+                  <Text style={[styles.metricUnit, { color: colors.textSecondary }]}>kg</Text>
                 </Text>
               </View>
 
-              <View style={[styles.metricCard, styles.metricCardHighlight]}>
-                <Text style={[styles.metricLabel, { color: '#FF4500' }]}>MUSCLE</Text>
-                <Text style={styles.metricValue}>
-                  +{PROGRESS_DATA.metrics.muscleGain}
-                  <Text style={styles.metricUnit}>%</Text>
+              <View style={[styles.metricCard, styles.metricCardHighlight, { backgroundColor: `${colors.accent}15`, borderColor: `${colors.accent}30` }]}>
+                <Text style={[styles.metricLabel, { color: colors.accent }]}>MUSCLE</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>
+                  +{progressData.metrics?.muscleGain ?? 0}
+                  <Text style={[styles.metricUnit, { color: colors.textSecondary }]}>%</Text>
                 </Text>
               </View>
 
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>TIME</Text>
-                <Text style={styles.metricValue}>
-                  {PROGRESS_DATA.metrics.monthsElapsed}
-                  <Text style={styles.metricUnit}>mo</Text>
+              <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TIME</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>
+                  {progressData.metrics?.monthsElapsed ?? 0}
+                  <Text style={[styles.metricUnit, { color: colors.textSecondary }]}>mo</Text>
                 </Text>
               </View>
             </View>
 
             {/* Privacy Badge */}
-            <View style={styles.privacyCard}>
-              <View style={styles.privacyIcon}>
-                <Ionicons name="shield-checkmark" size={20} color="#10B981" />
+            <View style={[styles.privacyCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <View style={[styles.privacyIcon, { backgroundColor: `${colors.success}15` }]}>
+                <Ionicons name="shield-checkmark" size={20} color={colors.success} />
               </View>
               <View style={styles.privacyText}>
-                <Text style={styles.privacyTitle}>Encrypted Locally</Text>
-                <Text style={styles.privacySubtitle}>Your photos never leave this device</Text>
+                <Text style={[styles.privacyTitle, { color: colors.text }]}>Encrypted Locally</Text>
+                <Text style={[styles.privacySubtitle, { color: colors.textSecondary }]}>Your photos never leave this device</Text>
               </View>
-              <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+              <Ionicons name="checkmark-circle" size={24} color={colors.success} />
             </View>
           </View>
         </SafeAreaView>
 
         {/* Bottom Navigation */}
         <View style={styles.bottomNav}>
-          <View style={styles.navContainer}>
-            <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[styles.navContainer, { borderColor: colors.navBorder }]}>
+            <BlurView intensity={isDark ? 60 : 80} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
 
             <TouchableOpacity
               style={styles.navButton}
@@ -468,7 +475,7 @@ export default function VaultScreen() {
               <Ionicons
                 name="grid-outline"
                 size={24}
-                color={viewMode === 'history' ? '#FF4500' : 'rgba(255,255,255,0.5)'}
+                color={viewMode === 'history' ? colors.accent : colors.navIcon}
               />
             </TouchableOpacity>
 
@@ -482,7 +489,7 @@ export default function VaultScreen() {
                   <Text style={styles.navButtonText}>Compare</Text>
                 </LinearGradient>
               ) : (
-                <Ionicons name="git-compare-outline" size={24} color="rgba(255,255,255,0.5)" />
+                <Ionicons name="git-compare-outline" size={24} color={colors.navIcon} />
               )}
             </TouchableOpacity>
 
@@ -493,7 +500,7 @@ export default function VaultScreen() {
               <Ionicons
                 name="camera-outline"
                 size={24}
-                color="rgba(255,255,255,0.5)"
+                color={colors.navIcon}
               />
             </TouchableOpacity>
 
@@ -507,7 +514,7 @@ export default function VaultScreen() {
               <Ionicons
                 name={showWireframe ? 'eye-outline' : 'eye-off-outline'}
                 size={24}
-                color="rgba(255,255,255,0.5)"
+                color={colors.navIcon}
               />
             </TouchableOpacity>
           </View>
@@ -520,11 +527,9 @@ export default function VaultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
   },
   authContainer: {
     flex: 1,
-    backgroundColor: '#000',
   },
   authContent: {
     flex: 1,
@@ -536,21 +541,17 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 69, 0, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 69, 0, 0.3)',
   },
   authTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#FFF',
     marginTop: 16,
   },
   authSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
   },
   authIndicator: {
     flexDirection: 'row',
@@ -561,14 +562,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FF4500',
-    opacity: 0.3,
-  },
-  authIndicatorDotDelay1: {
-    opacity: 0.6,
-  },
-  authIndicatorDotDelay2: {
-    opacity: 1,
   },
   safeArea: {
     flex: 1,
@@ -581,10 +574,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -599,15 +591,12 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: 'rgba(255,69,0,0.15)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,69,0,0.3)',
   },
   lockText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#FF4500',
     letterSpacing: 1.2,
   },
   titleContainer: {
@@ -617,7 +606,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#FFF',
     lineHeight: 36,
   },
   content: {
@@ -626,18 +614,14 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   comparisonContainer: {
-    height: 480,
+    height: 420,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#1A1A1A',
     position: 'relative',
   },
-  beforeContainer: {
-    backgroundColor: '#1A1A1A',
-  },
+  beforeContainer: {},
   afterContainer: {
     flex: 1,
-    backgroundColor: '#FFF',
   },
   comparisonImage: {
     width: '100%',
@@ -645,7 +629,6 @@ const styles = StyleSheet.create({
   },
   wireframeOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.4)',
     zIndex: 1,
   },
   wireframeImage: {
@@ -654,17 +637,13 @@ const styles = StyleSheet.create({
   },
   gridLine: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 69, 0, 0.15)',
   },
   dataBadge: {
     position: 'absolute',
-    top: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
+    top: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -672,22 +651,20 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   dataBadgeLeft: {
-    left: 24,
+    left: 20,
   },
   dataBadgeRight: {
-    right: 24,
+    right: 20,
   },
   badgeLabel: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#666',
-    letterSpacing: 1.5,
+    fontWeight: '700',
+    letterSpacing: 1,
     marginBottom: 2,
   },
   badgeValue: {
     fontSize: 18,
-    fontWeight: '900',
-    color: '#000',
+    fontWeight: '800',
   },
   sliderLine: {
     position: 'absolute',
@@ -698,8 +675,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.9)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     zIndex: 15,
   },
   sliderHandle: {
@@ -728,13 +705,12 @@ const styles = StyleSheet.create({
     bottom: -4,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: 'rgba(255,69,0,0.3)',
   },
   comparisonActions: {
     position: 'absolute',
-    bottom: 24,
-    left: 24,
-    right: 24,
+    bottom: 20,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
@@ -760,13 +736,11 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333',
   },
   shareIndicator: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FF4500',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -774,49 +748,38 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
-  metricCardHighlight: {
-    backgroundColor: 'rgba(255,69,0,0.15)',
-    borderColor: 'rgba(255,69,0,0.3)',
-  },
+  metricCardHighlight: {},
   metricLabel: {
     fontSize: 10,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 1.5,
+    fontWeight: '700',
+    letterSpacing: 1.2,
     marginBottom: 6,
   },
   metricValue: {
     fontSize: 20,
-    fontWeight: '900',
-    color: '#FFF',
+    fontWeight: '800',
   },
   metricUnit: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
   },
   privacyCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   privacyIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(16,185,129,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -824,14 +787,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   privacyTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#FFF',
     marginBottom: 2,
   },
   privacySubtitle: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
   },
   bottomNav: {
     position: 'absolute',
@@ -849,11 +810,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.2,
+    shadowRadius: 32,
   },
   navButton: {
     width: 48,
@@ -875,7 +835,7 @@ const styles = StyleSheet.create({
     shadowColor: '#FF4500',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
-    shadowRadius: 20,
+    shadowRadius: 16,
   },
   navButtonText: {
     fontSize: 14,

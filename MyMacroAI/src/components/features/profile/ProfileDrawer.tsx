@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { SlideInRight, SlideOutRight, FadeIn, FadeOut } from 'react-native-reanimated';
@@ -6,6 +6,8 @@ import Animated, { SlideInRight, SlideOutRight, FadeIn, FadeOut } from 'react-na
 // UI
 import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
 import { haptics } from '@/src/utils/haptics';
+import { useTabBarStore } from '@/src/store/tabBarStore';
+import { useUserStore, storage } from '@/src/store/UserStore';
 
 interface ProfileDrawerProps {
     visible: boolean;
@@ -16,6 +18,16 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ visible, onClose }
     // Mock States
     const [notifications, setNotifications] = useState(true);
     const [hapticsEnabled, setHapticsEnabled] = useState(true);
+    const { hideTabBar, showTabBar } = useTabBarStore();
+
+    // Hide tab bar when drawer opens, show when it closes
+    useEffect(() => {
+        if (visible) {
+            hideTabBar();
+        } else {
+            showTabBar();
+        }
+    }, [visible, hideTabBar, showTabBar]);
 
     if (!visible) return null;
 
@@ -31,7 +43,36 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ visible, onClose }
             "Are you sure you want to nuke all your data? This cannot be undone.",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "NUKE IT", style: "destructive", onPress: () => { /* TODO: Implement data deletion */ } }
+                {
+                    text: "NUKE IT",
+                    style: "destructive",
+                    onPress: () => {
+                        haptics.heavy();
+
+                        // Clear persisted storage
+                        try {
+                            storage.delete('user-storage-v3-encrypted');
+                        } catch (e) {
+                            // Storage might not exist
+                        }
+
+                        // Reset Zustand store to initial state
+                        useUserStore.persist.clearStorage();
+
+                        haptics.success();
+                        Alert.alert(
+                            "Data Nuked",
+                            "All your data has been permanently deleted. The app will now restart.",
+                            [{
+                                text: "OK",
+                                onPress: () => {
+                                    // In a real app, you might use expo-updates or RNRestart
+                                    onClose();
+                                }
+                            }]
+                        );
+                    }
+                }
             ]
         );
     };

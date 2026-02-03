@@ -23,9 +23,12 @@ import { BlurView } from 'expo-blur';
 
 import { useUserStore } from '@/src/store/UserStore';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useWidgetPreferences } from '@/hooks/useWidgetPreferences';
 import { SPACING } from '@/src/design-system/tokens';
 import { UpgradeHeaderButton } from '@/src/components/ui/UpgradeBanner';
 import { MacroCoinIcon } from '@/src/components/ui/MacroCoinIcon';
+import { GradientMeshBackground } from '@/src/components/ui/GradientMeshBackground';
+import { MyMacroAIAvatar } from '@/src/components/ui/MyMacroAIAvatar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTENT_PADDING = SPACING.lg;
@@ -75,7 +78,7 @@ const GREETING_VARIANTS: Record<GreetingTone, GreetingTemplate[]> = {
   welcome: [
     () => ({
       lead: 'Welcome!',
-      emphasis: 'Ready to transform.',
+      emphasis: 'Ready to transform?',
     }),
   ],
   starter: [
@@ -199,16 +202,17 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { light } = useHaptics();
   const { currentIntake, dailyTarget, economy, streak, dailyLog, user } = useUserStore();
+  const { preferences, isWidgetVisible } = useWidgetPreferences();
 
   const palette = {
-    bg: isDark ? '#0F1115' : '#F5F5F7',
+    bg: isDark ? '#0F1115' : '#F0F0F5', // Darker gray for light mode
     card: isDark ? 'rgba(23, 23, 28, 0.88)' : 'rgba(255, 255, 255, 0.85)',
     cardSolid: isDark ? '#1C1C20' : '#FFFFFF',
     text: isDark ? '#F5F5F7' : '#1C1C1E',
     muted: isDark ? 'rgba(255, 255, 255, 0.6)' : '#8E8E93',
     accent: '#FF4500',
     accentSoft: isDark ? 'rgba(255, 69, 0, 0.22)' : 'rgba(255, 69, 0, 0.12)',
-    border: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.7)',
+    border: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', // Darker hairline for light mode
     track: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
     coolGlow: isDark ? 'rgba(56, 189, 248, 0.16)' : 'rgba(59, 130, 246, 0.12)',
   };
@@ -258,19 +262,52 @@ export default function DashboardScreen() {
     dayKey: now.toISOString().slice(0, 10),
   });
 
-  const quickActions = [
-    { id: 'workout', icon: 'barbell-outline', label: 'Workout', color: palette.accent },
-    { id: 'meal', icon: 'restaurant-outline', label: 'Meal', color: '#F59E0B' },
-    { id: 'water', icon: 'water-outline', label: 'Water', color: '#3B82F6' },
-    { id: 'voice', icon: 'mic-outline', label: 'Voice Log', color: palette.accent },
-  ];
+  // All available quick actions
+  const allQuickActions: Record<string, { icon: string; label: string; color: string }> = {
+    workout: { icon: 'barbell-outline', label: 'Workout', color: palette.accent },
+    meal: { icon: 'restaurant-outline', label: 'Meal', color: '#F59E0B' },
+    water: { icon: 'water-outline', label: 'Water', color: '#3B82F6' },
+    voice: { icon: 'mic-outline', label: 'Voice Log', color: palette.accent },
+    scan: { icon: 'scan-outline', label: 'Scan', color: '#22C55E' },
+    weight: { icon: 'scale-outline', label: 'Weight', color: '#8B5CF6' },
+    journal: { icon: 'book-outline', label: 'Journal', color: '#EC4899' },
+    sleep: { icon: 'moon-outline', label: 'Sleep', color: '#6366F1' },
+  };
+
+  // Use saved preferences or defaults
+  const savedActions = preferences.quickActions || ['workout', 'meal', 'water', 'voice'];
+  const quickActions = savedActions
+    .filter((id) => allQuickActions[id])
+    .map((id) => ({ id, ...allQuickActions[id] }));
 
   const handleQuickAction = (id: string) => {
     light();
-    if (id === 'workout') router.push('/(modals)/import' as any);
-    if (id === 'meal') router.push('/(tabs)/nutrition');
-    if (id === 'water') router.push('/(tabs)/health');
-    if (id === 'voice') router.push('/(tabs)/ai');
+    switch (id) {
+      case 'workout':
+        router.push('/(modals)/ai-workout' as any);
+        break;
+      case 'meal':
+        router.push('/(modals)/log-meal' as any);
+        break;
+      case 'water':
+        router.push('/(modals)/water-log' as any);
+        break;
+      case 'voice':
+        router.push('/(modals)/voice-log' as any);
+        break;
+      case 'scan':
+        router.push('/(modals)/scan' as any);
+        break;
+      case 'weight':
+        router.push('/(modals)/log-meal' as any);
+        break;
+      case 'journal':
+        router.push('/(modals)/journaling' as any);
+        break;
+      case 'sleep':
+        router.push('/(tabs)/sleep');
+        break;
+    }
   };
 
   const GlassCard = ({
@@ -301,10 +338,7 @@ export default function DashboardScreen() {
     <View style={[styles.container, { backgroundColor: palette.bg }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View pointerEvents="none" style={styles.background}>
-        <View style={[styles.bgGlow, styles.bgGlowTop, { backgroundColor: palette.accentSoft }]} />
-        <View style={[styles.bgGlow, styles.bgGlowBottom, { backgroundColor: palette.coolGlow }]} />
-      </View>
+      <GradientMeshBackground variant="primary" />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
@@ -329,6 +363,13 @@ export default function DashboardScreen() {
 
           <View style={styles.headerChips}>
             <TouchableOpacity
+              style={[styles.headerChip, styles.editChip, { backgroundColor: palette.cardSolid, borderColor: palette.border }]}
+              onPress={() => { light(); router.push('/(modals)/dashboard-edit' as any); }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="grid-outline" size={14} color={palette.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.headerChip, { backgroundColor: palette.cardSolid, borderColor: palette.border }]}
               onPress={() => { light(); router.push('/(modals)/streak' as any); }}
               activeOpacity={0.7}
@@ -349,209 +390,217 @@ export default function DashboardScreen() {
             <UpgradeHeaderButton />
           </View>
 
-          <GlassCard style={styles.goalCard} intensity={70}>
-            <View style={[styles.ringWrap, { width: ringSize, height: ringSize }]}>
-              <View
-                style={[
-                  styles.ringGlow,
-                  {
-                    width: ringSize,
-                    height: ringSize,
-                    borderRadius: ringSize / 2,
-                    backgroundColor: palette.accentSoft,
-                  },
-                ]}
-              />
-              <Svg width={ringSize} height={ringSize}>
-                <Circle
-                  cx={ringSize / 2}
-                  cy={ringSize / 2}
-                  r={ringRadius}
-                  stroke={palette.track}
-                  strokeWidth={ringStroke}
-                  fill="none"
+          {isWidgetVisible('macro-ring') && (
+            <GlassCard style={styles.goalCard} intensity={70}>
+              <View style={[styles.ringWrap, { width: ringSize, height: ringSize }]}>
+                <View
+                  style={[
+                    styles.ringGlow,
+                    {
+                      width: ringSize,
+                      height: ringSize,
+                      borderRadius: ringSize / 2,
+                      backgroundColor: palette.accentSoft,
+                    },
+                  ]}
                 />
-                <Circle
-                  cx={ringSize / 2}
-                  cy={ringSize / 2}
-                  r={ringRadius}
-                  stroke={palette.accent}
-                  strokeWidth={ringStroke}
-                  strokeDasharray={`${ringCircumference} ${ringCircumference}`}
-                  strokeDashoffset={ringOffset}
-                  strokeLinecap="round"
-                  rotation="-90"
-                  origin={`${ringSize / 2}, ${ringSize / 2}`}
-                  fill="none"
-                />
-              </Svg>
-              <View style={styles.ringCenter}>
-                <Text style={[styles.ringPercent, { color: palette.text }]}>{goalPercent}%</Text>
-                <Text style={[styles.ringLabel, { color: palette.muted }]}>To Daily Goal</Text>
-              </View>
-            </View>
-
-            <View style={[styles.goalPill, { backgroundColor: palette.cardSolid, borderColor: palette.border }]}>
-              <Ionicons name="flame" size={16} color={palette.accent} />
-              <Text style={[styles.goalPillText, { color: palette.text }]}>
-                {calories.toLocaleString()} <Text style={{ color: palette.muted }}>/</Text>{' '}
-                {target.toLocaleString()}
-              </Text>
-            </View>
-          </GlassCard>
-
-          <GlassCard style={styles.aiCard} intensity={55}>
-            <View style={styles.aiHeader}>
-              <View style={[styles.aiIcon, { backgroundColor: palette.accentSoft }]}>
-                <Ionicons name="sparkles" size={18} color={palette.accent} />
-              </View>
-              <Text style={[styles.aiTitle, { color: palette.text }]}>AI Summary</Text>
-            </View>
-            <Text style={[styles.aiSummaryText, { color: palette.muted }]}>
-              {progress >= 1
-                ? 'Goal hit. Prioritize recovery and hydration.'
-                : progress > 0
-                  ? `${remaining.toLocaleString()} kcal left. Keep logging to stay on pace.`
-                  : 'Start logging to unlock personalized insights.'}
-            </Text>
-            <TouchableOpacity
-              style={[styles.aiInput, { backgroundColor: palette.cardSolid, borderColor: palette.border }]}
-              onPress={() => handleQuickAction('voice')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="mic" size={18} color={palette.accent} />
-              <Text style={[styles.aiInputText, { color: palette.muted }]}>Tap to voice log</Text>
-            </TouchableOpacity>
-          </GlassCard>
-
-          <View style={styles.actionStrip}>
-            {quickActions.map((action) => (
-              <TouchableOpacity
-                key={action.id}
-                style={styles.actionItem}
-                onPress={() => handleQuickAction(action.id)}
-                activeOpacity={0.8}
-              >
-                <GlassCard style={styles.actionCircle} intensity={35}>
-                  <Ionicons name={action.icon as any} size={26} color={action.color} />
-                </GlassCard>
-                <Text style={[styles.actionLabel, { color: palette.muted }]}>{action.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.summaryHeader}>
-            <Text style={[styles.summaryTitle, { color: palette.text }]}>Daily Summary</Text>
-            <View style={[styles.summaryDot, { backgroundColor: palette.accent }]} />
-          </View>
-
-          <View style={styles.summaryGrid}>
-            <GlassCard style={[styles.summaryCard, { width: CARD_WIDTH }]}>
-              <View style={styles.summaryCardHeader}>
-                <View>
-                  <Text style={[styles.cardKicker, { color: palette.muted }]}>Steps</Text>
-                  <Text style={[styles.cardValue, { color: palette.text }]}>
-                    {steps.toLocaleString()}
-                  </Text>
-                </View>
-                <Svg width={miniRingSize} height={miniRingSize}>
+                <Svg width={ringSize} height={ringSize}>
                   <Circle
-                    cx={miniRingSize / 2}
-                    cy={miniRingSize / 2}
-                    r={miniRingRadius}
+                    cx={ringSize / 2}
+                    cy={ringSize / 2}
+                    r={ringRadius}
                     stroke={palette.track}
-                    strokeWidth={miniRingStroke}
+                    strokeWidth={ringStroke}
                     fill="none"
                   />
                   <Circle
-                    cx={miniRingSize / 2}
-                    cy={miniRingSize / 2}
-                    r={miniRingRadius}
+                    cx={ringSize / 2}
+                    cy={ringSize / 2}
+                    r={ringRadius}
                     stroke={palette.accent}
-                    strokeWidth={miniRingStroke}
-                    strokeDasharray={`${miniRingCircumference} ${miniRingCircumference}`}
-                    strokeDashoffset={miniRingOffset}
+                    strokeWidth={ringStroke}
+                    strokeDasharray={`${ringCircumference} ${ringCircumference}`}
+                    strokeDashoffset={ringOffset}
                     strokeLinecap="round"
                     rotation="-90"
-                    origin={`${miniRingSize / 2}, ${miniRingSize / 2}`}
+                    origin={`${ringSize / 2}, ${ringSize / 2}`}
                     fill="none"
                   />
                 </Svg>
-              </View>
-              <View style={styles.stepsBars}>
-                {[0.3, 0.5, 0.8, 0.4, 0.6, 0.3].map((bar, index) => (
-                  <View
-                    key={`${bar}-${index}`}
-                    style={[
-                      styles.stepBar,
-                      {
-                        height: 36 * bar,
-                        backgroundColor: index === 2 ? palette.accent : palette.track,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-            </GlassCard>
-
-            <GlassCard style={[styles.summaryCard, { width: CARD_WIDTH }]}>
-              <View style={styles.calorieHeader}>
-                <Text style={[styles.cardKicker, { color: palette.muted }]}>Calories</Text>
-                <View style={styles.valueRow}>
-                  <Text style={[styles.cardValue, { color: palette.text }]}>
-                    {calories.toLocaleString()}
-                  </Text>
-                  <Text style={[styles.cardUnit, { color: palette.muted }]}>kcal</Text>
+                <View style={styles.ringCenter}>
+                  <Text style={[styles.ringPercent, { color: palette.text }]}>{goalPercent}%</Text>
+                  <Text style={[styles.ringLabel, { color: palette.muted }]}>To Daily Goal</Text>
                 </View>
               </View>
-              <View style={styles.calorieChart}>
-                <Svg width="100%" height="100%" viewBox="0 0 120 50" preserveAspectRatio="none">
-                  <Defs>
-                    <SvgLinearGradient id="calorieGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <Stop offset="0%" stopColor={palette.accent} stopOpacity="0.25" />
-                      <Stop offset="100%" stopColor={palette.accent} stopOpacity="0" />
-                    </SvgLinearGradient>
-                  </Defs>
-                  <Path
-                    d="M0,35 C10,35 20,15 35,25 S60,5 75,15 S100,5 110,0"
-                    fill="none"
-                    stroke={palette.accent}
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                  />
-                  <Path
-                    d="M0,35 C10,35 20,15 35,25 S60,5 75,15 S100,5 110,0 V50 H0 Z"
-                    fill="url(#calorieGrad)"
-                    stroke="none"
-                  />
-                </Svg>
+
+              <View style={[styles.goalPill, { backgroundColor: palette.cardSolid, borderColor: palette.border }]}>
+                <Ionicons name="flame" size={16} color={palette.accent} />
+                <Text style={[styles.goalPillText, { color: palette.text }]}>
+                  {calories.toLocaleString()} <Text style={{ color: palette.muted }}>/</Text>{' '}
+                  {target.toLocaleString()}
+                </Text>
               </View>
             </GlassCard>
+          )}
 
-            <GlassCard style={[styles.summaryCard, styles.summaryWide]}>
-              <View style={styles.distanceRow}>
-                <View>
-                  <Text style={[styles.cardKicker, { color: palette.muted }]}>Distance</Text>
-                  <View style={styles.valueRow}>
-                    <Text style={[styles.distanceValue, { color: palette.text }]}>{distanceKm.toFixed(1)}</Text>
-                    <Text style={[styles.cardUnit, { color: palette.muted }]}>km</Text>
+          {isWidgetVisible('ai-summary') && (
+            <GlassCard style={styles.aiCard} intensity={55}>
+              <View style={styles.aiHeader}>
+                <MyMacroAIAvatar size="small" />
+                <Text style={[styles.aiTitle, { color: palette.text }]}>MyMacro AI</Text>
+              </View>
+              <Text style={[styles.aiSummaryText, { color: palette.muted }]}>
+                {progress >= 1
+                  ? '🎯 Goal crushed! Time to focus on recovery and hydration.'
+                  : progress > 0
+                    ? `${remaining.toLocaleString()} kcal to go – you've got this! Keep logging.`
+                    : '✨ Start logging to unlock your personalized AI insights.'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.aiInput, { backgroundColor: palette.cardSolid, borderColor: palette.border }]}
+                onPress={() => handleQuickAction('voice')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="mic" size={18} color={palette.accent} />
+                <Text style={[styles.aiInputText, { color: palette.muted }]}>Tap to voice log</Text>
+              </TouchableOpacity>
+            </GlassCard>
+          )}
+
+          {isWidgetVisible('quick-actions') && (
+            <View style={styles.actionStrip}>
+              {quickActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={styles.actionItem}
+                  onPress={() => handleQuickAction(action.id)}
+                  activeOpacity={0.8}
+                >
+                  <GlassCard style={styles.actionCircle} intensity={35}>
+                    <Ionicons name={action.icon as any} size={26} color={action.color} />
+                  </GlassCard>
+                  <Text style={[styles.actionLabel, { color: palette.muted }]}>{action.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {isWidgetVisible('activity-cards') && (
+            <>
+              <View style={styles.summaryHeader}>
+                <Text style={[styles.summaryTitle, { color: palette.text }]}>Daily Summary</Text>
+                <View style={[styles.summaryDot, { backgroundColor: palette.accent }]} />
+              </View>
+
+              <View style={styles.summaryGrid}>
+                <GlassCard style={[styles.summaryCard, { width: CARD_WIDTH }]}>
+                  <View style={styles.summaryCardHeader}>
+                    <View>
+                      <Text style={[styles.cardKicker, { color: palette.muted }]}>Steps</Text>
+                      <Text style={[styles.cardValue, { color: palette.text }]}>
+                        {steps.toLocaleString()}
+                      </Text>
+                    </View>
+                    <Svg width={miniRingSize} height={miniRingSize}>
+                      <Circle
+                        cx={miniRingSize / 2}
+                        cy={miniRingSize / 2}
+                        r={miniRingRadius}
+                        stroke={palette.track}
+                        strokeWidth={miniRingStroke}
+                        fill="none"
+                      />
+                      <Circle
+                        cx={miniRingSize / 2}
+                        cy={miniRingSize / 2}
+                        r={miniRingRadius}
+                        stroke={palette.accent}
+                        strokeWidth={miniRingStroke}
+                        strokeDasharray={`${miniRingCircumference} ${miniRingCircumference}`}
+                        strokeDashoffset={miniRingOffset}
+                        strokeLinecap="round"
+                        rotation="-90"
+                        origin={`${miniRingSize / 2}, ${miniRingSize / 2}`}
+                        fill="none"
+                      />
+                    </Svg>
                   </View>
-                </View>
-                <View style={styles.distanceChart}>
-                  <Svg width="100%" height="100%" viewBox="0 0 100 40">
-                    <Path
-                      d="M5,35 Q25,35 35,20 T65,20 T95,10"
-                      fill="none"
-                      stroke={palette.accent}
-                      strokeWidth={3}
-                      strokeLinecap="round"
-                    />
-                    <Circle cx="95" cy="10" r="4" fill={palette.accent} />
-                  </Svg>
-                </View>
+                  <View style={styles.stepsBars}>
+                    {[0.3, 0.5, 0.8, 0.4, 0.6, 0.3].map((bar, index) => (
+                      <View
+                        key={`${bar}-${index}`}
+                        style={[
+                          styles.stepBar,
+                          {
+                            height: 36 * bar,
+                            backgroundColor: index === 2 ? palette.accent : palette.track,
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </GlassCard>
+
+                <GlassCard style={[styles.summaryCard, { width: CARD_WIDTH }]}>
+                  <View style={styles.calorieHeader}>
+                    <Text style={[styles.cardKicker, { color: palette.muted }]}>Calories</Text>
+                    <View style={styles.valueRow}>
+                      <Text style={[styles.cardValue, { color: palette.text }]}>
+                        {calories.toLocaleString()}
+                      </Text>
+                      <Text style={[styles.cardUnit, { color: palette.muted }]}>kcal</Text>
+                    </View>
+                  </View>
+                  <View style={styles.calorieChart}>
+                    <Svg width="100%" height="100%" viewBox="0 0 120 50" preserveAspectRatio="none">
+                      <Defs>
+                        <SvgLinearGradient id="calorieGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <Stop offset="0%" stopColor={palette.accent} stopOpacity="0.25" />
+                          <Stop offset="100%" stopColor={palette.accent} stopOpacity="0" />
+                        </SvgLinearGradient>
+                      </Defs>
+                      <Path
+                        d="M0,35 C10,35 20,15 35,25 S60,5 75,15 S100,5 110,0"
+                        fill="none"
+                        stroke={palette.accent}
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                      />
+                      <Path
+                        d="M0,35 C10,35 20,15 35,25 S60,5 75,15 S100,5 110,0 V50 H0 Z"
+                        fill="url(#calorieGrad)"
+                        stroke="none"
+                      />
+                    </Svg>
+                  </View>
+                </GlassCard>
+
+                <GlassCard style={[styles.summaryCard, styles.summaryWide]}>
+                  <View style={styles.distanceRow}>
+                    <View>
+                      <Text style={[styles.cardKicker, { color: palette.muted }]}>Distance</Text>
+                      <View style={styles.valueRow}>
+                        <Text style={[styles.distanceValue, { color: palette.text }]}>{distanceKm.toFixed(1)}</Text>
+                        <Text style={[styles.cardUnit, { color: palette.muted }]}>km</Text>
+                      </View>
+                    </View>
+                    <View style={styles.distanceChart}>
+                      <Svg width="100%" height="100%" viewBox="0 0 100 40">
+                        <Path
+                          d="M5,35 Q25,35 35,20 T65,20 T95,10"
+                          fill="none"
+                          stroke={palette.accent}
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                        />
+                        <Circle cx="95" cy="10" r="4" fill={palette.accent} />
+                      </Svg>
+                    </View>
+                  </View>
+                </GlassCard>
               </View>
-            </GlassCard>
-          </View>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -589,6 +638,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: CONTENT_PADDING,
+    paddingTop: SPACING.xs,
     paddingBottom: 160,
   },
   header: {
@@ -645,16 +695,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  editChip: {
+    paddingHorizontal: 10,
+  },
   glassCard: {
     borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
     backgroundColor: 'transparent',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
   goalCard: {
     paddingVertical: SPACING.xl,

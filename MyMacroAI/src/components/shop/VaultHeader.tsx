@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     coinContainer: {
-        perspective: 1000,
+        // Note: perspective is only valid on web, using transform instead for RN
     },
     coin: {
         width: 64,

@@ -21,6 +21,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useUserStore } from '@/src/store/UserStore';
 import { useOmniLogger } from '@/hooks/useOmniLogger';
 import { SPACING, RADIUS, SHADOWS } from '@/src/design-system/tokens';
+import { GradientMeshBackground } from '@/src/components/ui/GradientMeshBackground';
 
 // Icons
 const SparkleIcon = ({ color = '#9CA3AF' }: { color?: string }) => (
@@ -119,12 +120,16 @@ export default function AiNarrativeScreen() {
     }
   };
 
-  // Get time of day greeting
+  // Get time of day greeting - charismatic and energetic
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 6) return 'Night owl mode';
+    if (hour < 10) return 'Rise and grind';
+    if (hour < 12) return 'Let\'s crush it';
+    if (hour < 15) return 'Stay locked in';
+    if (hour < 18) return 'Keep that energy';
+    if (hour < 21) return 'Evening power hour';
+    return 'Winding down';
   };
 
   // Calculate readiness score (simple mock based on metrics)
@@ -146,12 +151,8 @@ export default function AiNarrativeScreen() {
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Soft Dreamy Background Blobs */}
-      <View style={styles.backgroundContainer}>
-        <View style={[styles.blob, styles.blobTopLeft]} />
-        <View style={[styles.blob, styles.blobTopRight]} />
-        <View style={[styles.blob, styles.blobBottom]} />
-      </View>
+      {/* Gradient Mesh Background */}
+      <GradientMeshBackground variant="ai" />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Status Bar */}
@@ -175,7 +176,7 @@ export default function AiNarrativeScreen() {
           <View style={styles.header}>
             <View style={styles.narrativeBadge}>
               <View style={styles.pulseDot} />
-              <Text style={styles.narrativeBadgeText}>NARRATIVE ENGINE</Text>
+              <Text style={styles.narrativeBadgeText}>MYMACRO AI</Text>
             </View>
             <Text style={styles.greeting}>
               {getGreeting()},{'\n'}

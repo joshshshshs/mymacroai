@@ -84,7 +84,7 @@ export default function OnboardingScreen() {
             {/* Liquid Orb Background */}
             <LiquidOrb scrollX={scrollX} totalSlides={SLIDES.length} />
 
-            <SafeAreaView style={styles.safeArea}>
+            <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Carousel */}
                 <AnimatedFlatList
                     ref={flatListRef}

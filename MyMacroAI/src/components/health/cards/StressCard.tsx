@@ -1,37 +1,62 @@
 /**
- * StressCard - Stress level with wave line visualization
+ * StressCard - Premium Stress Widget
+ * Purple zen gradient with ripple effect
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    Easing,
+    interpolate,
+} from 'react-native-reanimated';
 import { StressLevel } from '@/hooks/useHealthData';
+import { useCombinedTheme } from '@/src/design-system/theme';
 
 interface Props {
     level: StressLevel;
     history: number[];
+    onPress?: () => void;
 }
 
-export const StressCard: React.FC<Props> = ({ level, history }) => {
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+export const StressCard: React.FC<Props> = ({ level, history, onPress }) => {
+    const { isDark } = useCombinedTheme();
 
-    const colors = {
-        bg: isDark ? '#2C2C2E' : '#FFFFFF',
-        text: isDark ? '#FFFFFF' : '#1A1A1A',
-        textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
-        low: '#22C55E',
-        moderate: '#F97316',
-        high: '#EF4444',
+    // Calm breathing animation
+    const breathe = useSharedValue(0);
+
+    useEffect(() => {
+        breathe.value = withRepeat(
+            withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+            -1,
+            true
+        );
+    }, []);
+
+    const pulseStyle = useAnimatedStyle(() => {
+        const scale = interpolate(breathe.value, [0, 1], [0.9, 1.1]);
+        const opacity = interpolate(breathe.value, [0, 0.5, 1], [0.3, 0.5, 0.3]);
+        return { transform: [{ scale }], opacity };
+    });
+
+    const stressColors = {
+        low: { bg: ['#065F46', '#10B981', '#34D399'], color: '#10B981', emoji: '😌' },
+        moderate: { bg: ['#92400E', '#F97316', '#FB923C'], color: '#F97316', emoji: '😐' },
+        high: { bg: ['#7C2D12', '#EF4444', '#F87171'], color: '#EF4444', emoji: '😰' },
     };
 
-    const stressColor = colors[level];
+    const config = stressColors[level];
     const stressLabel = level.charAt(0).toUpperCase() + level.slice(1);
 
     // Generate wave path from history
     const width = 140;
-    const height = 40;
+    const height = 35;
     const points = history.slice(-12);
 
     const generatePath = () => {
@@ -55,33 +80,54 @@ export const StressCard: React.FC<Props> = ({ level, history }) => {
     };
 
     return (
-        <View style={[styles.card, { backgroundColor: colors.bg }]}>
-            <View style={styles.header}>
-                <Ionicons name="fitness" size={18} color={stressColor} />
-                <Text style={[styles.label, { color: colors.textSecondary }]}>STRESS</Text>
-            </View>
+        <TouchableOpacity
+            style={styles.card}
+            onPress={onPress}
+            activeOpacity={onPress ? 0.7 : 1}
+            disabled={!onPress}
+        >
+            <LinearGradient
+                colors={isDark
+                    ? ['#3B1F4D', '#7C3AED', '#9333EA']
+                    : ['#9333EA', '#A855F7', '#C084FC']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.gradient}
+            >
+                {/* Zen pulse effect */}
+                <Animated.View style={[styles.zenPulse, pulseStyle]} />
 
-            <Text style={[styles.value, { color: stressColor }]}>{stressLabel}</Text>
+                <View style={styles.header}>
+                    <View style={styles.iconBg}>
+                        <Text style={styles.emoji}>{config.emoji}</Text>
+                    </View>
+                    <Text style={styles.label}>STRESS</Text>
+                </View>
 
-            {/* Wave Line */}
-            <View style={styles.chartContainer}>
-                <Svg width={width} height={height}>
-                    <Defs>
-                        <LinearGradient id="stressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <Stop offset="0%" stopColor={stressColor} stopOpacity={0.3} />
-                            <Stop offset="100%" stopColor={stressColor} />
-                        </LinearGradient>
-                    </Defs>
-                    <Path
-                        d={generatePath()}
-                        stroke="url(#stressGradient)"
-                        strokeWidth={2}
-                        fill="none"
-                        strokeLinecap="round"
-                    />
-                </Svg>
-            </View>
-        </View>
+                <View style={styles.levelRow}>
+                    <Text style={styles.value}>{stressLabel}</Text>
+                </View>
+
+                {/* Wave Line */}
+                <View style={styles.chartContainer}>
+                    <Svg width={width} height={height}>
+                        <Defs>
+                            <SvgGradient id="stressWave" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <Stop offset="0%" stopColor="rgba(255,255,255,0.2)" />
+                                <Stop offset="100%" stopColor="rgba(255,255,255,0.8)" />
+                            </SvgGradient>
+                        </Defs>
+                        <Path
+                            d={generatePath()}
+                            stroke="url(#stressWave)"
+                            strokeWidth={2.5}
+                            fill="none"
+                            strokeLinecap="round"
+                        />
+                    </Svg>
+                </View>
+            </LinearGradient>
+        </TouchableOpacity>
     );
 };
 
@@ -89,12 +135,26 @@ const styles = StyleSheet.create({
     card: {
         flex: 1,
         borderRadius: 24,
-        padding: 16,
-        shadowColor: '#000',
+        overflow: 'hidden',
+        shadowColor: '#9333EA',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.25,
         shadowRadius: 12,
-        elevation: 2,
+        elevation: 4,
+    },
+    gradient: {
+        padding: 16,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    zenPulse: {
+        position: 'absolute',
+        top: -40,
+        right: -40,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255,255,255,0.15)',
     },
     header: {
         flexDirection: 'row',
@@ -102,15 +162,30 @@ const styles = StyleSheet.create({
         gap: 6,
         marginBottom: 8,
     },
+    iconBg: {
+        width: 24,
+        height: 24,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emoji: {
+        fontSize: 12,
+    },
     label: {
         fontSize: 10,
         fontWeight: '700',
         letterSpacing: 1,
+        color: 'rgba(255,255,255,0.8)',
+    },
+    levelRow: {
+        marginBottom: 8,
     },
     value: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '800',
-        marginBottom: 8,
+        color: '#FFFFFF',
     },
     chartContainer: {
         marginTop: 4,

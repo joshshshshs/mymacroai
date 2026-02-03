@@ -1,11 +1,12 @@
 /**
- * MealTimeline - Smart Feed with Silky Cards
+ * MealTimeline - Premium Meal Cards
  *
- * State of the Art Features:
- * - Ghost cards with dashed borders and shimmer animation
- * - Silky white cards for logged meals (borderRadius: 20, soft shadow)
- * - Macro dots indicator
- * - Smooth enter animations
+ * Redesigned Features:
+ * - Solid cards with gradient backgrounds (no transparency when empty)
+ * - Better Ionicons instead of emojis
+ * - Time-based headers with visual indicators
+ * - Improved layout and spacing
+ * - Smooth animations
  */
 
 import React from 'react';
@@ -15,23 +16,60 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    withRepeat,
-    withTiming,
     withSpring,
     withSequence,
-    Easing,
     FadeInDown,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { SPACING } from '@/src/design-system/tokens';
 
-// Glass & Light Color Palette
+// Color Palette
 const COLORS = {
     vitaminOrange: '#FF5C00',
     protein: '#3B82F6',
     carbs: '#22C55E',
     fats: '#F59E0B',
+};
+
+// Meal configuration with proper icons and themed colors
+const MEAL_CONFIG = {
+    breakfast: {
+        icon: 'sunny' as const,
+        label: 'Breakfast',
+        time: '6am - 10am',
+        gradient: ['#FEF3C7', '#FDE68A'] as const,
+        gradientDark: ['#451A03', '#78350F'] as const,
+        iconColor: '#F59E0B',
+        iconBg: 'rgba(245, 158, 11, 0.15)',
+    },
+    lunch: {
+        icon: 'restaurant' as const,
+        label: 'Lunch',
+        time: '11am - 2pm',
+        gradient: ['#DBEAFE', '#BFDBFE'] as const,
+        gradientDark: ['#1E3A5F', '#1E40AF'] as const,
+        iconColor: '#3B82F6',
+        iconBg: 'rgba(59, 130, 246, 0.15)',
+    },
+    dinner: {
+        icon: 'moon' as const,
+        label: 'Dinner',
+        time: '5pm - 9pm',
+        gradient: ['#EDE9FE', '#DDD6FE'] as const,
+        gradientDark: ['#2E1065', '#4C1D95'] as const,
+        iconColor: '#8B5CF6',
+        iconBg: 'rgba(139, 92, 246, 0.15)',
+    },
+    snacks: {
+        icon: 'nutrition' as const,
+        label: 'Snacks',
+        time: 'Anytime',
+        gradient: ['#FCE7F3', '#FBCFE8'] as const,
+        gradientDark: ['#500724', '#831843'] as const,
+        iconColor: '#EC4899',
+        iconBg: 'rgba(236, 72, 153, 0.15)',
+    },
 };
 
 interface MealItem {
@@ -48,6 +86,9 @@ interface Meal {
     type: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
     items: MealItem[];
     totalCalories: number;
+    totalProtein?: number;
+    totalCarbs?: number;
+    totalFats?: number;
 }
 
 interface Props {
@@ -56,15 +97,8 @@ interface Props {
     onAddPress: (mealType: string) => void;
 }
 
-const MEAL_CONFIG = {
-    breakfast: { icon: '🌅', label: 'Breakfast', time: '6am - 10am' },
-    lunch: { icon: '☀️', label: 'Lunch', time: '11am - 2pm' },
-    dinner: { icon: '🌙', label: 'Dinner', time: '5pm - 9pm' },
-    snacks: { icon: '🍿', label: 'Snacks', time: 'Anytime' },
-};
-
-// Ghost Card - Empty meal slot with dashed border
-const GhostCard: React.FC<{
+// Empty Meal Card - Solid design with invitation to log
+const EmptyMealCard: React.FC<{
     mealType: keyof typeof MEAL_CONFIG;
     onPress: () => void;
     index: number;
@@ -72,20 +106,7 @@ const GhostCard: React.FC<{
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const config = MEAL_CONFIG[mealType];
-    const shimmer = useSharedValue(0);
     const scale = useSharedValue(1);
-
-    React.useEffect(() => {
-        shimmer.value = withRepeat(
-            withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
-            -1,
-            true
-        );
-    }, []);
-
-    const shimmerStyle = useAnimatedStyle(() => ({
-        opacity: 0.4 + shimmer.value * 0.2,
-    }));
 
     const scaleStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
@@ -94,74 +115,87 @@ const GhostCard: React.FC<{
     const handlePress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         scale.value = withSequence(
-            withSpring(0.98, { damping: 15 }),
+            withSpring(0.97, { damping: 15 }),
             withSpring(1, { damping: 12 })
         );
         onPress();
     };
 
     return (
-        <Animated.View
-            entering={FadeInDown.delay(index * 80).springify()}
-            style={scaleStyle}
-        >
-            <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
-                <Animated.View
-                    style={[
-                        styles.ghostCard,
-                        {
-                            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-                            backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.5)',
-                        },
-                        shimmerStyle,
-                    ]}
-                >
-                    <View style={styles.ghostContent}>
-                        <View style={[styles.ghostIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                            <Text style={styles.mealIcon}>{config.icon}</Text>
-                        </View>
-                        <View style={styles.ghostText}>
-                            <Text style={[styles.ghostLabel, { color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)' }]}>
-                                {config.label}
-                            </Text>
-                            <Text style={[styles.ghostHint, { color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)' }]}>
-                                Tap to log
-                            </Text>
-                        </View>
-                        <View style={[styles.addIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                            <Ionicons
-                                name="add"
-                                size={20}
-                                color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'}
-                            />
-                        </View>
+        <Animated.View entering={FadeInDown.delay(index * 60).springify()}>
+            <Animated.View style={scaleStyle}>
+                <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
+                    <View style={styles.cardContainer}>
+                        <LinearGradient
+                            colors={isDark ? config.gradientDark : config.gradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.emptyCard}
+                        >
+                            <View style={styles.emptyContent}>
+                                {/* Icon */}
+                                <View style={[styles.iconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)' }]}>
+                                    <Ionicons name={config.icon} size={24} color={config.iconColor} />
+                                </View>
+
+                                {/* Text */}
+                                <View style={styles.emptyTextContainer}>
+                                    <Text style={[styles.mealLabel, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>
+                                        {config.label}
+                                    </Text>
+                                    <Text style={[styles.timeRange, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>
+                                        {config.time}
+                                    </Text>
+                                </View>
+
+                                {/* Add Button */}
+                                <TouchableOpacity
+                                    style={[styles.addButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.9)' }]}
+                                    onPress={handlePress}
+                                >
+                                    <Ionicons name="add" size={22} color={config.iconColor} />
+                                </TouchableOpacity>
+                            </View>
+                        </LinearGradient>
                     </View>
-                </Animated.View>
-            </TouchableOpacity>
+                </TouchableOpacity>
+            </Animated.View>
         </Animated.View>
     );
 };
 
-// Macro Dots - Small colored indicators for P/C/F
-const MacroDots: React.FC = () => (
-    <View style={styles.macroDots}>
-        <View style={[styles.macroDot, { backgroundColor: COLORS.protein }]} />
-        <View style={[styles.macroDot, { backgroundColor: COLORS.carbs }]} />
-        <View style={[styles.macroDot, { backgroundColor: COLORS.fats }]} />
+// Macro Pills - Visual macro breakdown
+const MacroPills: React.FC<{ protein?: number; carbs?: number; fats?: number }> = ({ protein = 0, carbs = 0, fats = 0 }) => (
+    <View style={styles.macroPills}>
+        <View style={[styles.pill, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+            <Text style={[styles.pillText, { color: COLORS.protein }]}>P {protein}g</Text>
+        </View>
+        <View style={[styles.pill, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
+            <Text style={[styles.pillText, { color: COLORS.carbs }]}>C {carbs}g</Text>
+        </View>
+        <View style={[styles.pill, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
+            <Text style={[styles.pillText, { color: COLORS.fats }]}>F {fats}g</Text>
+        </View>
     </View>
 );
 
-// Silky Meal Card - Logged meal with glass effect
-const MealCard: React.FC<{
+// Logged Meal Card - Shows items under correct meal
+const LoggedMealCard: React.FC<{
     meal: Meal;
     onPress: () => void;
+    onAddPress: () => void;
     index: number;
-}> = ({ meal, onPress, index }) => {
+}> = ({ meal, onPress, onAddPress, index }) => {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const config = MEAL_CONFIG[meal.type];
     const scale = useSharedValue(1);
 
+    // Use meal-level totals or calculate from items
+    const totalProtein = meal.totalProtein ?? meal.items.reduce((sum, item) => sum + (item.protein || 0), 0);
+    const totalCarbs = meal.totalCarbs ?? meal.items.reduce((sum, item) => sum + (item.carbs || 0), 0);
+    const totalFats = meal.totalFats ?? meal.items.reduce((sum, item) => sum + (item.fats || 0), 0);
+
     const scaleStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
     }));
@@ -176,91 +210,81 @@ const MealCard: React.FC<{
     };
 
     return (
-        <Animated.View
-            entering={FadeInDown.delay(index * 80).springify()}
-            style={scaleStyle}
-        >
-            <TouchableOpacity onPress={handlePress} activeOpacity={0.95}>
-                {/* Silky Card */}
-                <View style={[
-                    styles.silkyCard,
-                    {
-                        backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-                        shadowColor: isDark ? '#000' : COLORS.vitaminOrange,
-                    }
-                ]}>
-                    {/* Subtle gradient overlay for depth */}
-                    {!isDark && (
-                        <LinearGradient
-                            colors={['rgba(255,255,255,0)', 'rgba(255,92,0,0.02)']}
-                            style={StyleSheet.absoluteFillObject}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        />
-                    )}
+        <Animated.View entering={FadeInDown.delay(index * 60).springify()}>
+            <Animated.View style={scaleStyle}>
+                <TouchableOpacity onPress={handlePress} activeOpacity={0.95}>
+                    <View style={[
+                        styles.loggedCard,
+                        {
+                            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                            shadowColor: isDark ? '#000' : config.iconColor,
+                        }
+                    ]}>
+                        {/* Accent bar */}
+                        <View style={[styles.accentBar, { backgroundColor: config.iconColor }]} />
 
-                    {/* Header */}
-                    <View style={styles.mealHeader}>
-                        <View style={styles.mealHeaderLeft}>
-                            <View style={[styles.iconContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,92,0,0.08)' }]}>
-                                <Text style={styles.mealIcon}>{config.icon}</Text>
-                            </View>
-                            <View>
-                                <Text style={[styles.mealLabel, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>
-                                    {config.label}
-                                </Text>
-                                <View style={styles.mealMeta}>
-                                    <Text style={[styles.mealItemCount, { color: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93' }]}>
-                                        {meal.items.length} item{meal.items.length !== 1 ? 's' : ''}
+                        {/* Header */}
+                        <View style={styles.loggedHeader}>
+                            <View style={styles.headerLeft}>
+                                <View style={[styles.iconCircleSmall, { backgroundColor: config.iconBg }]}>
+                                    <Ionicons name={config.icon} size={18} color={config.iconColor} />
+                                </View>
+                                <View>
+                                    <Text style={[styles.mealLabel, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>
+                                        {config.label}
                                     </Text>
-                                    <MacroDots />
+                                    <Text style={[styles.itemCount, { color: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93' }]}>
+                                        {meal.items.length} item{meal.items.length !== 1 ? 's' : ''} • {config.time}
+                                    </Text>
                                 </View>
                             </View>
+
+                            <View style={styles.headerRight}>
+                                <Text style={[styles.caloriesLarge, { color: config.iconColor }]}>{meal.totalCalories}</Text>
+                                <Text style={[styles.caloriesUnit, { color: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93' }]}>kcal</Text>
+                            </View>
                         </View>
 
-                        {/* Calories Badge */}
-                        <View style={styles.caloriesBadge}>
-                            <Text style={styles.caloriesValue}>{meal.totalCalories}</Text>
-                            <Text style={[styles.caloriesUnit, { color: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93' }]}>
-                                kcal
-                            </Text>
-                        </View>
-                    </View>
+                        {/* Macro Pills */}
+                        <MacroPills protein={totalProtein} carbs={totalCarbs} fats={totalFats} />
 
-                    {/* Items Preview */}
-                    {meal.items.length > 0 && (
-                        <View style={[styles.itemsPreview, { borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
-                            {meal.items.slice(0, 2).map((item) => (
+                        {/* Items List */}
+                        <View style={[styles.itemsList, { borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
+                            {meal.items.slice(0, 3).map((item, idx) => (
                                 <View key={item.id} style={styles.itemRow}>
+                                    <View style={styles.itemDot} />
                                     <Text
-                                        style={[styles.itemName, { color: isDark ? 'rgba(255,255,255,0.7)' : '#4B5563' }]}
+                                        style={[styles.itemName, { color: isDark ? 'rgba(255,255,255,0.8)' : '#374151' }]}
                                         numberOfLines={1}
                                     >
                                         {item.name}
                                     </Text>
-                                    <Text style={[styles.itemCalories, { color: isDark ? 'rgba(255,255,255,0.4)' : '#9CA3AF' }]}>
-                                        {item.calories}
+                                    <Text style={[styles.itemCals, { color: isDark ? 'rgba(255,255,255,0.4)' : '#9CA3AF' }]}>
+                                        {item.calories} kcal
                                     </Text>
                                 </View>
                             ))}
-                            {meal.items.length > 2 && (
-                                <Text style={styles.moreItems}>
-                                    +{meal.items.length - 2} more
+                            {meal.items.length > 3 && (
+                                <Text style={[styles.moreText, { color: config.iconColor }]}>
+                                    +{meal.items.length - 3} more items
                                 </Text>
                             )}
                         </View>
-                    )}
 
-                    {/* Chevron indicator */}
-                    <View style={styles.chevronContainer}>
-                        <Ionicons
-                            name="chevron-forward"
-                            size={16}
-                            color={isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}
-                        />
+                        {/* Add More Button */}
+                        <TouchableOpacity
+                            style={[styles.addMoreButton, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onAddPress();
+                            }}
+                        >
+                            <Ionicons name="add-circle" size={18} color={config.iconColor} />
+                            <Text style={[styles.addMoreText, { color: config.iconColor }]}>Add more</Text>
+                        </TouchableOpacity>
                     </View>
-                </View>
-            </TouchableOpacity>
+                </TouchableOpacity>
+            </Animated.View>
         </Animated.View>
     );
 };
@@ -273,31 +297,38 @@ export const MealTimeline: React.FC<Props> = ({
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
 
-    // All meal slots
+    // All meal slots in order
     const allSlots: (keyof typeof MEAL_CONFIG)[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
 
     return (
         <View style={styles.container}>
-            <Text style={[styles.sectionLabel, { color: isDark ? 'rgba(255,255,255,0.4)' : '#8E8E93' }]}>
-                TODAY'S MEALS
-            </Text>
+            {/* Section Header */}
+            <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                    <Ionicons name="calendar-outline" size={16} color={isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93'} />
+                    <Text style={[styles.sectionLabel, { color: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93' }]}>
+                        TODAY'S MEALS
+                    </Text>
+                </View>
+            </View>
 
             {allSlots.map((slotType, index) => {
                 const meal = meals.find(m => m.type === slotType);
 
                 if (meal && meal.items.length > 0) {
                     return (
-                        <MealCard
+                        <LoggedMealCard
                             key={slotType}
                             meal={meal}
                             onPress={() => onMealPress(slotType)}
+                            onAddPress={() => onAddPress(slotType)}
                             index={index}
                         />
                     );
                 }
 
                 return (
-                    <GhostCard
+                    <EmptyMealCard
                         key={slotType}
                         mealType={slotType}
                         onPress={() => onAddPress(slotType)}
@@ -311,157 +342,198 @@ export const MealTimeline: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: SPACING.xl,
-        paddingTop: SPACING.lg,
+        paddingHorizontal: SPACING.lg,
+        paddingTop: SPACING.md,
+    },
+    sectionHeader: {
+        marginBottom: SPACING.md,
+    },
+    sectionTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     sectionLabel: {
         fontSize: 11,
         fontWeight: '700',
         letterSpacing: 1.5,
-        marginBottom: SPACING.md,
     },
 
-    // Ghost Card Styles
-    ghostCard: {
-        borderWidth: 1.5,
-        borderStyle: 'dashed',
+    // Card container with shadow
+    cardContainer: {
+        borderRadius: 20,
+        marginBottom: SPACING.md,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+    },
+
+    // Empty Card
+    emptyCard: {
         borderRadius: 20,
         padding: SPACING.lg,
-        marginBottom: SPACING.md,
+        overflow: 'hidden',
     },
-    ghostContent: {
+    emptyContent: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    ghostIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
+    iconCircle: {
+        width: 52,
+        height: 52,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: SPACING.md,
     },
-    ghostText: {
+    emptyTextContainer: {
         flex: 1,
-    },
-    ghostLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    ghostHint: {
-        fontSize: 13,
-        marginTop: 2,
-    },
-    addIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-    // Silky Card Styles
-    silkyCard: {
-        borderRadius: 20,
-        padding: SPACING.lg,
-        marginBottom: SPACING.md,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 24,
-        elevation: 6,
-        overflow: 'hidden',
-        position: 'relative',
-    },
-    mealHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    mealHeaderLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.md,
-    },
-    iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    mealIcon: {
-        fontSize: 24,
     },
     mealLabel: {
         fontSize: 17,
         fontWeight: '700',
         letterSpacing: -0.3,
     },
-    mealMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginTop: 2,
-    },
-    mealItemCount: {
+    timeRange: {
         fontSize: 13,
         fontWeight: '500',
+        marginTop: 2,
     },
-    macroDots: {
+    addButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+
+    // Logged Card
+    loggedCard: {
+        borderRadius: 20,
+        padding: SPACING.lg,
+        marginBottom: SPACING.md,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        elevation: 6,
+        overflow: 'hidden',
+    },
+    accentBar: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 4,
+        borderTopLeftRadius: 20,
+        borderBottomLeftRadius: 20,
+    },
+    loggedHeader: {
         flexDirection: 'row',
-        gap: 4,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: SPACING.sm,
     },
-    macroDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm,
     },
-    caloriesBadge: {
+    iconCircleSmall: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    itemCount: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 1,
+    },
+    headerRight: {
         alignItems: 'flex-end',
     },
-    caloriesValue: {
-        fontSize: 24,
+    caloriesLarge: {
+        fontSize: 28,
         fontWeight: '800',
-        color: COLORS.vitaminOrange,
         letterSpacing: -1,
     },
     caloriesUnit: {
         fontSize: 11,
         fontWeight: '600',
-        marginTop: -2,
+        marginTop: -3,
     },
-    itemsPreview: {
-        paddingTop: SPACING.md,
-        marginTop: SPACING.md,
+
+    // Macro Pills
+    macroPills: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: SPACING.md,
+    },
+    pill: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
+    },
+    pillText: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
+
+    // Items List
+    itemsList: {
+        paddingTop: SPACING.sm,
         borderTopWidth: 1,
     },
     itemRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 6,
+        paddingVertical: 8,
+    },
+    itemDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: COLORS.vitaminOrange,
+        marginRight: 10,
     },
     itemName: {
+        flex: 1,
         fontSize: 14,
         fontWeight: '500',
-        flex: 1,
-        marginRight: SPACING.md,
     },
-    itemCalories: {
+    itemCals: {
         fontSize: 13,
         fontWeight: '600',
     },
-    moreItems: {
+    moreText: {
         fontSize: 13,
-        color: COLORS.vitaminOrange,
         fontWeight: '600',
         marginTop: 4,
+        marginLeft: 16,
     },
-    chevronContainer: {
-        position: 'absolute',
-        right: SPACING.md,
-        top: '50%',
-        marginTop: -8,
+
+    // Add More Button
+    addMoreButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 12,
+        marginTop: SPACING.sm,
+        borderTopWidth: 1,
+        borderRadius: 12,
+    },
+    addMoreText: {
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 

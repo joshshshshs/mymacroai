@@ -367,6 +367,7 @@ const styles = StyleSheet.create({
         right: 0,
         alignItems: 'center',
         paddingBottom: SPACING.xl,
+        paddingHorizontal: SPACING.lg,
     },
     instructionText: {
         fontSize: 16,
@@ -400,11 +401,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.1)',
         marginTop: SPACING.lg,
+        marginBottom: SPACING.md,
         paddingVertical: SPACING.md,
         paddingHorizontal: SPACING.lg,
         borderRadius: RADIUS.xl,
         borderWidth: 1,
         borderColor: 'rgba(245, 158, 11, 0.3)',
+        width: '100%',
     },
     contributeContent: {
         flex: 1,

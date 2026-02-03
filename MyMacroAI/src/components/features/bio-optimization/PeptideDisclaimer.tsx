@@ -220,7 +220,7 @@ export const PeptideDisclaimer: React.FC<PeptideDisclaimerProps> = ({
                                 MyMacro AI provides general educational information only. The information
                                 provided is not intended as medical advice, diagnosis, or treatment. The AI
                                 acts as a research librarian, providing information from published literature
-                                — not as a medical professional. Peptides and research compounds may be
+                                and not as a medical professional. Peptides and research compounds may be
                                 regulated differently in your region. By proceeding, you acknowledge that
                                 you have read and understood this disclaimer.
                             </Text>

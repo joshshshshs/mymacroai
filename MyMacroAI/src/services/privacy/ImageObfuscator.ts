@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import { logger } from '../../../utils/logger';
 
-export type PhysiqueGoal = 'cut' | 'bulk';
+export type PhysiqueGoal = 'cut' | 'bulk' | 'body_recomp' | 'maintain';
 
 export interface PhysiqueAnalysisResult {
   est_body_fat: number;

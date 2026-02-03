@@ -1,13 +1,16 @@
 /**
- * StrainGauge - Capacity vs Strain dual bar comparison
+ * StrainGauge - Premium Load vs Capacity Widget
+ * Orange/gray gradient with animated bars and glow
  */
 
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withTiming,
+    withRepeat,
     Easing,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,18 +26,29 @@ export const StrainGauge: React.FC<Props> = ({ strain, capacity }) => {
 
     const strainWidth = useSharedValue(0);
     const capacityWidth = useSharedValue(0);
+    const pulse = useSharedValue(0.7);
+
+    const isOverloaded = strain > capacity;
 
     useEffect(() => {
         const maxValue = 21;
         strainWidth.value = withTiming((strain / maxValue) * 100, {
-            duration: 800,
+            duration: 900,
             easing: Easing.out(Easing.cubic),
         });
         capacityWidth.value = withTiming((capacity / maxValue) * 100, {
-            duration: 800,
+            duration: 900,
             easing: Easing.out(Easing.cubic),
         });
-    }, [strain, capacity]);
+
+        if (isOverloaded) {
+            pulse.value = withRepeat(
+                withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true
+            );
+        }
+    }, [strain, capacity, isOverloaded]);
 
     const strainStyle = useAnimatedStyle(() => ({
         width: `${strainWidth.value}%`,
@@ -44,108 +58,155 @@ export const StrainGauge: React.FC<Props> = ({ strain, capacity }) => {
         width: `${capacityWidth.value}%`,
     }));
 
-    const isOverloaded = strain > capacity;
-
-    const colors = {
-        bg: isDark ? '#2C2C2E' : '#FFFFFF',
-        text: isDark ? '#FFFFFF' : '#1A1A1A',
-        textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
-        track: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-        strain: '#FF5C00',
-        capacity: '#6B7280',
-        warning: '#EF4444',
-    };
+    const pulseStyle = useAnimatedStyle(() => ({
+        opacity: isOverloaded ? pulse.value : 0,
+    }));
 
     return (
-        <View style={[styles.card, { backgroundColor: colors.bg }]}>
-            <View style={styles.header}>
-                <Ionicons name="flash" size={18} color={colors.strain} />
-                <Text style={[styles.title, { color: colors.text }]}>Load vs Capacity</Text>
-                {isOverloaded && (
-                    <View style={styles.warningBadge}>
-                        <Ionicons name="warning" size={12} color={colors.warning} />
-                        <Text style={[styles.warningText, { color: colors.warning }]}>Overload</Text>
-                    </View>
-                )}
-            </View>
+        <View style={styles.container}>
+            <LinearGradient
+                colors={isDark
+                    ? ['#1C1917', '#292524', '#44403C']
+                    : ['#44403C', '#57534E', '#78716C']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.gradient}
+            >
+                {/* Warning pulse for overload */}
+                <Animated.View style={[styles.warningPulse, pulseStyle]} />
 
-            {/* Capacity Bar */}
-            <View style={styles.barRow}>
-                <Text style={[styles.barLabel, { color: colors.textSecondary }]}>CAPACITY</Text>
-                <View style={styles.barWrapper}>
-                    <View style={[styles.track, { backgroundColor: colors.track }]}>
-                        <Animated.View style={[styles.bar, { backgroundColor: colors.capacity }, capacityStyle]} />
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <View style={styles.iconBg}>
+                            <Ionicons name="flash" size={16} color="#FF5C00" />
+                        </View>
+                        <Text style={styles.title}>Load vs Capacity</Text>
                     </View>
-                    <Text style={[styles.barValue, { color: colors.text }]}>{capacity.toFixed(1)}</Text>
+                    {isOverloaded && (
+                        <View style={styles.warningBadge}>
+                            <Ionicons name="warning" size={12} color="#FEF3C7" />
+                            <Text style={styles.warningText}>Overload</Text>
+                        </View>
+                    )}
                 </View>
-            </View>
 
-            {/* Strain Bar */}
-            <View style={styles.barRow}>
-                <Text style={[styles.barLabel, { color: colors.textSecondary }]}>STRAIN</Text>
-                <View style={styles.barWrapper}>
-                    <View style={[styles.track, { backgroundColor: colors.track }]}>
-                        <Animated.View
-                            style={[
-                                styles.bar,
-                                { backgroundColor: isOverloaded ? colors.warning : colors.strain },
-                                strainStyle
-                            ]}
-                        />
+                {/* Capacity Bar */}
+                <View style={styles.barRow}>
+                    <Text style={styles.barLabel}>CAPACITY</Text>
+                    <View style={styles.barWrapper}>
+                        <View style={styles.track}>
+                            <Animated.View style={[capacityStyle]}>
+                                <LinearGradient
+                                    colors={['#6B7280', '#9CA3AF', '#D1D5DB']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.barFill}
+                                />
+                            </Animated.View>
+                        </View>
+                        <Text style={styles.barValue}>{capacity.toFixed(1)}</Text>
                     </View>
-                    <Text style={[styles.barValue, { color: colors.text }]}>{strain.toFixed(1)}</Text>
                 </View>
-            </View>
 
-            <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                Keep strain below capacity for optimal recovery
-            </Text>
+                {/* Strain Bar */}
+                <View style={styles.barRow}>
+                    <Text style={styles.barLabel}>STRAIN</Text>
+                    <View style={styles.barWrapper}>
+                        <View style={styles.track}>
+                            <Animated.View style={[strainStyle]}>
+                                <LinearGradient
+                                    colors={isOverloaded
+                                        ? ['#DC2626', '#EF4444', '#F87171']
+                                        : ['#C2410C', '#EA580C', '#FB923C']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.barFill}
+                                />
+                            </Animated.View>
+                        </View>
+                        <Text style={styles.barValue}>{strain.toFixed(1)}</Text>
+                    </View>
+                </View>
+
+                <Text style={styles.hint}>
+                    {isOverloaded
+                        ? '⚠️ Consider rest for optimal recovery'
+                        : '✓ Keep strain below capacity'}
+                </Text>
+            </LinearGradient>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    card: {
+    container: {
         borderRadius: 24,
+        overflow: 'hidden',
+        shadowColor: '#FF5C00',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    gradient: {
         padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: 2,
+        position: 'relative',
+    },
+    warningPulse: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        marginBottom: 16,
+        justifyContent: 'space-between',
+        marginBottom: 18,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    iconBg: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 92, 0, 0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     title: {
         fontSize: 16,
         fontWeight: '700',
-        flex: 1,
+        color: '#FFFFFF',
     },
     warningBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: 'rgba(239,68,68,0.1)',
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 6,
+        backgroundColor: 'rgba(239, 68, 68, 0.4)',
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 8,
     },
     warningText: {
         fontSize: 10,
         fontWeight: '700',
+        color: '#FEF3C7',
     },
     barRow: {
-        marginBottom: 12,
+        marginBottom: 14,
     },
     barLabel: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '700',
-        letterSpacing: 0.5,
+        letterSpacing: 1,
         marginBottom: 6,
+        color: 'rgba(255,255,255,0.6)',
     },
     barWrapper: {
         flexDirection: 'row',
@@ -154,23 +215,26 @@ const styles = StyleSheet.create({
     },
     track: {
         flex: 1,
-        height: 12,
-        borderRadius: 6,
+        height: 14,
+        borderRadius: 7,
         overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
-    bar: {
+    barFill: {
         height: '100%',
-        borderRadius: 6,
+        borderRadius: 7,
     },
     barValue: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '700',
-        width: 36,
+        width: 40,
         textAlign: 'right',
+        color: '#FFFFFF',
     },
     hint: {
         fontSize: 11,
         textAlign: 'center',
-        marginTop: 4,
+        marginTop: 6,
+        color: 'rgba(255,255,255,0.6)',
     },
 });

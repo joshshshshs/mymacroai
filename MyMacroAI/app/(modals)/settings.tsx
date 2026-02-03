@@ -13,6 +13,7 @@ import { ProfileMenuItem } from '@/src/components/profile';
 import { useUserStore, TRAINING_STYLES, useBioOptimizationProfile, useCoachIntensity } from '@/src/store/UserStore';
 import { useTheme } from '@/hooks/useTheme';
 import { PeptideStatus } from '@/src/types';
+import { useTranslation } from '@/src/hooks/useTranslation';
 
 // Helper function for peptide status label
 const getPeptideStatusLabel = (status: PeptideStatus, compoundCount: number): string => {
@@ -71,6 +72,7 @@ const getVoiceLabel = (voice: string | undefined): string => {
 export default function SettingsScreen() {
     const router = useRouter();
     const { isDark, themePreference, colors: themeColors } = useTheme();
+    const { t, locale, changeLanguage, languages } = useTranslation();
     const preferences = useUserStore(s => s.preferences);
     const healthMetrics = useUserStore(s => s.healthMetrics);
     const trainingStyles = useUserStore(s => s.trainingStyles) || [];
@@ -249,21 +251,60 @@ export default function SettingsScreen() {
                     />
                 </View>
 
-                {/* App Experience */}
-                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APP EXPERIENCE</Text>
+                {/* Data & Devices */}
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>DATA & DEVICES</Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <ProfileMenuItem
+                        icon="watch-outline"
+                        label="Connected Devices"
+                        subtitle="Wearables & Health Sources"
+                        onPress={() => router.push('/(modals)/wearable-sync')}
+                    />
+                    <ProfileMenuItem
+                        icon="cloud-upload-outline"
+                        label="Import Data"
+                        subtitle="MyFitnessPal, Apple Health, CSV"
+                        onPress={() => router.push('/(modals)/import')}
+                    />
+                </View>
+
+                {/* App Experience */}
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>{t('settings.appExperience')}</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <ProfileMenuItem
+                        icon="language-outline"
+                        label={t('settings.language')}
+                        subtitle={`${languages[locale].flag} ${languages[locale].nativeName}`}
+                        onPress={() => router.push('/(modals)/edit-language')}
+                    />
+                    <ProfileMenuItem
                         icon="scale-outline"
-                        label="Units"
+                        label={t('settings.units')}
                         subtitle={unitsDisplay}
                         onPress={() => router.push('/(modals)/edit-units')}
                     />
                     <ProfileMenuItem
                         icon="phone-portrait-outline"
-                        label="Haptics"
+                        label={t('settings.haptics')}
                         rightElement="toggle"
                         toggleValue={hapticsEnabled}
                         onToggle={handleHapticsToggle}
+                    />
+                </View>
+
+                {/* Account Management */}
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ACCOUNT</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <ProfileMenuItem
+                        icon="log-out-outline"
+                        label="Sign Out"
+                        onPress={() => router.push('/(modals)/sign-out')}
+                    />
+                    <ProfileMenuItem
+                        icon="trash-outline"
+                        label="Delete Account"
+                        subtitle="Permanently delete your data"
+                        onPress={() => router.push('/(modals)/delete-account')}
                     />
                 </View>
 

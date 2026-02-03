@@ -4,8 +4,8 @@
  * Handles public profiles, follows, and user discovery.
  */
 
-import { supabase } from '../lib/supabase';
-import { StorageService } from './supabase/storage';
+import { supabase } from '@/src/lib/supabase';
+import { StorageService } from './storage';
 
 // ============================================================================
 // TYPES
@@ -71,13 +71,17 @@ export async function getProfileById(userId: string): Promise<PublicProfile | nu
             .single();
 
         if (error) {
-            console.error('[ProfilesService] Get profile error:', error);
+            // PGRST205 = table doesn't exist - silently return null (expected during development)
+            if (error.code === 'PGRST205') {
+                return null;
+            }
+            if (__DEV__) console.warn('[ProfilesService] Get profile error:', error.code);
             return null;
         }
 
         return data as PublicProfile;
     } catch (error) {
-        console.error('[ProfilesService] Get profile exception:', error);
+        if (__DEV__) console.warn('[ProfilesService] Get profile exception:', error);
         return null;
     }
 }
@@ -121,6 +125,10 @@ export async function updateProfile(
             .eq('id', user.id);
 
         if (error) {
+            // PGRST205 = table doesn't exist - expected during development
+            if (error.code === 'PGRST205') {
+                return { success: false, error: 'Profile system not yet configured' };
+            }
             return { success: false, error: error.message };
         }
 
@@ -336,6 +344,17 @@ export async function getSuggestedProfiles(limit: number = 10): Promise<PublicPr
 }
 
 /**
+ * Sanitize search query to prevent SQL injection
+ */
+const sanitizeSearchQuery = (input: string): string => {
+    return input
+        .replace(/[%_\\]/g, '\\$&')  // Escape PostgreSQL LIKE wildcards
+        .replace(/['"`;]/g, '')       // Remove potential SQL injection chars
+        .trim()
+        .substring(0, 100);           // Limit length
+};
+
+/**
  * Search profiles by username or display name
  */
 export async function searchProfiles(
@@ -343,11 +362,14 @@ export async function searchProfiles(
     limit: number = 20
 ): Promise<PublicProfile[]> {
     try {
+        const sanitizedQuery = sanitizeSearchQuery(query);
+        if (!sanitizedQuery) return [];
+
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-            .limit(limit);
+            .or(`username.ilike.%${sanitizedQuery}%,display_name.ilike.%${sanitizedQuery}%`)
+            .limit(Math.min(limit, 50)); // Cap limit to prevent abuse
 
         if (error || !data) return [];
 

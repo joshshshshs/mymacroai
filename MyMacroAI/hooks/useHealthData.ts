@@ -102,13 +102,25 @@ export function useHealthData() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
+    // In development, automatically load mock data
+    if (__DEV__) {
       setData(generateMockHealthData());
       setIsLoading(false);
-    }, 300);
+    } else {
+      // Production: Wait for real device connection
+      setIsLoading(false);
+      setData(null);
+    }
   }, []);
 
-  return { data, isLoading, refresh: () => setData(generateMockHealthData()) };
+  // refresh() can be used to manually load mock data in development
+  const refresh = () => {
+    if (__DEV__) {
+      setData(generateMockHealthData());
+    }
+  };
+
+  return { data, isLoading, refresh };
 }
 
 // ============================================================================

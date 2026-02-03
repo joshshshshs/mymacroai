@@ -6,8 +6,10 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import Animated, {
   FadeIn,
@@ -137,10 +139,29 @@ export default function ImportModal() {
         <BlurView intensity={40} tint="dark" style={{ flex: 1 }}>
           <View style={{ flex: 1, padding: 24 }}>
 
+            {/* Close Button */}
+            <TouchableOpacity
+              onPress={handleClose}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+              }}
+            >
+              <Ionicons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+
             {/* 标题区域 */}
             <Animated.View
               entering={FadeIn.duration(600)}
-              style={{ alignItems: 'center', marginBottom: 32 }}
+              style={{ alignItems: 'center', marginBottom: 32, marginTop: 16 }}
             >
               <ThemedText variant="premium-heading" style={{ color: '#fff', fontSize: 28, lineHeight: 34, marginBottom: 8 }}>
                 Legacy Bridge

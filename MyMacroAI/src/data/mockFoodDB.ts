@@ -1,11 +1,17 @@
 /**
  * Mock Food Database - USDA-Verified Data
- * 
+ *
  * Contains 5 verified foods with accurate nutritional data from USDA FoodData Central.
  * All values are per 100g serving.
+ *
+ * NOTE: In production, food data comes from external API or Supabase.
+ * This mock data is for development/testing only.
  */
 
 import { FoodItem, NUTRIENT_IDS } from '../types/food';
+
+// Production guard - don't use mock data in production
+const IS_PRODUCTION = !__DEV__;
 
 // ============================================================================
 // VERIFIED FOOD DATABASE
@@ -216,8 +222,10 @@ export const MOCK_FOOD_DB: FoodItem[] = [
 
 /**
  * Search foods by name (case-insensitive)
+ * In production, this returns empty - use real food API instead
  */
 export function searchFoods(query: string): FoodItem[] {
+    if (IS_PRODUCTION) return [];
     if (!query.trim()) return MOCK_FOOD_DB;
 
     const normalizedQuery = query.toLowerCase().trim();
@@ -244,8 +252,10 @@ export function searchFoods(query: string): FoodItem[] {
 
 /**
  * Find food by barcode
+ * In production, this returns undefined - use real food API instead
  */
 export function findFoodByBarcode(barcode: string): FoodItem | undefined {
+    if (IS_PRODUCTION) return undefined;
     return MOCK_FOOD_DB.find(food => food.barcode === barcode);
 }
 

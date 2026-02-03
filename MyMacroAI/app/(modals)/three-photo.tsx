@@ -13,6 +13,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -50,6 +51,8 @@ const ANGLES: AngleInfo[] = [
 ];
 
 export default function ThreePhotoScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [photos, setPhotos] = useState<Record<PhotoAngle, PhotoCapture | null>>({
@@ -59,6 +62,19 @@ export default function ThreePhotoScreen() {
   });
   const [analyzing, setAnalyzing] = useState(false);
   const [currentAngle, setCurrentAngle] = useState<PhotoAngle>('front');
+
+  const colors = {
+    bg: isDark ? '#0F0F0F' : '#F5F5F7',
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
+    textTertiary: isDark ? 'rgba(255,255,255,0.4)' : '#AEAEB2',
+    card: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF',
+    cardBorder: isDark ? 'transparent' : 'rgba(0,0,0,0.08)',
+    buttonBg: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+    progressBg: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+    accent: '#FF4500',
+    success: '#10B981',
+  };
 
   const handleCapture = useCallback(async (angle: PhotoAngle) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -114,7 +130,7 @@ export default function ThreePhotoScreen() {
   const isComplete = completedCount === 3;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <SoftDreamyBackground />
 
@@ -122,11 +138,11 @@ export default function ThreePhotoScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: colors.buttonBg }]}
           >
-            <Ionicons name="chevron-back" size={24} color="#FFF" />
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>3-Photo Protocol</Text>
+          <Text style={[styles.title, { color: colors.text }]}>3-Photo Protocol</Text>
           <View style={styles.backButton} />
         </View>
 
@@ -134,10 +150,10 @@ export default function ThreePhotoScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(completedCount / 3) * 100}%` }]} />
+          <View style={[styles.progressBar, { backgroundColor: colors.progressBg }]}>
+            <View style={[styles.progressFill, { width: `${(completedCount / 3) * 100}%`, backgroundColor: colors.accent }]} />
           </View>
-          <Text style={styles.progressText}>
+          <Text style={[styles.progressText, { color: colors.textSecondary }]}>
             {completedCount}/3 photos captured
           </Text>
 
@@ -150,8 +166,9 @@ export default function ThreePhotoScreen() {
                 <View key={angleInfo.angle} style={styles.photoSlot}>
                   <View style={[
                     styles.photoCard,
-                    isActive && styles.photoCardActive,
-                    photo && styles.photoCardComplete,
+                    { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: isDark ? 2 : 1 },
+                    isActive && { borderColor: colors.accent, backgroundColor: isDark ? 'rgba(255, 69, 0, 0.1)' : 'rgba(255, 69, 0, 0.08)' },
+                    photo && { borderColor: colors.success },
                   ]}>
                     {photo ? (
                       <>
@@ -162,7 +179,7 @@ export default function ThreePhotoScreen() {
                         >
                           <Ionicons name="refresh" size={16} color="#FFF" />
                         </TouchableOpacity>
-                        <View style={styles.checkBadge}>
+                        <View style={[styles.checkBadge, { backgroundColor: colors.success }]}>
                           <Ionicons name="checkmark" size={14} color="#FFF" />
                         </View>
                       </>
@@ -171,20 +188,20 @@ export default function ThreePhotoScreen() {
                         style={styles.captureArea}
                         onPress={() => handleCapture(angleInfo.angle)}
                       >
-                        <View style={[styles.angleIcon, isActive && styles.angleIconActive]}>
+                        <View style={[styles.angleIcon, { backgroundColor: colors.buttonBg }, isActive && { backgroundColor: 'rgba(255, 69, 0, 0.2)' }]}>
                           <Text style={styles.angleEmoji}>{angleInfo.icon}</Text>
                         </View>
-                        <Text style={styles.angleLabel}>{angleInfo.label}</Text>
+                        <Text style={[styles.angleLabel, { color: colors.text }]}>{angleInfo.label}</Text>
                         {isActive && (
                           <View style={styles.captureHint}>
-                            <Ionicons name="camera" size={14} color="#FF4500" />
-                            <Text style={styles.captureHintText}>Tap to capture</Text>
+                            <Ionicons name="camera" size={14} color={colors.accent} />
+                            <Text style={[styles.captureHintText, { color: colors.accent }]}>Tap to capture</Text>
                           </View>
                         )}
                       </TouchableOpacity>
                     )}
                   </View>
-                  <Text style={styles.instructionText} numberOfLines={2}>
+                  <Text style={[styles.instructionText, { color: colors.textTertiary }]} numberOfLines={2}>
                     {angleInfo.instructions}
                   </Text>
                 </View>
@@ -192,26 +209,26 @@ export default function ThreePhotoScreen() {
             })}
           </View>
 
-          <View style={styles.tipsCard}>
-            <Text style={styles.tipsTitle}>Photo Tips</Text>
+          <View style={[styles.tipsCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: isDark ? 0 : 1 }]}>
+            <Text style={[styles.tipsTitle, { color: colors.text }]}>Photo Tips</Text>
             <View style={styles.tipsList}>
               <View style={styles.tipItem}>
                 <Ionicons name="sunny" size={16} color="#F59E0B" />
-                <Text style={styles.tipText}>Use good, even lighting</Text>
+                <Text style={[styles.tipText, { color: colors.textSecondary }]}>Use good, even lighting</Text>
               </View>
               <View style={styles.tipItem}>
                 <Ionicons name="body" size={16} color="#3B82F6" />
-                <Text style={styles.tipText}>Wear fitted clothing or workout gear</Text>
+                <Text style={[styles.tipText, { color: colors.textSecondary }]}>Wear fitted clothing or workout gear</Text>
               </View>
               <View style={styles.tipItem}>
                 <Ionicons name="phone-portrait" size={16} color="#10B981" />
-                <Text style={styles.tipText}>Keep phone at chest height</Text>
+                <Text style={[styles.tipText, { color: colors.textSecondary }]}>Keep phone at chest height</Text>
               </View>
             </View>
           </View>
 
           <TouchableOpacity
-            style={[styles.analyzeButton, !isComplete && styles.analyzeButtonDisabled]}
+            style={[styles.analyzeButton, { backgroundColor: colors.accent }, !isComplete && styles.analyzeButtonDisabled]}
             onPress={handleAnalyze}
             disabled={!isComplete || analyzing}
           >
@@ -233,7 +250,6 @@ export default function ThreePhotoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
   },
   safeArea: {
     flex: 1,
@@ -248,13 +264,13 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFF',
   },
   content: {
     paddingHorizontal: 20,
@@ -262,19 +278,16 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FF4500',
     borderRadius: 2,
   },
   progressText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -288,19 +301,9 @@ const styles = StyleSheet.create({
   },
   photoCard: {
     aspectRatio: 0.75,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
     overflow: 'hidden',
     marginBottom: 8,
-  },
-  photoCardActive: {
-    borderColor: '#FF4500',
-    backgroundColor: 'rgba(255, 69, 0, 0.1)',
-  },
-  photoCardComplete: {
-    borderColor: '#10B981',
   },
   photoImage: {
     width: '100%',
@@ -324,7 +327,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -338,13 +340,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-  },
-  angleIconActive: {
-    backgroundColor: 'rgba(255, 69, 0, 0.2)',
   },
   angleEmoji: {
     fontSize: 24,
@@ -352,7 +350,6 @@ const styles = StyleSheet.create({
   angleLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFF',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -363,17 +360,14 @@ const styles = StyleSheet.create({
   },
   captureHintText: {
     fontSize: 10,
-    color: '#FF4500',
     fontWeight: '500',
   },
   instructionText: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.4)',
     textAlign: 'center',
     lineHeight: 14,
   },
   tipsCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
@@ -381,7 +375,6 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
     marginBottom: 12,
   },
   tipsList: {
@@ -394,13 +387,11 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.6)',
   },
   analyzeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF4500',
     borderRadius: 14,
     paddingVertical: 16,
     gap: 10,
@@ -414,3 +405,4 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
 });
+

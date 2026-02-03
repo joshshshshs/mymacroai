@@ -125,6 +125,47 @@ export const WIDGET_REGISTRY: WidgetConfig[] = [
         defaultVisible: false,
         category: 'hormonal',
     },
+    // Dashboard widgets
+    {
+        id: 'macro-ring',
+        name: 'Macro Ring',
+        shortName: 'Macros',
+        description: 'Daily calorie and macro progress ring',
+        requiredCapabilities: [],
+        compatibleDevices: [],
+        defaultVisible: true,
+        category: 'activity',
+    },
+    {
+        id: 'ai-summary',
+        name: 'AI Summary',
+        shortName: 'AI',
+        description: 'Personalized AI coaching insights',
+        requiredCapabilities: [],
+        compatibleDevices: [],
+        defaultVisible: true,
+        category: 'activity',
+    },
+    {
+        id: 'quick-actions',
+        name: 'Quick Actions',
+        shortName: 'Actions',
+        description: 'Quick log buttons for meals, water, etc.',
+        requiredCapabilities: [],
+        compatibleDevices: [],
+        defaultVisible: true,
+        category: 'activity',
+    },
+    {
+        id: 'activity-cards',
+        name: 'Activity Cards',
+        shortName: 'Activity',
+        description: 'Daily summary stats cards',
+        requiredCapabilities: [],
+        compatibleDevices: [],
+        defaultVisible: true,
+        category: 'activity',
+    },
 ];
 
 // ============================================================================

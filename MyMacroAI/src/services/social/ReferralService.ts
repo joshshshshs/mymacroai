@@ -179,7 +179,7 @@ class ReferralService {
 
         // In production, would update Supabase and apply credit
         // For now, log and return success
-        console.log(`Referral code ${code} applied by user ${currentUserId}`);
+        if (__DEV__) console.log(`Referral code ${code} applied by user ${currentUserId}`);
 
         return {
             success: true,
@@ -269,7 +269,7 @@ class ReferralService {
         storage.set(PENDING_REFERRALS_KEY, JSON.stringify(pending));
 
         // In production, would send push notification or email
-        console.log(`Nudged referral ${referralId}`);
+        if (__DEV__) console.log(`Nudged referral ${referralId}`);
         return true;
     }
 

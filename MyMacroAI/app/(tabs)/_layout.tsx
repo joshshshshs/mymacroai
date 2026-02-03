@@ -16,8 +16,10 @@ export default function TabsLayout() {
     if (pathname.includes('/ai')) return 'ai-hub';
     if (pathname.includes('/dashboard')) return 'dashboard';
     if (pathname.includes('/nutrition')) return 'nutrition';
-    if (pathname.includes('/community')) return 'community';
+    if (pathname.includes('/squad')) return 'squad';
+    if (pathname.includes('/community')) return 'squad'; // Fallback for old references
     if (pathname.includes('/health')) return 'health';
+    if (pathname.includes('/sleep')) return 'health'; // Sleep is in health section
     return 'dashboard';
   };
 

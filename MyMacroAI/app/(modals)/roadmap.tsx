@@ -328,6 +328,10 @@ export default function RoadmapScreen() {
                             onVote={(type) => handleVote(item.id, type)}
                         />
                     )}
+                    initialNumToRender={10}
+                    maxToRenderPerBatch={10}
+                    windowSize={5}
+                    removeClippedSubviews={true}
                 />
             )}
 

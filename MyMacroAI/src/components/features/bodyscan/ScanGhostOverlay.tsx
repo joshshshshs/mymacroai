@@ -127,8 +127,8 @@ export const ScanGhostOverlay: React.FC<ScanGhostOverlayProps> = ({ step, isAlig
     return (
         <View style={styles.container} pointerEvents="none">
             <Svg
-                width={width * 0.7}
-                height={height * 0.55}
+                width={width * 0.85}
+                height={height * 0.65}
                 viewBox="0 0 120 140"
                 style={styles.svg}
             >

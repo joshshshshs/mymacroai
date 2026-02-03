@@ -43,7 +43,7 @@ export const ReactionRewardsProvider: React.FC<Props> = ({ children }) => {
 
                     // Optional: Show toast notification
                     // You could use a toast library here
-                    console.log(`🎉 +${coinsAwarded} MacroCoins from a heart!`);
+                    if (__DEV__) console.log(`🎉 +${coinsAwarded} MacroCoins from a heart!`);
                 }
             );
 

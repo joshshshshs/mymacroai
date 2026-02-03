@@ -11,6 +11,7 @@ import { GlassButton } from '../ui/GlassButton';
 import { revenueCatService } from '@/src/services/paywall/RevenueCat';
 import { founderService } from '@/src/services/founder/FounderService';
 import { useUserStore } from '@/src/store/UserStore';
+import { useTabBarStore } from '@/src/store/tabBarStore';
 import { haptics } from '@/src/utils/haptics';
 
 interface PaywallSheetProps {
@@ -21,27 +22,33 @@ interface PaywallSheetProps {
 export const PaywallSheet: React.FC<PaywallSheetProps> = ({ visible, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { setProStatus, setFounderStatus } = useUserStore();
+    const { hideTabBar, showTabBar } = useTabBarStore();
+
+    // Hide tab bar when sheet opens, show when it closes
+    useEffect(() => {
+        if (visible) {
+            hideTabBar();
+        } else {
+            showTabBar();
+        }
+    }, [visible, hideTabBar, showTabBar]);
 
     const handlePurchase = async () => {
         setIsLoading(true);
         haptics.selection();
 
         try {
-            // 1. Fetch Offerings (Mock for simplicity in this snippet, ideally strict typing)
             const offerings = await revenueCatService.getOfferings();
 
             if (offerings && offerings.availablePackages.length > 0) {
-                // Purchase first available package (usually Monthly/Annual/Lifetime)
-                const packageToBuy = offerings.availablePackages[0]; // Simplified
+                const packageToBuy = offerings.availablePackages[0];
+                const result = await revenueCatService.purchasePackage(packageToBuy);
 
-                const success = await revenueCatService.purchasePackage(packageToBuy);
-
-                if (success) {
+                if (result.success) {
                     haptics.success();
                     setProStatus(true);
 
-                    // 2. Claim Founder Status (Growth Mechanic)
-                    // In real app, get user email from Auth provider
+                    // Claim Founder Status
                     const dummyEmail = "user@example.com";
                     await founderService.claimFounderStatus(dummyEmail);
 
@@ -50,18 +57,19 @@ export const PaywallSheet: React.FC<PaywallSheetProps> = ({ visible, onClose }) 
                         "You have joined the Inner Circle. Check your email for your unique ID.",
                         [{ text: "Let's Go", onPress: onClose }]
                     );
+                } else if (result.userCancelled) {
+                    // User cancelled - no alert needed
                 } else {
-                    Alert.alert("Purchase Canceled");
+                    haptics.error();
+                    Alert.alert("Purchase Failed", result.error || "Please try again.");
                 }
             } else {
-                // No offerings configured - show error
                 Alert.alert("Setup Required", "Please configure RevenueCat offerings.");
             }
 
         } catch (error) {
-            console.error("Purchase Error:", error);
             haptics.error();
-            Alert.alert("Error", "Transaction failed.");
+            Alert.alert("Error", "Transaction failed. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -69,14 +77,21 @@ export const PaywallSheet: React.FC<PaywallSheetProps> = ({ visible, onClose }) 
 
     const handleRestore = async () => {
         setIsLoading(true);
-        const restored = await revenueCatService.restorePurchases();
+        haptics.selection();
+
+        const result = await revenueCatService.restorePurchases();
         setIsLoading(false);
-        if (restored) {
+
+        if (result.success && result.hasActiveSubscription) {
+            haptics.success();
             setProStatus(true);
             Alert.alert("Restored", "Welcome back, Pro.");
             onClose();
-        } else {
+        } else if (result.success) {
             Alert.alert("Nothing to Restore", "No active subscriptions found.");
+        } else {
+            haptics.error();
+            Alert.alert("Restore Failed", result.error || "Please try again.");
         }
     };
 

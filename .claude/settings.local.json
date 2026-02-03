@@ -33,7 +33,8 @@
       "Bash(xcrun simctl terminate:*)",
       "Bash(xcrun simctl launch:*)",
       "Bash(xcrun simctl:*)",
-      "Bash(EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start:*)"
+      "Bash(EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start:*)",
+      "Bash(kill:*)"
     ]
   }
 }

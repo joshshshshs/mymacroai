@@ -1,9 +1,9 @@
 /**
  * Wearable Sync - Connect and configure wearable devices
- * Supports Oura, Whoop, and Garmin integration
+ * Supports Oura, Whoop, Garmin, Samsung Health, and Google Fit integration
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -19,107 +20,90 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { SoftDreamyBackground } from '@/src/components/ui/SoftDreamyBackground';
-import { wearableAdapter, WearableProvider } from '@/src/services/wearables/WearableAdapter';
-
-interface WearableDevice {
-  id: WearableProvider;
-  name: string;
-  icon: string;
-  color: string;
-  description: string;
-  connected: boolean;
-}
-
-const WEARABLES: WearableDevice[] = [
-  {
-    id: 'oura',
-    name: 'Oura Ring',
-    icon: '💍',
-    color: '#A3A3A3',
-    description: 'Sleep, HRV, readiness tracking',
-    connected: false,
-  },
-  {
-    id: 'whoop',
-    name: 'WHOOP',
-    icon: '💪',
-    color: '#000000',
-    description: 'Recovery, strain, sleep performance',
-    connected: false,
-  },
-  {
-    id: 'garmin',
-    name: 'Garmin',
-    icon: '⌚',
-    color: '#007DC3',
-    description: 'Activity, body battery, stress',
-    connected: false,
-  },
-];
+import { useWearableConnections, WearableDevice } from '@/hooks/useWearableConnections';
 
 export default function WearableSyncScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [devices, setDevices] = useState(WEARABLES);
-  const [connecting, setConnecting] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState<string | null>(null);
+  const {
+    devices,
+    isInitialized,
+    error,
+    connect,
+    disconnect,
+    syncDevice,
+    syncAll,
+  } = useWearableConnections();
 
-  const handleConnect = useCallback(async (deviceId: WearableProvider) => {
+  const handleConnect = useCallback(async (device: WearableDevice) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setConnecting(deviceId);
 
-    // Simulate OAuth flow - in production, this would open the OAuth URL
-    setTimeout(async () => {
-      setDevices(prev => prev.map(d =>
-        d.id === deviceId ? { ...d, connected: true } : d
-      ));
-      setConnecting(null);
+    // Check platform compatibility
+    if (device.id === 'samsung_health' && Platform.OS !== 'android') {
+      Alert.alert('Not Available', 'Samsung Health is only available on Android devices.');
+      return;
+    }
 
-      // Trigger initial sync
-      setSyncing(deviceId);
-      try {
-        await wearableAdapter.fetchRecoveryData(deviceId, 'current-user');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch (error) {
-        console.error('Sync error:', error);
-      }
-      setSyncing(null);
-    }, 2000);
-  }, []);
+    if (device.id === 'apple_health' && Platform.OS !== 'ios') {
+      Alert.alert('Not Available', 'Apple Health is only available on iOS devices.');
+      return;
+    }
 
-  const handleDisconnect = useCallback((deviceId: string) => {
+    const success = await connect(device.id);
+
+    if (!success && device.supportsOAuth) {
+      Alert.alert(
+        'Connection Started',
+        'Complete the sign-in process in your browser to connect.',
+        [{ text: 'OK' }]
+      );
+    }
+  }, [connect]);
+
+  const handleDisconnect = useCallback((device: WearableDevice) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
       'Disconnect Device',
-      'Are you sure you want to disconnect this device?',
+      `Are you sure you want to disconnect ${device.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Disconnect',
           style: 'destructive',
-          onPress: () => {
-            setDevices(prev => prev.map(d =>
-              d.id === deviceId ? { ...d, connected: false } : d
-            ));
-          },
+          onPress: () => disconnect(device.id),
         },
       ]
     );
-  }, []);
+  }, [disconnect]);
 
-  const handleSync = useCallback(async (deviceId: WearableProvider) => {
+  const handleSync = useCallback(async (device: WearableDevice) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSyncing(deviceId);
+    const success = await syncDevice(device.id);
 
-    try {
-      await wearableAdapter.fetchRecoveryData(deviceId, 'current-user');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
+    if (!success) {
       Alert.alert('Sync Failed', 'Could not sync with device. Please try again.');
     }
+  }, [syncDevice]);
 
-    setSyncing(null);
-  }, []);
+  // Filter devices based on platform
+  const filteredDevices = devices.filter(device => {
+    if (device.id === 'samsung_health' && Platform.OS !== 'android') return false;
+    if (device.id === 'google_fit' && Platform.OS !== 'android') return false;
+    if (device.id === 'apple_health' && Platform.OS !== 'ios') return false;
+    return true;
+  });
+
+  const formatLastSync = (date?: Date) => {
+    if (!date) return null;
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+    return `${Math.floor(diffMins / 1440)}d ago`;
+  };
 
   return (
     <View style={styles.container}>
@@ -147,7 +131,7 @@ export default function WearableSyncScreen() {
           </Text>
 
           <View style={styles.deviceList}>
-            {devices.map((device) => (
+            {filteredDevices.map((device) => (
               <View key={device.id} style={styles.deviceCard}>
                 <LinearGradient
                   colors={['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.05)']}
@@ -161,8 +145,13 @@ export default function WearableSyncScreen() {
                   <View style={styles.deviceInfo}>
                     <Text style={styles.deviceName}>{device.name}</Text>
                     <Text style={styles.deviceDescription}>{device.description}</Text>
+                    {device.connectionStatus.connected && device.connectionStatus.lastSync && (
+                      <Text style={styles.lastSyncText}>
+                        Last sync: {formatLastSync(device.connectionStatus.lastSync)}
+                      </Text>
+                    )}
                   </View>
-                  {device.connected && (
+                  {device.connectionStatus.connected && (
                     <View style={styles.connectedBadge}>
                       <View style={styles.connectedDot} />
                       <Text style={styles.connectedText}>Connected</Text>
@@ -171,14 +160,14 @@ export default function WearableSyncScreen() {
                 </View>
 
                 <View style={styles.deviceActions}>
-                  {device.connected ? (
+                  {device.connectionStatus.connected ? (
                     <>
                       <TouchableOpacity
                         style={styles.syncButton}
-                        onPress={() => handleSync(device.id)}
-                        disabled={syncing === device.id}
+                        onPress={() => handleSync(device)}
+                        disabled={device.isLoading}
                       >
-                        {syncing === device.id ? (
+                        {device.isLoading ? (
                           <ActivityIndicator size="small" color="#FFF" />
                         ) : (
                           <>
@@ -189,7 +178,7 @@ export default function WearableSyncScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.disconnectButton}
-                        onPress={() => handleDisconnect(device.id)}
+                        onPress={() => handleDisconnect(device)}
                       >
                         <Text style={styles.disconnectButtonText}>Disconnect</Text>
                       </TouchableOpacity>
@@ -197,10 +186,10 @@ export default function WearableSyncScreen() {
                   ) : (
                     <TouchableOpacity
                       style={styles.connectButton}
-                      onPress={() => handleConnect(device.id)}
-                      disabled={connecting === device.id}
+                      onPress={() => handleConnect(device)}
+                      disabled={device.isLoading}
                     >
-                      {connecting === device.id ? (
+                      {device.isLoading ? (
                         <ActivityIndicator size="small" color="#FFF" />
                       ) : (
                         <>
@@ -214,6 +203,13 @@ export default function WearableSyncScreen() {
               </View>
             ))}
           </View>
+
+          {error && (
+            <View style={styles.errorCard}>
+              <Ionicons name="warning" size={20} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
           <View style={styles.infoCard}>
             <Ionicons name="shield-checkmark" size={24} color="#10B981" />
@@ -393,5 +389,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.6)',
     lineHeight: 18,
+  },
+  lastSyncText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.4)',
+    marginTop: 2,
+  },
+  errorCard: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 16,
+    alignItems: 'center',
+    gap: 10,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#EF4444',
+    flex: 1,
   },
 });

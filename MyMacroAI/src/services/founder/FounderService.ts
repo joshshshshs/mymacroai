@@ -3,7 +3,7 @@ import { useUserStore } from '@/src/store/UserStore';
 // Assuming basic supabase setup or raw fetch if package not installed yet for client
 // For this strict implementation, we'll use a fetch wrapper to the Edge Function URL.
 
-const SUPABASE_PROJECT_URL = "https://YOUR_PROJECT_ID.supabase.co"; // Placeholder
+const SUPABASE_PROJECT_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
 const FUNCTION_NAME = "send-founder-email";
 
 // Note: In production, use the Supabase JS Client `functions.invoke`.

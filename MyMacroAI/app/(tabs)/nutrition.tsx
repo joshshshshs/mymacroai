@@ -45,6 +45,7 @@ import {
     MealTimeline,
 } from '@/src/components/features/nutrition';
 import { RisingEmbers } from '@/src/components/animations';
+import { GradientMeshBackground } from '@/src/components/ui/GradientMeshBackground';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -123,6 +124,75 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({
                 ]}>
                     {label}
                 </Text>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
+// ============================================================================
+// COMMUNITY KITCHEN BUTTON - Entry Point to Recipe Feed
+// ============================================================================
+
+const CommunityKitchenButton: React.FC<{ onPress: () => void; isDark: boolean }> = ({ onPress, isDark }) => {
+    const scale = useSharedValue(1);
+
+    const handlePress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        scale.value = withSequence(
+            withSpring(0.96, { damping: 15 }),
+            withSpring(1, { damping: 12 })
+        );
+        onPress();
+    };
+
+    const containerStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+
+    return (
+        <Animated.View style={[styles.communityKitchenWrapper, containerStyle]}>
+            <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
+                <LinearGradient
+                    colors={isDark
+                        ? ['rgba(255,92,0,0.15)', 'rgba(255,158,0,0.1)']
+                        : ['rgba(255,92,0,0.08)', 'rgba(255,158,0,0.05)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.communityKitchenCard}
+                >
+                    <View style={styles.communityKitchenContent}>
+                        <View style={styles.communityKitchenLeft}>
+                            <View style={[
+                                styles.communityKitchenIconBg,
+                                { backgroundColor: isDark ? 'rgba(255,92,0,0.2)' : 'rgba(255,92,0,0.15)' }
+                            ]}>
+                                <Ionicons name="restaurant" size={24} color={COLORS.vitaminOrange} />
+                            </View>
+                            <View style={styles.communityKitchenTextContainer}>
+                                <Text style={[styles.communityKitchenTitle, { color: isDark ? '#FFF' : '#1A1A1A' }]}>
+                                    Community Kitchen
+                                </Text>
+                                <Text style={[styles.communityKitchenSubtitle, { color: isDark ? 'rgba(255,255,255,0.6)' : '#6B7280' }]}>
+                                    Discover & share recipes
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={styles.communityKitchenRight}>
+                            <View style={[
+                                styles.communityKitchenBadge,
+                                { backgroundColor: isDark ? 'rgba(255,92,0,0.2)' : 'rgba(255,92,0,0.1)' }
+                            ]}>
+                                <Text style={styles.communityKitchenBadgeText}>NEW</Text>
+                            </View>
+                            <Ionicons
+                                name="chevron-forward"
+                                size={20}
+                                color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}
+                            />
+                        </View>
+                    </View>
+                </LinearGradient>
             </TouchableOpacity>
         </Animated.View>
     );
@@ -458,6 +528,7 @@ const TemporalHeader: React.FC<{
                                     >
                                         <Text style={[
                                             styles.heatmapDayText,
+                                            { color: isDark ? '#FFFFFF' : '#1A1A1A' },
                                             isSelected && styles.heatmapDayTextSelected,
                                             isToday && !isSelected && styles.heatmapDayTextToday,
                                         ]}>
@@ -469,7 +540,7 @@ const TemporalHeader: React.FC<{
                             return cells;
                         })()}
                     </View>
-                    <Text style={styles.heatmapHint}>Select a day to time travel</Text>
+                    <Text style={[styles.heatmapHint, { color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)' }]}>Select a day to time travel</Text>
                 </BlurView>
             )}
         </View>
@@ -509,33 +580,46 @@ export default function NutritionScreen() {
     const fats = { current: dateIntake.fats || 0, target: dailyTarget.fats || 80 };
 
     // Meal type definition
-    type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+    type MealTypeKey = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
 
     // Process meals from daily log for selected date
+    // Uses the stored mealType field, falling back to timestamp-based guessing for legacy logs
     const meals = useMemo(() => {
-        const map: Record<MealType, { type: MealType; items: any[]; totalCalories: number }> = {
-            breakfast: { type: 'breakfast', items: [], totalCalories: 0 },
-            lunch: { type: 'lunch', items: [], totalCalories: 0 },
-            dinner: { type: 'dinner', items: [], totalCalories: 0 },
-            snacks: { type: 'snacks', items: [], totalCalories: 0 },
+        const map: Record<MealTypeKey, { type: MealTypeKey; items: any[]; totalCalories: number; totalProtein: number; totalCarbs: number; totalFats: number }> = {
+            breakfast: { type: 'breakfast', items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFats: 0 },
+            lunch: { type: 'lunch', items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFats: 0 },
+            dinner: { type: 'dinner', items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFats: 0 },
+            snacks: { type: 'snacks', items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFats: 0 },
         };
 
         dateLogs
             .filter(l => l.type === 'food' || l.type === 'nutrition')
             .forEach((l, index) => {
-                const hour = new Date(l.timestamp || Date.now()).getHours();
-                let mealType: MealType = 'snacks';
-                if (hour >= 6 && hour < 11) mealType = 'breakfast';
-                else if (hour >= 11 && hour < 15) mealType = 'lunch';
-                else if (hour >= 17 && hour < 22) mealType = 'dinner';
+                // Use stored mealType if available, otherwise fall back to timestamp guessing
+                let mealType: MealTypeKey = 'snacks';
+                if (l.mealType && ['breakfast', 'lunch', 'dinner', 'snacks'].includes(l.mealType)) {
+                    mealType = l.mealType as MealTypeKey;
+                } else {
+                    // Legacy fallback: guess from timestamp
+                    const hour = new Date(l.timestamp || Date.now()).getHours();
+                    if (hour >= 6 && hour < 11) mealType = 'breakfast';
+                    else if (hour >= 11 && hour < 15) mealType = 'lunch';
+                    else if (hour >= 17 && hour < 22) mealType = 'dinner';
+                }
 
                 map[mealType].items.push({
                     id: l.id || `${l.timestamp}-${index}`,
                     name: l.foodName || l.notes || 'Food item',
                     calories: l.calories || 0,
+                    protein: l.protein || 0,
+                    carbs: l.carbs || 0,
+                    fats: l.fats || 0,
                     time: new Date(l.timestamp || Date.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
                 });
                 map[mealType].totalCalories += l.calories || 0;
+                map[mealType].totalProtein += l.protein || 0;
+                map[mealType].totalCarbs += l.carbs || 0;
+                map[mealType].totalFats += l.fats || 0;
             });
 
         return Object.values(map);
@@ -587,27 +671,7 @@ export default function NutritionScreen() {
             />
 
             {/* Mesh Gradient Background - Glass & Light */}
-            <LinearGradient
-                colors={isDark
-                    ? ['#0A0A0C', '#121214', '#0A0A0C']
-                    : [COLORS.warmWhite, COLORS.softGrey, '#FFFFFF']
-                }
-                style={StyleSheet.absoluteFillObject}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            />
-
-            {/* Subtle warm blob for depth */}
-            {!isDark && (
-                <View style={styles.backgroundBlob}>
-                    <LinearGradient
-                        colors={['rgba(255,92,0,0.05)', 'rgba(255,158,0,0.02)', 'transparent']}
-                        style={StyleSheet.absoluteFillObject}
-                        start={{ x: 0.5, y: 0 }}
-                        end={{ x: 0.5, y: 1 }}
-                    />
-                </View>
-            )}
+            <GradientMeshBackground variant="nutrition" />
 
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Temporal Navigation Header */}
@@ -666,7 +730,7 @@ export default function NutritionScreen() {
                             icon="camera"
                             label="Photo Estimate"
                             color={COLORS.vitaminOrange}
-                            onPress={() => handleNavigate('/(modals)/scan')}
+                            onPress={() => handleNavigate('/(modals)/food-camera')}
                         />
                         <QuickActionButton
                             icon="mic"
@@ -675,6 +739,12 @@ export default function NutritionScreen() {
                             onPress={() => handleNavigate('/(modals)/voice-log')}
                         />
                     </View>
+
+                    {/* Community Kitchen Entry Point */}
+                    <CommunityKitchenButton
+                        onPress={() => handleNavigate('/(tabs)/community')}
+                        isDark={isDark}
+                    />
 
                     {/* Smart Feed: Meal Timeline */}
                     <MealTimeline
@@ -1030,5 +1100,65 @@ const styles = StyleSheet.create({
     shimmerOverlay: {
         ...StyleSheet.absoluteFillObject,
         width: 200,
+    },
+
+    // Community Kitchen Button
+    communityKitchenWrapper: {
+        marginHorizontal: SPACING.xl,
+        marginTop: SPACING.lg,
+        marginBottom: SPACING.lg,
+    },
+    communityKitchenCard: {
+        borderRadius: RADIUS.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255,92,0,0.2)',
+        overflow: 'hidden',
+    },
+    communityKitchenContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: SPACING.lg,
+        paddingHorizontal: SPACING.lg,
+    },
+    communityKitchenLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.md,
+    },
+    communityKitchenIconBg: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    communityKitchenTextContainer: {
+        gap: 2,
+    },
+    communityKitchenTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: -0.3,
+    },
+    communityKitchenSubtitle: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    communityKitchenRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm,
+    },
+    communityKitchenBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    communityKitchenBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#FF5C00',
+        letterSpacing: 0.5,
     },
 });

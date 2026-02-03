@@ -12,6 +12,8 @@ import { GlassSheet } from '../../ui/GlassSheet';
 import { haptics } from '@/src/utils/haptics';
 import { geminiService } from '@/src/services/ai/GeminiService';
 import { useUserStore } from '@/src/store/UserStore';
+import { useTabBarStore } from '@/src/store/tabBarStore';
+import { useCombinedTheme } from '@/src/design-system/theme';
 
 // Updated to 4 Core Actions
 const QUICK_ACTIONS = [
@@ -32,6 +34,17 @@ export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClo
     const [intent, setIntent] = useState<string>('');
     const [inputValue, setInputValue] = useState<string>('');
     const translateY = useSharedValue(0);
+    const { hideTabBar, showTabBar } = useTabBarStore();
+    const { colors, isDark } = useCombinedTheme();
+
+    // Hide tab bar when sheet opens, show when it closes
+    useEffect(() => {
+        if (visible) {
+            hideTabBar();
+        } else {
+            showTabBar();
+        }
+    }, [visible, hideTabBar, showTabBar]);
 
     const handleActionPress = (id: string) => {
         haptics.selection();
@@ -110,17 +123,17 @@ export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClo
                         <View style={styles.dragHandle} />
 
                         <View style={styles.headerContent}>
-                            <Ionicons name="mic" size={24} color="#10B981" />
-                            <Text style={styles.headerText}>{getHeaderText()}</Text>
+                            <Ionicons name="mic" size={24} color={colors.primary} />
+                            <Text style={[styles.headerText, { color: colors.textPrimary }]}>{getHeaderText()}</Text>
                         </View>
-                        <Text style={styles.swipeHint}>Swipe up for Camera</Text>
+                        <Text style={[styles.swipeHint, { color: colors.textMuted }]}>Swipe up for Camera</Text>
                     </View>
 
                     {/* Waveform Area (Visual Only) */}
-                    <View style={styles.waveformContainer}>
+                    <View style={[styles.waveformContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         {/* Mock Waveform Lines */}
                         {[...Array(20)].map((_, i) => (
-                            <View key={i} style={[styles.waveLine, { height: 10 + Math.random() * 20 }]} />
+                            <View key={i} style={[styles.waveLine, { height: 10 + Math.random() * 20, backgroundColor: colors.primary }]} />
                         ))}
                     </View>
 
@@ -129,19 +142,19 @@ export const OmniLoggerSheet: React.FC<OmniLoggerSheetProps> = ({ visible, onClo
                         {QUICK_ACTIONS.map((action) => (
                             <TouchableOpacity
                                 key={action.id}
-                                style={styles.actionPill}
+                                style={[styles.actionPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
                                 onPress={() => handleActionPress(action.id)}
                             >
-                                <Ionicons name={action.icon as any} size={20} color="#F1F5F9" />
-                                <Text style={styles.actionLabel}>{action.label}</Text>
+                                <Ionicons name={action.icon as any} size={20} color={colors.textPrimary} />
+                                <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>{action.label}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
 
                     {/* Send Button */}
-                    <TouchableOpacity style={styles.sendButton} onPress={onClose}>
-                        <Text style={styles.sendButtonText}>Send</Text>
-                        <Ionicons name="arrow-forward" size={20} color="#0B1410" />
+                    <TouchableOpacity style={[styles.sendButton, { backgroundColor: colors.primary }]} onPress={onClose}>
+                        <Text style={[styles.sendButtonText, { color: colors.textContrast }]}>Send</Text>
+                        <Ionicons name="arrow-forward" size={20} color={colors.textContrast} />
                     </TouchableOpacity>
 
                 </Animated.View>
@@ -176,11 +189,9 @@ const styles = StyleSheet.create({
     headerText: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#F1F5F9',
     },
     swipeHint: {
         fontSize: 10,
-        color: 'rgba(255,255,255,0.4)',
         marginTop: 4,
     },
     waveformContainer: {
@@ -189,16 +200,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
-        backgroundColor: 'rgba(255,255,255,0.03)',
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.08)',
     },
     waveLine: {
         width: 3,
-        backgroundColor: '#10B981',
         borderRadius: 2,
-        opacity: 0.6,
+        opacity: 0.7,
     },
     grid: {
         flexDirection: 'row',
@@ -214,12 +223,10 @@ const styles = StyleSheet.create({
         gap: 8,
         paddingVertical: 14,
         borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.08)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
     actionLabel: {
-        color: '#F1F5F9',
         fontSize: 14,
         fontWeight: '500',
     },
@@ -228,14 +235,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: '#A3E635',
         paddingVertical: 14,
         borderRadius: 16,
         marginTop: 'auto',
         marginBottom: 20,
     },
     sendButtonText: {
-        color: '#0B1410',
         fontSize: 16,
         fontWeight: '700',
     },

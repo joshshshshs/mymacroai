@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -59,14 +60,36 @@ const PHASE_INFO: Record<CyclePhase, { name: string; color: string; icon: string
       'Cravings are normal - plan healthy alternatives',
     ],
   },
+  unknown: {
+    name: 'Unknown Phase',
+    color: '#6B7280',
+    icon: '❓',
+    tips: [
+      'Set your cycle start date to get personalized recommendations',
+      'Track your cycle for better macro adjustments',
+      'No adjustments applied without cycle data',
+    ],
+  },
 };
 
 export default function CycleMacrosScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { dailyTarget } = useUserStore();
   const [currentPhase, setCurrentPhase] = useState<CyclePhase>('follicular');
   const [adjustments, setAdjustments] = useState<CyclePhaseAdjustments | null>(null);
+
+  const colors = {
+    bg: isDark ? '#0F0F0F' : '#F5F5F7',
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
+    textTertiary: isDark ? 'rgba(255,255,255,0.4)' : '#AEAEB2',
+    card: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
+    cardBorder: isDark ? 'transparent' : 'rgba(0,0,0,0.08)',
+    buttonBg: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+  };
 
   useEffect(() => {
     // Get current phase and adjustments
@@ -81,9 +104,17 @@ export default function CycleMacrosScreen() {
         dailyTarget.calories,
         dailyTarget.protein,
         dailyTarget.carbs,
-        dailyTarget.fat
+        dailyTarget.fats
       );
-      setAdjustments(adj);
+      // Convert MacroAdjustment to CyclePhaseAdjustments format
+      setAdjustments({
+        adjustedCalories: dailyTarget.calories + adj.calorieAdjustment,
+        adjustedProtein: dailyTarget.protein + adj.proteinAdjustment,
+        adjustedCarbs: dailyTarget.carbs + adj.carbAdjustment,
+        adjustedFat: dailyTarget.fats + adj.fatAdjustment,
+        reason: adj.reason,
+        recommendations: adj.recommendations,
+      });
     };
 
     fetchPhaseData();
@@ -115,15 +146,15 @@ export default function CycleMacrosScreen() {
     },
     {
       label: 'Fat',
-      baseline: dailyTarget.fat,
-      adjusted: adjustments?.adjustedFat ?? dailyTarget.fat,
+      baseline: dailyTarget.fats,
+      adjusted: adjustments?.adjustedFat ?? dailyTarget.fats,
       unit: 'g',
       color: '#F59E0B',
     },
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <SoftDreamyBackground />
 
@@ -131,16 +162,16 @@ export default function CycleMacrosScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: colors.buttonBg }]}
           >
-            <Ionicons name="chevron-back" size={24} color="#FFF" />
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Phase Macros</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Phase Macros</Text>
           <TouchableOpacity
             onPress={() => router.push('/(modals)/cycle-tracking' as any)}
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: colors.buttonBg }]}
           >
-            <Ionicons name="calendar-outline" size={22} color="#FFF" />
+            <Ionicons name="calendar-outline" size={22} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -148,20 +179,20 @@ export default function CycleMacrosScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.phaseCard, { borderColor: phaseInfo.color }]}>
+          <View style={[styles.phaseCard, { backgroundColor: colors.card, borderColor: phaseInfo.color, borderWidth: isDark ? 2 : 1 }]}>
             <View style={[styles.phaseIcon, { backgroundColor: `${phaseInfo.color}20` }]}>
               <Text style={styles.phaseEmoji}>{phaseInfo.icon}</Text>
             </View>
             <View style={styles.phaseInfo}>
-              <Text style={styles.phaseLabel}>Current Phase</Text>
+              <Text style={[styles.phaseLabel, { color: colors.textSecondary }]}>Current Phase</Text>
               <Text style={[styles.phaseName, { color: phaseInfo.color }]}>
                 {phaseInfo.name}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Adjusted Macros</Text>
-          <Text style={styles.sectionSubtitle}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Adjusted Macros</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
             Based on your cycle phase, here are your optimized targets:
           </Text>
 
@@ -171,11 +202,11 @@ export default function CycleMacrosScreen() {
               const diffPercent = Math.round((diff / macro.baseline) * 100);
 
               return (
-                <View key={macro.label} style={styles.macroCard}>
+                <View key={macro.label} style={[styles.macroCard, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: isDark ? 0 : 1 }]}>
                   <View style={[styles.macroIndicator, { backgroundColor: macro.color }]} />
-                  <Text style={styles.macroLabel}>{macro.label}</Text>
-                  <Text style={styles.macroValue}>
-                    {Math.round(macro.adjusted)} <Text style={styles.macroUnit}>{macro.unit}</Text>
+                  <Text style={[styles.macroLabel, { color: colors.textSecondary }]}>{macro.label}</Text>
+                  <Text style={[styles.macroValue, { color: colors.text }]}>
+                    {Math.round(macro.adjusted)} <Text style={[styles.macroUnit, { color: colors.textSecondary }]}>{macro.unit}</Text>
                   </Text>
                   {diff !== 0 && (
                     <View style={[styles.diffBadge, { backgroundColor: diff > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}>
@@ -189,7 +220,7 @@ export default function CycleMacrosScreen() {
                       </Text>
                     </View>
                   )}
-                  <Text style={styles.baselineText}>
+                  <Text style={[styles.baselineText, { color: colors.textTertiary }]}>
                     Baseline: {Math.round(macro.baseline)} {macro.unit}
                   </Text>
                 </View>
@@ -197,23 +228,23 @@ export default function CycleMacrosScreen() {
             })}
           </View>
 
-          <Text style={styles.sectionTitle}>Phase Tips</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Phase Tips</Text>
 
           <View style={styles.tipsList}>
             {phaseInfo.tips.map((tip, index) => (
               <View key={index} style={styles.tipItem}>
                 <View style={[styles.tipDot, { backgroundColor: phaseInfo.color }]} />
-                <Text style={styles.tipText}>{tip}</Text>
+                <Text style={[styles.tipText, { color: colors.textSecondary }]}>{tip}</Text>
               </View>
             ))}
           </View>
 
           <TouchableOpacity
-            style={styles.updateButton}
+            style={[styles.updateButton, { backgroundColor: colors.buttonBg }]}
             onPress={() => router.push('/(modals)/cycle-tracking' as any)}
           >
-            <Ionicons name="refresh" size={18} color="#FFF" />
-            <Text style={styles.updateButtonText}>Update Cycle Phase</Text>
+            <Ionicons name="refresh" size={18} color={colors.text} />
+            <Text style={[styles.updateButtonText, { color: colors.text }]}>Update Cycle Phase</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -224,7 +255,6 @@ export default function CycleMacrosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
   },
   safeArea: {
     flex: 1,
@@ -239,13 +269,13 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFF',
   },
   content: {
     paddingHorizontal: 20,
@@ -254,10 +284,8 @@ const styles = StyleSheet.create({
   phaseCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 20,
     padding: 20,
-    borderWidth: 2,
     marginBottom: 24,
   },
   phaseIcon: {
@@ -275,7 +303,6 @@ const styles = StyleSheet.create({
   },
   phaseLabel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
     fontWeight: '500',
     marginBottom: 4,
   },
@@ -286,12 +313,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFF',
     marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
     marginBottom: 16,
   },
   macroGrid: {
@@ -302,7 +327,6 @@ const styles = StyleSheet.create({
   },
   macroCard: {
     width: '48%',
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     padding: 16,
   },
@@ -316,7 +340,6 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
     fontWeight: '500',
     marginBottom: 8,
     marginLeft: 12,
@@ -324,13 +347,11 @@ const styles = StyleSheet.create({
   macroValue: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFF',
     marginLeft: 12,
   },
   macroUnit: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.5)',
   },
   diffBadge: {
     flexDirection: 'row',
@@ -349,7 +370,6 @@ const styles = StyleSheet.create({
   },
   baselineText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.4)',
     marginTop: 8,
     marginLeft: 12,
   },
@@ -371,14 +391,12 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
     lineHeight: 20,
   },
   updateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 14,
     paddingVertical: 16,
     gap: 10,
@@ -386,6 +404,6 @@ const styles = StyleSheet.create({
   updateButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFF',
   },
 });
+

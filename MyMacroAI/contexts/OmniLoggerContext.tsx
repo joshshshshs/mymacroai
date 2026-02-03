@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { Alert } from 'react-native';
-import { Intent, IntentType } from '../services/ai/GeminiService';
+import { Intent, IntentType } from '@/src/services/ai/GeminiService';
 import { useHaptics } from '../hooks/useHaptics';
 import { logger } from '../utils/logger';
 

@@ -80,7 +80,7 @@ export const ShopItemCard: React.FC<ShopItemCardProps> = ({
         disabled: isDark ? 'rgba(255,255,255,0.3)' : '#9CA3AF',
     };
 
-    const itemIcon = ITEM_ICONS[item.id] || CATEGORY_ICONS[item.category] || { icon: '📦', color: '#6B7280' };
+    const itemIcon = ITEM_ICONS[item.id] || (item.category ? CATEGORY_ICONS[item.category] : null) || { icon: '📦', color: '#6B7280' };
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],

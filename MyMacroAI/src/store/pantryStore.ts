@@ -1,6 +1,55 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { storageService } from '../../services/storage/storage';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { MMKV } from 'react-native-mmkv';
+
+// Shared MMKV instance for pantry storage
+let _pantryStorage: MMKV | null = null;
+let _storageError = false;
+
+const getPantryStorage = (): MMKV | null => {
+    if (_storageError) return null;
+    if (_pantryStorage) return _pantryStorage;
+
+    try {
+        _pantryStorage = new MMKV({
+            id: 'pantry-storage-v1',
+        });
+        return _pantryStorage;
+    } catch (error) {
+        console.warn('[PantryStore] MMKV initialization failed, using memory fallback:', error);
+        _storageError = true;
+        return null;
+    }
+};
+
+// Memory fallback when MMKV is unavailable
+const memoryStorage = new Map<string, string>();
+
+const mmkvPantryStorage: StateStorage = {
+    setItem: (name, value) => {
+        const storage = getPantryStorage();
+        if (storage) {
+            storage.set(name, value);
+        } else {
+            memoryStorage.set(name, value);
+        }
+    },
+    getItem: (name) => {
+        const storage = getPantryStorage();
+        if (storage) {
+            return storage.getString(name) ?? null;
+        }
+        return memoryStorage.get(name) ?? null;
+    },
+    removeItem: (name) => {
+        const storage = getPantryStorage();
+        if (storage) {
+            storage.delete(name);
+        } else {
+            memoryStorage.delete(name);
+        }
+    },
+};
 
 interface PantryState {
   // 储藏室物品列表
@@ -40,12 +89,8 @@ interface PantryState {
 export const usePantryStore = create<PantryState>()(
   persist(
     (set, get) => ({
-      // 初始状态 - 包含一些常见的基础食材
-      items: [
-        '鸡胸肉', '鸡蛋', '牛奶', '面包', '米饭',
-        '燕麦', '香蕉', '苹果', '胡萝卜', '洋葱',
-        '大蒜', '橄榄油', '盐', '胡椒', '酱油'
-      ],
+      // 初始状态 - 新用户从空储藏室开始
+      items: [],
       
       isLoading: false,
       error: null,
@@ -197,7 +242,7 @@ export const usePantryStore = create<PantryState>()(
     }),
     {
       name: 'pantry-store',
-      storage: createJSONStorage(() => storageService.getZustandStorage()),
+      storage: createJSONStorage(() => mmkvPantryStorage),
       version: 1,
       migrate: (persistedState: any, version: number) => {
         // 状态迁移逻辑
@@ -260,12 +305,7 @@ export const exportPantryItems = (): string[] => {
   return usePantryStore.getState().items;
 };
 
-// 工具函数：重置为默认食材
+// 工具函数：重置为空储藏室
 export const resetToDefaultPantry = (): void => {
-  const defaultItems = [
-    '鸡胸肉', '鸡蛋', '牛奶', '面包', '米饭',
-    '燕麦', '香蕉', '苹果', '胡萝卜', '洋葱',
-    '大蒜', '橄榄油', '盐', '胡椒', '酱油'
-  ];
-  usePantryStore.getState().setItems(defaultItems);
+  usePantryStore.getState().setItems([]);
 };

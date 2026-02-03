@@ -1,6 +1,7 @@
 /**
  * Sleep Analytics Screen - Biological Restoration Report
  * Premium sleep analysis with educational phase cards and AI insights
+ * Features: Dark mode support, Unwind/DND settings, AI insights at top
  */
 
 import React from 'react';
@@ -11,11 +12,14 @@ import {
   ScrollView,
   StatusBar,
   TouchableOpacity,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 
 import {
   SleepScoreGauge,
@@ -26,10 +30,26 @@ import {
 import { SunriseRecovery } from '@/src/components/animations';
 import { useUserStore } from '@/src/store/UserStore';
 import { SPACING } from '@/src/design-system/tokens';
+import { GradientMeshBackground } from '@/src/components/ui/GradientMeshBackground';
 
 export default function SleepScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const healthMetrics = useUserStore(state => state.healthMetrics);
+
+  // Theme colors
+  const colors = {
+    bg: isDark ? '#121214' : '#F2F4F6',
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255,255,255,0.6)' : '#6B7280',
+    card: isDark ? 'rgba(30,30,34,0.8)' : 'rgba(255,255,255,0.9)',
+    cardAlt: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
+    blobPrimary: isDark ? 'rgba(79, 70, 229, 0.2)' : '#C7D2FE',
+    blobSecondary: isDark ? 'rgba(147, 51, 234, 0.15)' : '#E0E7FF',
+    accent: '#4F46E5',
+  };
 
   // Calculate sleep metrics
   const sleepMinutes = healthMetrics.sleepMinutes || 480; // Default 8 hours
@@ -72,15 +92,22 @@ export default function SleepScreen() {
     return yesterday.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   };
 
-  return (
-    <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.back();
+  };
 
-      {/* Soft Background with Indigo tint */}
-      <View style={styles.backgroundContainer}>
-        <View style={[styles.blob, styles.blobTopRight]} />
-        <View style={[styles.blob, styles.blobBottomLeft]} />
-      </View>
+  const handleMoonPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(modals)/unwind-dnd' as any);
+  };
+
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
+      {/* Gradient Mesh Background */}
+      <GradientMeshBackground variant="health" />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView
@@ -90,16 +117,22 @@ export default function SleepScreen() {
         >
           {/* Header: Date Navigator */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.navButton}>
-              <Ionicons name="chevron-back" size={20} color="#6B7280" />
+            <TouchableOpacity style={[styles.navButton, { backgroundColor: colors.cardAlt }]} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
             <View style={styles.headerCenter}>
-              <Text style={styles.headerDate}>Last Night, {formatDate().split(', ')[1]}</Text>
+              <Text style={[styles.headerDate, { color: colors.text }]}>Last Night, {formatDate().split(', ')[1]}</Text>
             </View>
-            <TouchableOpacity style={styles.navButton}>
-              <Ionicons name="moon" size={20} color="#4F46E5" />
+            <TouchableOpacity style={[styles.navButton, { backgroundColor: colors.cardAlt }]} onPress={handleMoonPress}>
+              <Ionicons name="moon" size={20} color={colors.accent} />
             </TouchableOpacity>
           </View>
+
+          {/* AI Coach Insight - MOVED TO TOP */}
+          <SleepAIInsight
+            remHigh={remSleepMinutes > sleepMinutes * 0.25}
+            deepLow={deepSleepMinutes < sleepMinutes * 0.18}
+          />
 
           {/* Hero: Sunrise Recovery Visualization */}
           <View style={styles.heroCard}>
@@ -113,13 +146,13 @@ export default function SleepScreen() {
           {/* Hypnogram: Sleep Cycles */}
           <View style={styles.cyclesCard}>
             <LinearGradient
-              colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+              colors={isDark ? ['rgba(30,30,34,0.9)', 'rgba(30,30,34,0.7)'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.glassCard}
             >
               <View style={styles.cyclesHeader}>
-                <Text style={styles.cyclesTitle}>Sleep Architecture</Text>
+                <Text style={[styles.cyclesTitle, { color: colors.text }]}>Sleep Architecture</Text>
                 <View style={styles.cyclesLegend}>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: '#4F46E5' }]} />
@@ -175,7 +208,7 @@ export default function SleepScreen() {
           </View>
 
           {/* Phase Cards Grid */}
-          <Text style={styles.sectionTitle}>SLEEP PHASES</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>SLEEP PHASES</Text>
           <View style={styles.phaseGrid}>
             <SleepPhaseCard
               phase="deep"
@@ -200,18 +233,11 @@ export default function SleepScreen() {
           </View>
 
           {/* Vitals Strip */}
-          <Text style={styles.sectionTitle}>OVERNIGHT VITALS</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>OVERNIGHT VITALS</Text>
           <VitalsStrip
             rhr={42}
             hrv={115}
             respRate={14}
-          />
-
-          {/* AI Coach Insight */}
-          <Text style={styles.sectionTitle}>AI INSIGHT</Text>
-          <SleepAIInsight
-            remHigh={remSleepMinutes > sleepMinutes * 0.25}
-            deepLow={deepSleepMinutes < sleepMinutes * 0.18}
           />
 
         </ScrollView>
@@ -223,7 +249,6 @@ export default function SleepScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F2F4F6',
   },
   backgroundContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -240,14 +265,12 @@ const styles = StyleSheet.create({
     right: '-15%',
     width: 500,
     height: 500,
-    backgroundColor: '#C7D2FE', // Indigo tint
   },
   blobBottomLeft: {
     bottom: '-10%',
     left: '-15%',
     width: 400,
     height: 400,
-    backgroundColor: '#E0E7FF', // Light indigo
   },
   safeArea: {
     flex: 1,
@@ -270,18 +293,17 @@ const styles = StyleSheet.create({
   navButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerCenter: {
+    flex: 1,
     alignItems: 'center',
   },
   headerDate: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   heroCard: {
     marginTop: 8,

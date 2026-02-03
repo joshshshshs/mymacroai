@@ -14,7 +14,8 @@ import { SoftGlassCard } from '@/src/components/ui/SoftGlassCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useCombinedTheme } from '@/src/design-system/theme';
-import { useUserStore } from '@/src/store/UserStore';
+import { useUserStore, useLogsForDate, useDailyLogs } from '@/src/store/UserStore';
+import { DailyLog } from '@/src/types';
 
 interface Meal {
     id: string;
@@ -26,22 +27,52 @@ interface Meal {
     items: string[];
 }
 
-// Get meals from store or use defaults
-const getDefaultMeals = (): Meal[] => [
-    { id: 'breakfast', name: 'Breakfast', calories: 420, protein: 25, carbs: 45, fats: 15, items: ['Oatmeal', 'Berries', 'Coffee'] },
-    { id: 'lunch', name: 'Lunch', calories: 580, protein: 40, carbs: 55, fats: 20, items: ['Grilled Chicken Salad', 'Quinoa'] },
-    { id: 'dinner', name: 'Dinner', calories: 0, protein: 0, carbs: 0, fats: 0, items: [] },
-    { id: 'snacks', name: 'Snacks', calories: 50, protein: 3, carbs: 4, fats: 4, items: ['Almonds'] },
-];
+// Aggregate logs by meal type
+const aggregateLogsByMeal = (logs: DailyLog[]): Meal[] => {
+    const mealTypes = ['breakfast', 'lunch', 'dinner', 'snacks'] as const;
+
+    return mealTypes.map(mealType => {
+        const mealLogs = logs.filter(log => log.mealType === mealType || (!log.mealType && mealType === 'snacks'));
+
+        const totals = mealLogs.reduce(
+            (acc, log) => ({
+                calories: acc.calories + (log.calories || 0),
+                protein: acc.protein + (log.protein || 0),
+                carbs: acc.carbs + (log.carbs || 0),
+                fats: acc.fats + (log.fats || 0),
+            }),
+            { calories: 0, protein: 0, carbs: 0, fats: 0 }
+        );
+
+        return {
+            id: mealType,
+            name: mealType.charAt(0).toUpperCase() + mealType.slice(1),
+            ...totals,
+            items: mealLogs.map(log => log.foodName || 'Food item').filter(Boolean),
+        };
+    });
+};
 
 export const MealList = () => {
     const haptics = useHaptics();
     const { colors } = useCombinedTheme();
-    const MEALS = getDefaultMeals(); // TODO: Wire to actual user logged meals
+
+    // Get today's logs from store
+    const today = new Date().toISOString().split('T')[0];
+    const todaysLogs = useLogsForDate(today);
+    const legacyLogs = useDailyLogs();
+
+    // Use today's logs or fall back to legacy
+    const logs = todaysLogs.length > 0 ? todaysLogs : legacyLogs;
+    const MEALS = aggregateLogsByMeal(logs);
 
     const handleAdd = (mealId: string) => {
         haptics.light();
-        // TODO: Open AI Hub or Search for mealId
+        // Navigate to food logging with meal type pre-selected
+        router.push({
+            pathname: '/(modals)/log-food',
+            params: { mealType: mealId }
+        } as any);
     };
 
     const handleShare = (meal: Meal) => {
@@ -70,7 +101,7 @@ export const MealList = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.sectionTitle}>Meals</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Meals</Text>
             <View style={styles.list}>
                 {MEALS.map((meal) => {
                     const hasContent = meal.calories > 0;
@@ -83,11 +114,11 @@ export const MealList = () => {
                         >
                             <View style={styles.cardContent}>
                                 <View style={styles.textContainer}>
-                                    <Text style={styles.mealName}>{meal.name}</Text>
-                                    <Text style={styles.mealCalories}>
-                                        {meal.calories > 0 ? meal.calories : 0} <Text style={styles.unit}>kcal</Text>
+                                    <Text style={[styles.mealName, { color: colors.textSecondary }]}>{meal.name}</Text>
+                                    <Text style={[styles.mealCalories, { color: colors.textPrimary }]}>
+                                        {meal.calories > 0 ? meal.calories : 0} <Text style={[styles.unit, { color: colors.textMuted }]}>kcal</Text>
                                     </Text>
-                                    <Text style={styles.mealItems} numberOfLines={1}>
+                                    <Text style={[styles.mealItems, { color: colors.textMuted }]} numberOfLines={1}>
                                         {meal.items.length > 0 ? meal.items.join(', ') : 'No food logged'}
                                     </Text>
                                 </View>
@@ -130,7 +161,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     sectionTitle: {
-        color: '#F1F5F9',
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 12,
@@ -152,13 +182,11 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     mealName: {
-        color: '#94A3B8',
         fontSize: 13,
         fontWeight: '500',
         marginBottom: 2,
     },
     mealCalories: {
-        color: '#F8FAFC',
         fontSize: 20,
         fontWeight: '700',
         marginBottom: 4,
@@ -166,10 +194,8 @@ const styles = StyleSheet.create({
     unit: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#64748B',
     },
     mealItems: {
-        color: '#64748B',
         fontSize: 12,
     },
     actions: {

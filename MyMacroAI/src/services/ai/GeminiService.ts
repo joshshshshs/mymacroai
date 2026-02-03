@@ -1,6 +1,67 @@
 import { supabase } from '../../lib/supabase';
 import { getUserContextForAI } from '../../store/UserStore';
 
+// Intent types for OmniLogger
+export type IntentType =
+    | 'LOG_FOOD'
+    | 'LOG_WORKOUT'
+    | 'LOG_WEIGHT'
+    | 'LOG_WATER'
+    | 'LOG_CYCLE'
+    | 'ADD_PANTRY'
+    | 'QUERY'
+    | 'CHAT'
+    | 'GENERAL_HELP'
+    | 'UNKNOWN';
+
+export interface Intent {
+    type: IntentType;
+    confidence: number;
+    parameters: Record<string, string | number | boolean | undefined>;
+    rawText?: string;
+    timestamp?: string;
+}
+
+interface MealEntry {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    timestamp?: string;
+}
+
+interface IntakeData {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+}
+
+interface UserPrefs {
+    dietStyle?: string;
+    units?: string;
+    goal?: string;
+}
+
+export interface OmniLoggerContext {
+    userText: string;
+    timestamp: string;
+    userContext?: {
+        recentMeals?: MealEntry[];
+        currentIntake?: IntakeData;
+        preferences?: UserPrefs;
+    };
+}
+
+interface FoodAnalysisResult {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+}
+
 // Helper Interface for Proxy Response
 export interface NLUResult {
     intent: 'log_food' | 'log_workout' | 'query' | 'chat';
@@ -27,7 +88,7 @@ class GeminiService {
             });
 
             if (error) {
-                console.error("AI Proxy Error:", error);
+                if (__DEV__) console.error("[GeminiService] AI Proxy Error:", error);
                 if (error instanceof Error && error.message.includes("429")) {
                     return { intent: 'chat', response: "Daily AI limit reached. Please upgrade to Pro." };
                 }
@@ -51,15 +112,83 @@ class GeminiService {
             return parsed;
 
         } catch (error) {
-            console.error("Gemini Service Error:", error);
+            if (__DEV__) console.error("[GeminiService] NLU Error:", error);
             // Fallback to Mock
-            console.warn("Falling back to offline mock.");
             return this.mockProcess(input);
         }
     }
 
+    /**
+     * Analyze physique from body scan photos
+     * Used by ThreePhotoProtocol for body composition analysis
+     */
+    async analyzePhysique(
+        base64Image: string,
+        angle: 'front' | 'side' | 'back',
+        prompt?: string
+    ): Promise<{
+        bodyFatEstimate?: number;
+        muscleGroups?: { name: string; development: string }[];
+        symmetry?: string;
+        recommendations?: string[];
+        rawAnalysis?: string;
+    }> {
+        try {
+            const analysisPrompt = prompt || `Analyze this ${angle} view body photo for fitness assessment.
+Estimate body fat percentage range, identify major muscle group development (underdeveloped/average/well-developed),
+assess symmetry, and provide actionable recommendations.
+Return JSON: {
+    bodyFatEstimate: number,
+    muscleGroups: [{name: string, development: "underdeveloped"|"average"|"well-developed"}],
+    symmetry: string,
+    recommendations: string[]
+}`;
+
+            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+                body: {
+                    intent: 'vision',
+                    payload: analysisPrompt,
+                    image: base64Image
+                }
+            });
+
+            if (error) throw error;
+
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            try {
+                return JSON.parse(jsonStr);
+            } catch {
+                // If JSON parsing fails, return raw analysis
+                return { rawAnalysis: text };
+            }
+
+        } catch (error) {
+            if (__DEV__) console.error(`[GeminiService] Physique Analysis Error (${angle}):`, error);
+            // Return mock data for offline mode
+            return {
+                bodyFatEstimate: 15,
+                muscleGroups: [
+                    { name: 'Chest', development: 'average' },
+                    { name: 'Back', development: 'average' },
+                    { name: 'Shoulders', development: 'average' },
+                    { name: 'Arms', development: 'average' },
+                    { name: 'Core', development: 'average' },
+                    { name: 'Legs', development: 'average' },
+                ],
+                symmetry: 'Generally balanced (mock data)',
+                recommendations: [
+                    'Continue consistent training',
+                    'Focus on progressive overload',
+                    'Maintain protein intake at 1g/lb bodyweight',
+                ],
+            };
+        }
+    }
+
     // Vision Analysis
-    async analyzeVision(base64Image: string | string[]): Promise<any> {
+    async analyzeVision(base64Image: string | string[]): Promise<FoodAnalysisResult> {
         try {
             const prompt = "Identify this food and estimate calories, protein, carbs, and fat per serving. Return JSON: { name, calories, protein, carbs, fats }";
             const isMulti = Array.isArray(base64Image);
@@ -79,7 +208,7 @@ class GeminiService {
             return JSON.parse(jsonStr);
 
         } catch (error) {
-            console.error("Gemini Vision Error:", error);
+            if (__DEV__) console.error("[GeminiService] Vision Error:", error);
             return this.mockVision();
         }
     }
@@ -100,7 +229,7 @@ class GeminiService {
             const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
             return text.trim();
         } catch (error) {
-            console.error("Gemini Speech Error:", error);
+            if (__DEV__) console.error("[GeminiService] Speech Error:", error);
             return '';
         }
     }
@@ -144,7 +273,7 @@ class GeminiService {
             });
 
             if (error) {
-                console.error("AI Context Error:", error);
+                if (__DEV__) console.error("[GeminiService] Context Error:", error);
                 throw error;
             }
 
@@ -152,7 +281,7 @@ class GeminiService {
             return text.trim();
 
         } catch (error) {
-            console.error("Gemini Contextual Message Error:", error);
+            if (__DEV__) console.error("[GeminiService] Contextual Message Error:", error);
             throw error; // Let caller handle fallback
         }
     }
@@ -186,7 +315,7 @@ ${userContext}
             });
 
             if (error) {
-                console.error("AI Chat Error:", error);
+                if (__DEV__) console.error("[GeminiService] Chat Error:", error);
                 if (error instanceof Error && error.message.includes("429")) {
                     return "I've reached my daily limit. Please try again tomorrow or upgrade to Pro for unlimited conversations.";
                 }
@@ -197,7 +326,7 @@ ${userContext}
             return text.trim() || "I'm having trouble responding right now.";
 
         } catch (error) {
-            console.error("Gemini Chat Error:", error);
+            if (__DEV__) console.error("[GeminiService] Chat Error:", error);
             return this.mockChatResponse(messages[messages.length - 1]?.content || '');
         }
     }

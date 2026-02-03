@@ -1,13 +1,38 @@
 /**
  * AI Tool Definitions - Gemini Function Calling Schema
- * 
+ *
  * These tools give the AI read/write access to:
  * - Verified Food Database
  * - User Biometric State
  * - Food Logging Actions
  */
 
-import { FunctionDeclaration, SchemaType } from '@google/generative-ai';
+// Define types locally to ensure compatibility across @google/generative-ai versions
+// The package may export these differently depending on version
+
+export enum SchemaType {
+    STRING = 'STRING',
+    NUMBER = 'NUMBER',
+    INTEGER = 'INTEGER',
+    BOOLEAN = 'BOOLEAN',
+    ARRAY = 'ARRAY',
+    OBJECT = 'OBJECT',
+}
+
+export interface FunctionDeclarationSchema {
+    type: SchemaType;
+    properties?: Record<string, FunctionDeclarationSchema>;
+    items?: FunctionDeclarationSchema;
+    description?: string;
+    required?: string[];
+    enum?: string[];
+}
+
+export interface FunctionDeclaration {
+    name: string;
+    description: string;
+    parameters?: FunctionDeclarationSchema;
+}
 
 // ============================================================================
 // TOOL: SEARCH FOOD DATABASE

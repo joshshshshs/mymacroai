@@ -5,6 +5,8 @@
 
 import { logger } from '../../../utils/logger';
 import { supabase } from '../../lib/supabase';
+import { ouraService } from '../../../services/wearables/OuraService';
+import { whoopService } from '../../../services/wearables/WhoopService';
 
 export type WearableProvider = 'oura' | 'whoop' | 'garmin' | 'manual';
 
@@ -42,6 +44,10 @@ export interface RecoveryRecommendation {
   calorieAdjustment: number; // Positive = increase, negative = decrease
   trainingRecommendation: 'full' | 'light' | 'rest';
   message: string;
+  // UI display properties
+  title?: string;
+  description?: string;
+  intensity?: 'high' | 'medium' | 'low';
 }
 
 class WearableAdapterService {
@@ -261,6 +267,31 @@ class WearableAdapterService {
   }
 
   /**
+   * Fetch recovery data - simplified version for UI
+   * Returns normalized recovery data or mock data for manual provider
+   */
+  async fetchRecoveryData(
+    provider: WearableProvider,
+    userId: string
+  ): Promise<NormalizedRecoveryData | null> {
+    try {
+      // For manual provider, return mock data
+      if (provider === 'manual') {
+        return this.normalizeManualData({
+          provider: 'manual',
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // For real providers, would fetch from DB or API
+      return await this.getLatestRecovery(userId);
+    } catch (error) {
+      logger.error(`Failed to fetch recovery data for ${provider}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Fetch recovery data from provider APIs
    * (Placeholder - implement actual OAuth flows in production)
    */
@@ -288,22 +319,21 @@ class WearableAdapterService {
   }
 
   private async fetchOuraData(userId: string, accessToken: string): Promise<RawRecoveryData | null> {
-    // Placeholder: Implement Oura API v2 call
-    // GET https://api.ouraring.com/v2/usercollection/daily_readiness
-    logger.info('Oura API integration pending');
-    return null;
+    // Use real OuraService for API calls
+    logger.info('Fetching data from Oura API...');
+    return ouraService.fetchRecoveryData();
   }
 
   private async fetchWhoopData(userId: string, accessToken: string): Promise<RawRecoveryData | null> {
-    // Placeholder: Implement Whoop API call
-    // GET https://api.prod.whoop.com/developer/v1/recovery
-    logger.info('Whoop API integration pending');
-    return null;
+    // Use real WhoopService for API calls
+    logger.info('Fetching data from WHOOP API...');
+    return whoopService.fetchRecoveryData();
   }
 
   private async fetchGarminData(userId: string, accessToken: string): Promise<RawRecoveryData | null> {
-    // Placeholder: Implement Garmin Connect API call
-    logger.info('Garmin API integration pending');
+    // TODO: Implement Garmin Connect API integration
+    // Garmin uses OAuth 1.0a which requires different handling
+    logger.info('Garmin API integration requires OAuth 1.0a - pending implementation');
     return null;
   }
 

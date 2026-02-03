@@ -350,7 +350,7 @@ class AIContextService {
         // 2. Check rate limits before making API call
         const rateCheck = this.canMakeApiCall();
         if (!rateCheck.allowed) {
-            console.log(`AI greeting skipped: ${rateCheck.reason}`);
+            if (__DEV__) console.log(`AI greeting skipped: ${rateCheck.reason}`);
             return this.getFallbackGreeting(context);
         }
 
@@ -390,7 +390,7 @@ class AIContextService {
         // 2. Check rate limits
         const rateCheck = this.canMakeApiCall();
         if (!rateCheck.allowed) {
-            console.log(`AI insight skipped: ${rateCheck.reason}`);
+            if (__DEV__) console.log(`AI insight skipped: ${rateCheck.reason}`);
             return this.getFallbackInsight(context);
         }
 
@@ -424,7 +424,7 @@ class AIContextService {
         // 2. Check rate limits
         const rateCheck = this.canMakeApiCall();
         if (!rateCheck.allowed) {
-            console.log(`AI recommendation skipped: ${rateCheck.reason}`);
+            if (__DEV__) console.log(`AI recommendation skipped: ${rateCheck.reason}`);
             return this.getFallbackRecommendation(context);
         }
 

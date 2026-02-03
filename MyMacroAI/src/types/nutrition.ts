@@ -1,6 +1,6 @@
 // Nutrition-related type definitions
 
-export interface FoodItem {
+export interface SimpleFoodItem {
     id: string;
     name: string;
     brand?: string;
@@ -15,6 +15,9 @@ export interface FoodItem {
     micronutrients?: Micronutrient[];
     category: FoodCategory;
 }
+
+// Legacy alias - prefer FoodItem from food.ts for new code
+export type FoodItemLegacy = SimpleFoodItem;
 
 export interface Micronutrient {
     name: string;
@@ -61,7 +64,7 @@ export interface Meal {
 }
 
 export interface MealFood {
-    food: FoodItem;
+    food: SimpleFoodItem;
     quantity: number;
     unit: string;
     calories: number;

@@ -15,3 +15,4 @@ export { SleepCard } from './cards/SleepCard';
 export { RespirationCard } from './cards/RespirationCard';
 export { StressCard } from './cards/StressCard';
 export { OxygenCard } from './cards/OxygenCard';
+export { HRVCard } from './cards/HRVCard';

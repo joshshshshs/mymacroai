@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SPACING, RADIUS } from '@/src/design-system/tokens';
+import { MyMacroAIAvatar } from '@/src/components/ui/MyMacroAIAvatar';
 
 interface SleepAIInsightProps {
     remHigh?: boolean;
@@ -53,19 +54,12 @@ export const SleepAIInsight: React.FC<SleepAIInsightProps> = ({
         >
             {/* AI Avatar */}
             <View style={styles.avatarContainer}>
-                <LinearGradient
-                    colors={['#4F46E5', '#9333EA']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.avatar}
-                >
-                    <Text style={styles.avatarText}>🤖</Text>
-                </LinearGradient>
+                <MyMacroAIAvatar size="medium" accentColor="#4F46E5" />
             </View>
 
             {/* Message */}
             <View style={styles.messageContainer}>
-                <Text style={[styles.label, { color: '#4F46E5' }]}>AI SLEEP COACH</Text>
+                <Text style={[styles.label, { color: '#4F46E5' }]}>MYMACRO AI SLEEP COACH</Text>
                 <Text style={[styles.message, { color: colors.textSecondary }]}>
                     {message}
                 </Text>

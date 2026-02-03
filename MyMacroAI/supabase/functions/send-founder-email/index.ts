@@ -1,8 +1,21 @@
-// Follows Deno/Supabase Edge Function syntax
+// @ts-nocheck
+// Supabase Edge Function - Deno runtime (excluded from main TypeScript check)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Email validation schema
+const EmailSchema = z.object({
+    email: z.string().email().max(254),
+});
 
 const handler = async (request: Request): Promise<Response> => {
     if (request.method === "OPTIONS") {
@@ -10,11 +23,41 @@ const handler = async (request: Request): Promise<Response> => {
     }
 
     try {
-        const { email } = await request.json();
+        const body = await request.json();
 
-        if (!email) {
-            throw new Error("Email is required");
+        // Validate email format
+        const validation = EmailSchema.safeParse(body);
+        if (!validation.success) {
+            return new Response(JSON.stringify({ error: "Invalid email format" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                status: 400,
+            });
         }
+
+        const { email } = validation.data;
+
+        // Rate limiting: Check if email was sent recently (1 per hour)
+        const serviceClient = createClient(
+            Deno.env.get("SUPABASE_URL") ?? "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { count, error: countError } = await serviceClient
+            .from('founder_emails')
+            .select('*', { count: 'exact', head: true })
+            .eq('email', email)
+            .gte('created_at', oneHourAgo);
+
+        if (!countError && count && count > 0) {
+            return new Response(JSON.stringify({ error: "Please wait before requesting another email" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                status: 429,
+            });
+        }
+
+        // Log the email attempt (create table if doesn't exist - will silently fail)
+        await serviceClient.from('founder_emails').insert({ email }).catch(() => {});
 
         const res = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -50,17 +93,14 @@ const handler = async (request: Request): Promise<Response> => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
         });
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return new Response(JSON.stringify({ error: message }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 400,
         });
     }
 };
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 serve(handler);
+

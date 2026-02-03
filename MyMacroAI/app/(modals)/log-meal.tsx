@@ -10,7 +10,7 @@
  * - Floating "Plate" dock for cart summary
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -19,6 +19,7 @@ import {
     useColorScheme,
     TextInput,
     ScrollView,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -39,6 +40,7 @@ import { SPACING, RADIUS } from '@/src/design-system/tokens';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useUserStore } from '@/src/store/UserStore';
 import { searchFoods, MOCK_FOOD_DB } from '@/src/data/mockFoodDB';
+import { searchFoodsAPI } from '@/src/services/foodApiService';
 import { FoodItem as DBFoodItem } from '@/src/types/food';
 import { FoodIcon } from '@/src/components/food/FoodIcon';
 
@@ -59,10 +61,10 @@ const COLORS = {
 };
 
 const MEAL_CONFIG: Record<string, { title: string; subtitle: string; icon: string }> = {
-    breakfast: { title: 'Morning Fuel', subtitle: '600 - 800', icon: '🌅' },
-    lunch: { title: 'Midday Refuel', subtitle: '700 - 900', icon: '☀️' },
-    dinner: { title: 'Evening Recovery', subtitle: '600 - 800', icon: '🌙' },
-    snacks: { title: 'Quick Bite', subtitle: '150 - 300', icon: '🍿' },
+    breakfast: { title: 'Breakfast', subtitle: '600 - 800 kcal', icon: '🌅' },
+    lunch: { title: 'Lunch', subtitle: '700 - 900 kcal', icon: '☀️' },
+    dinner: { title: 'Dinner', subtitle: '600 - 800 kcal', icon: '🌙' },
+    snacks: { title: 'Snacks', subtitle: '150 - 300 kcal', icon: '🍿' },
 };
 
 // Tabs: Search, History, Favorites, My Meals
@@ -429,12 +431,43 @@ export default function LogMealModal() {
     const [activeTab, setActiveTab] = useState(1); // Default to History
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
+    const [apiSearchResults, setApiSearchResults] = useState<DBFoodItem[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
 
-    // Database search results
-    const searchResults = useMemo(() => {
+    // Local database search results (instant)
+    const localSearchResults = useMemo(() => {
         if (!searchQuery.trim()) return [];
-        return searchFoods(searchQuery).slice(0, 10);
+        return searchFoods(searchQuery).slice(0, 5);
     }, [searchQuery]);
+
+    // Debounced API search
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setApiSearchResults([]);
+            return;
+        }
+
+        const timeoutId = setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const { foods } = await searchFoodsAPI(searchQuery, 1, 15);
+                setApiSearchResults(foods);
+            } catch (error) {
+                console.error('API search error:', error);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 400); // 400ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
+
+    // Combined search results (local first, then API)
+    const searchResults = useMemo(() => {
+        const localIds = new Set(localSearchResults.map(f => f.id));
+        const apiFiltered = apiSearchResults.filter(f => !localIds.has(f.id));
+        return [...localSearchResults, ...apiFiltered];
+    }, [localSearchResults, apiSearchResults]);
 
     // Auto-switch to Search tab when typing
     const handleSearchChange = (text: string) => {
@@ -500,7 +533,12 @@ export default function LogMealModal() {
         // Get the logFood function from store
         const { logFood } = useUserStore.getState();
 
-        // Log each selected food item
+        // Normalize mealType to match the expected type
+        const normalizedMealType = (mealType === 'snacks' || mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner')
+            ? mealType as 'breakfast' | 'lunch' | 'dinner' | 'snacks'
+            : 'snacks';
+
+        // Log each selected food item with the correct meal type
         [...HISTORY_FOODS, ...FAVORITE_FOODS].forEach(food => {
             if (selectedItems.includes(food.id)) {
                 logFood(
@@ -508,12 +546,13 @@ export default function LogMealModal() {
                     food.protein,
                     food.carbs,
                     food.fats,
-                    food.name
+                    food.name,
+                    normalizedMealType
                 );
             }
         });
 
-        // Log each selected meal (as a single combined entry)
+        // Log each selected meal (as a single combined entry) with the correct meal type
         MY_MEALS.forEach(meal => {
             if (selectedMeals.includes(meal.id)) {
                 // For meal combos, we estimate macros based on calorie ratio
@@ -526,7 +565,8 @@ export default function LogMealModal() {
                     estimatedProtein,
                     estimatedCarbs,
                     estimatedFats,
-                    meal.name
+                    meal.name,
+                    normalizedMealType
                 );
             }
         });
@@ -562,29 +602,52 @@ export default function LogMealModal() {
                     <View style={styles.section}>
                         {searchQuery.trim() ? (
                             <>
-                                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                                    🔍 SEARCH RESULTS
-                                </Text>
+                                <View style={styles.searchHeaderRow}>
+                                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                                        🔍 SEARCH RESULTS
+                                    </Text>
+                                    {isSearching && (
+                                        <ActivityIndicator size="small" color={COLORS.vitaminOrange} />
+                                    )}
+                                </View>
                                 {searchResults.length > 0 ? (
                                     searchResults.map((food, index) => (
-                                        <FoodItemCard
+                                        <TouchableOpacity
                                             key={food.id}
-                                            item={{
-                                                id: food.id,
-                                                name: food.name,
-                                                calories: food.macros.calories,
-                                                protein: food.macros.protein,
-                                                carbs: food.macros.carbs,
-                                                fats: food.macros.fat,
-                                                isPredicted: false,
-                                                emoji: food.isVerified ? '✅' : '🍽️',
+                                            onPress={() => {
+                                                light();
+                                                router.push({
+                                                    pathname: '/(modals)/food-detail-modal',
+                                                    params: { foodId: food.id, mealType }
+                                                } as any);
                                             }}
-                                            isSelected={selectedItems.includes(food.id)}
-                                            onToggle={() => handleToggleItem(food.id)}
-                                            index={index}
-                                            isDark={isDark}
-                                        />
+                                            activeOpacity={0.7}
+                                        >
+                                            <FoodItemCard
+                                                item={{
+                                                    id: food.id,
+                                                    name: food.name,
+                                                    calories: food.macros.calories,
+                                                    protein: food.macros.protein,
+                                                    carbs: food.macros.carbs,
+                                                    fats: food.macros.fat,
+                                                    isPredicted: false,
+                                                    emoji: food.isVerified ? '✅' : '🍽️',
+                                                }}
+                                                isSelected={selectedItems.includes(food.id)}
+                                                onToggle={() => handleToggleItem(food.id)}
+                                                index={index}
+                                                isDark={isDark}
+                                            />
+                                        </TouchableOpacity>
                                     ))
+                                ) : isSearching ? (
+                                    <View style={styles.emptyHint}>
+                                        <ActivityIndicator size="large" color={COLORS.vitaminOrange} />
+                                        <Text style={[styles.emptyHintText, { color: colors.textSecondary }]}>
+                                            Searching foods...
+                                        </Text>
+                                    </View>
                                 ) : (
                                     <View style={styles.emptyHint}>
                                         <Ionicons name="search-outline" size={24} color={colors.textSecondary} />
@@ -997,6 +1060,12 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '700',
         letterSpacing: 1.5,
+        marginBottom: SPACING.md,
+    },
+    searchHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: SPACING.md,
     },
 

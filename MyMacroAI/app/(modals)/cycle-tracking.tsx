@@ -3,7 +3,7 @@
  * Provides phase-based macro adjustments
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { SoftDreamyBackground } from '@/src/components/ui/SoftDreamyBackground';
 import { cyclePhaseAdapter, CyclePhase } from '@/src/services/nutrition/CyclePhaseAdapter';
+import { useTabBarStore } from '@/src/store/tabBarStore';
+
 
 interface PhaseOption {
   id: CyclePhase;
@@ -64,11 +67,33 @@ const PHASES: PhaseOption[] = [
 ];
 
 export default function CycleTrackingScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [selectedPhase, setSelectedPhase] = useState<CyclePhase | null>(null);
   const [cycleDay, setCycleDay] = useState(1);
   const [saving, setSaving] = useState(false);
+  const { hideTabBar, showTabBar } = useTabBarStore();
+
+  // Hide tab bar on mount
+  useEffect(() => {
+    hideTabBar();
+    return () => showTabBar();
+  }, [hideTabBar, showTabBar]);
+
+  const colors = {
+    bg: isDark ? '#0F0F0F' : '#F5F5F7',
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255,255,255,0.6)' : '#8E8E93',
+    textTertiary: isDark ? 'rgba(255,255,255,0.4)' : '#AEAEB2',
+    card: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
+    cardBorder: isDark ? 'transparent' : 'rgba(0,0,0,0.08)',
+    buttonBg: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+    accent: '#FF4500',
+    info: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+  };
+
 
   const handlePhaseSelect = useCallback((phase: CyclePhase) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -101,11 +126,15 @@ export default function CycleTrackingScreen() {
     setSaving(true);
 
     try {
+      // Calculate last period start from current day of cycle
+      const today = new Date();
+      const lastPeriodStart = new Date(today.setDate(today.getDate() - cycleDay)).toISOString();
+
       await cyclePhaseAdapter.logCyclePhase(
         'current-user',
         selectedPhase,
-        cycleDay,
-        28
+        lastPeriodStart,
+        [] // symptoms
       );
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -127,7 +156,7 @@ export default function CycleTrackingScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <SoftDreamyBackground />
 
@@ -135,11 +164,11 @@ export default function CycleTrackingScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: colors.buttonBg }]}
           >
-            <Ionicons name="chevron-back" size={24} color="#FFF" />
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Cycle Tracking</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Cycle Tracking</Text>
           <View style={styles.backButton} />
         </View>
 
@@ -147,32 +176,32 @@ export default function CycleTrackingScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Track your cycle to receive personalized macro adjustments that support your body's changing needs.
           </Text>
 
-          <View style={styles.daySelector}>
-            <Text style={styles.dayLabel}>Cycle Day</Text>
+          <View style={[styles.daySelector, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: isDark ? 0 : 1 }]}>
+            <Text style={[styles.dayLabel, { color: colors.textSecondary }]}>Cycle Day</Text>
             <View style={styles.dayControls}>
               <TouchableOpacity
-                style={styles.dayButton}
+                style={[styles.dayButton, { backgroundColor: colors.buttonBg }]}
                 onPress={() => adjustDay(-1)}
               >
-                <Ionicons name="remove" size={20} color="#FFF" />
+                <Ionicons name="remove" size={20} color={colors.text} />
               </TouchableOpacity>
               <View style={styles.dayDisplay}>
-                <Text style={styles.dayValue}>{cycleDay}</Text>
+                <Text style={[styles.dayValue, { color: colors.text }]}>{cycleDay}</Text>
               </View>
               <TouchableOpacity
-                style={styles.dayButton}
+                style={[styles.dayButton, { backgroundColor: colors.buttonBg }]}
                 onPress={() => adjustDay(1)}
               >
-                <Ionicons name="add" size={20} color="#FFF" />
+                <Ionicons name="add" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Select Current Phase</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Current Phase</Text>
 
           <View style={styles.phaseList}>
             {PHASES.map((phase) => (
@@ -180,8 +209,10 @@ export default function CycleTrackingScreen() {
                 key={phase.id}
                 style={[
                   styles.phaseCard,
+                  { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: isDark ? 0 : 1 },
                   selectedPhase === phase.id && {
                     borderColor: phase.color,
+                    borderWidth: 2,
                     backgroundColor: `${phase.color}15`,
                   },
                 ]}
@@ -193,9 +224,9 @@ export default function CycleTrackingScreen() {
                 <View style={styles.phaseInfo}>
                   <View style={styles.phaseHeader}>
                     <Text style={[styles.phaseName, { color: phase.color }]}>{phase.name}</Text>
-                    <Text style={styles.phaseDays}>{phase.days}</Text>
+                    <Text style={[styles.phaseDays, { color: colors.textTertiary }]}>{phase.days}</Text>
                   </View>
-                  <Text style={styles.phaseDescription}>{phase.description}</Text>
+                  <Text style={[styles.phaseDescription, { color: colors.textSecondary }]}>{phase.description}</Text>
                 </View>
                 {selectedPhase === phase.id && (
                   <View style={[styles.checkmark, { backgroundColor: phase.color }]}>
@@ -207,7 +238,7 @@ export default function CycleTrackingScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.saveButton, !selectedPhase && styles.saveButtonDisabled]}
+            style={[styles.saveButton, { backgroundColor: colors.accent }, !selectedPhase && styles.saveButtonDisabled]}
             onPress={handleSave}
             disabled={!selectedPhase || saving}
           >
@@ -216,9 +247,9 @@ export default function CycleTrackingScreen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={styles.infoCard}>
+          <View style={[styles.infoCard, { backgroundColor: colors.info }]}>
             <Ionicons name="information-circle" size={20} color="#3B82F6" />
-            <Text style={styles.infoText}>
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
               Phase-based adjustments are research-backed and help optimize your nutrition throughout your cycle.
             </Text>
           </View>
@@ -231,7 +262,6 @@ export default function CycleTrackingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
   },
   safeArea: {
     flex: 1,
@@ -246,13 +276,13 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFF',
   },
   content: {
     paddingHorizontal: 20,
@@ -260,19 +290,16 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
     lineHeight: 20,
     marginBottom: 24,
   },
   daySelector: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
   },
   dayLabel: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
     fontWeight: '500',
     marginBottom: 12,
     textAlign: 'center',
@@ -287,7 +314,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -298,12 +324,10 @@ const styles = StyleSheet.create({
   dayValue: {
     fontSize: 40,
     fontWeight: '700',
-    color: '#FFF',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFF',
     marginBottom: 16,
   },
   phaseList: {
@@ -313,11 +337,8 @@ const styles = StyleSheet.create({
   phaseCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   phaseIcon: {
     width: 48,
@@ -345,11 +366,9 @@ const styles = StyleSheet.create({
   },
   phaseDays: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
   },
   phaseDescription: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
     lineHeight: 16,
   },
   checkmark: {
@@ -361,7 +380,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   saveButton: {
-    backgroundColor: '#FF4500',
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
@@ -377,7 +395,6 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderRadius: 12,
     padding: 14,
     gap: 12,
@@ -386,7 +403,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
     lineHeight: 18,
   },
 });
+

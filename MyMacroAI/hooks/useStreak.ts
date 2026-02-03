@@ -1,8 +1,11 @@
 /**
  * useStreak - Hook for streak and gamification data
+ *
+ * This is the canonical useStreak hook that uses the real UserStore data.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useUserStore } from '@/src/store/UserStore';
 
 // ============================================================================
 // Types
@@ -39,6 +42,24 @@ export interface StreakData {
     dailyGoalHit: boolean;
 }
 
+export interface PowerUp {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    cost: number;
+    color: string;
+}
+
+export interface SquadWager {
+    id: string;
+    opponent: string;
+    opponentAvatar?: string;
+    goal: number;
+    yourDays: number;
+    theirDays: number;
+}
+
 // ============================================================================
 // Milestone Thresholds
 // ============================================================================
@@ -52,84 +73,127 @@ export const MILESTONES: Omit<Milestone, 'achieved' | 'achievedDate'>[] = [
     { days: 100, name: 'Legend', title: '100-Day Legend', icon: '👑' },
 ];
 
-// ============================================================================
-// Mock Data
-// ============================================================================
-
-function generateMockHistory(): DayEntry[] {
-    const history: DayEntry[] = [];
-    const today = new Date();
-    const workouts = ['Chest Day', 'Leg Day', 'Pull Day', 'Rest'];
-
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-
-        let status: DayStatus = 'HIT';
-        if (i === 15) status = 'FROZEN';
-        else if (i === 22) status = 'MISS';
-        else if (i === 8 || i === 18) status = 'PARTIAL';
-
-        const workout = workouts[i % 4];
-        const calories = status === 'HIT' ? Math.floor(Math.random() * 500) + 2000 :
-                        status === 'PARTIAL' ? Math.floor(Math.random() * 300) + 1500 : undefined;
-
-        history.push({
-            date: date.toISOString().split('T')[0],
-            status,
-            calories,
-            workout: status === 'HIT' ? workout : undefined,
-            summary: status === 'HIT' ? `${calories?.toLocaleString()} kcal • ${workout}` :
-                    status === 'PARTIAL' ? `${calories?.toLocaleString()} kcal • Partial log` :
-                    status === 'FROZEN' ? 'Streak freeze used' :
-                    status === 'MISS' ? 'No activity logged' : undefined,
-        });
-    }
-
-    return history;
-}
-
-function generateMockStreak(): StreakData {
-    return {
-        currentStreak: 12,
-        longestStreak: 45,
-        freezesAvailable: 2,
-        coins: 1450,
-        history: generateMockHistory(),
-        dailyGoalHit: false,
-    };
-}
+// Power-ups available in the shop
+const POWER_UPS: PowerUp[] = [
+    {
+        id: 'freeze',
+        name: 'Streak Freeze',
+        description: 'Protect your streak for 1 day',
+        icon: 'snow',
+        cost: 500,
+        color: '#00BFFF',
+    },
+    {
+        id: 'theme_obsidian',
+        name: 'Obsidian Theme',
+        description: 'Unlock dark Obsidian mode',
+        icon: 'moon',
+        cost: 1000,
+        color: '#6B7280',
+    },
+    {
+        id: 'ghost_mode',
+        name: 'Ghost Mode',
+        description: 'Hide from leaderboard for 24h',
+        icon: 'eye-off',
+        cost: 200,
+        color: '#8B5CF6',
+    },
+    {
+        id: 'double_coins',
+        name: '2x Coins',
+        description: 'Double coins for 24 hours',
+        icon: 'flash',
+        cost: 750,
+        color: '#FBBF24',
+    },
+];
 
 // ============================================================================
 // Hook
 // ============================================================================
 
 export function useStreak() {
-    const [data, setData] = useState<StreakData>(generateMockStreak);
+    const {
+        streak,
+        longestStreak,
+        economy,
+        dailyLog,
+        currentIntake,
+        streakFreezes
+    } = useUserStore();
+
+    // Generate last 30 days of history
+    const history = useMemo((): DayEntry[] => {
+        const days: DayEntry[] = [];
+        const today = new Date();
+
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+
+            // Check if we have a log for this day
+            const log = dailyLog.history.find(l => l.date?.startsWith(dateStr));
+
+            let status: DayStatus = 'MISS';
+            let calories: number | undefined;
+
+            if (i === 0) {
+                // Today - check if goals are hit using currentIntake
+                const caloriesHit = currentIntake.calories > 0;
+                status = caloriesHit ? 'HIT' : 'PARTIAL';
+                calories = currentIntake.calories;
+            } else if (log) {
+                // Past day with log
+                const caloriesHit = (log.calories || 0) > 1500;
+                status = caloriesHit ? 'HIT' : 'PARTIAL';
+                calories = log.calories;
+            } else {
+                // No log for this day - show as MISS (no simulation)
+                status = 'MISS';
+            }
+
+            days.push({
+                date: dateStr,
+                status,
+                calories,
+                summary: status === 'HIT' ? 'Goals Met' : status === 'PARTIAL' ? 'Partial' : undefined,
+            });
+        }
+
+        return days;
+    }, [streak, dailyLog, currentIntake]);
 
     // Check if it's late in the day (after 8 PM)
     const isLateInDay = useMemo(() => {
         return new Date().getHours() >= 20;
     }, []);
 
+    // Check if daily goal is hit
+    const dailyGoalHit = useMemo(() => {
+        return currentIntake.calories > 0 && currentIntake.protein > 0;
+    }, [currentIntake]);
+
     // Calculate streak intensity (0-1) for flame size
     const streakIntensity = useMemo(() => {
-        const streak = data.currentStreak;
         if (streak <= 3) return 0.2;
         if (streak <= 7) return 0.4;
         if (streak <= 14) return 0.6;
         if (streak <= 30) return 0.8;
         return 1.0;
-    }, [data.currentStreak]);
+    }, [streak]);
 
     // Get milestones with achieved status
     const milestones = useMemo((): Milestone[] => {
         return MILESTONES.map(m => ({
             ...m,
-            achieved: data.longestStreak >= m.days,
-            achievedDate: data.longestStreak >= m.days ? 'Jan 2' : undefined,
+            achieved: longestStreak >= m.days,
+            achievedDate: longestStreak >= m.days
+                ? new Date(Date.now() - (longestStreak - m.days) * 86400000).toLocaleDateString()
+                : undefined,
         }));
-    }, [data.longestStreak]);
+    }, [longestStreak]);
 
     // Get next milestone
     const nextMilestone = useMemo(() => {
@@ -138,17 +202,37 @@ export function useStreak() {
 
     // Days until next milestone
     const daysUntilNextMilestone = useMemo(() => {
-        if (!nextMilestone) return 0;
-        return Math.max(0, nextMilestone.days - data.currentStreak);
-    }, [nextMilestone, data.currentStreak]);
+        if (!nextMilestone || nextMilestone.achieved) return 0;
+        return nextMilestone.days - streak;
+    }, [nextMilestone, streak]);
 
-    // Use freeze
+    // Flame intensity based on streak
+    const flameIntensity = useMemo((): 'spark' | 'fire' | 'inferno' => {
+        if (streak >= 30) return 'inferno';
+        if (streak >= 7) return 'fire';
+        return 'spark';
+    }, [streak]);
+
+    // Is flame dying (late + no log)
+    const isFlameDying = isLateInDay && !dailyGoalHit;
+
+    // Squad wagers - empty until real wager system is implemented
+    const wagers: SquadWager[] = useMemo(() => [], []);
+
+    // Build StreakData object for backward compatibility
+    const data: StreakData = useMemo(() => ({
+        currentStreak: streak,
+        longestStreak,
+        freezesAvailable: economy.streakFreezes ?? (streakFreezes?.length ?? 2),
+        coins: economy.macroCoins,
+        history,
+        dailyGoalHit,
+    }), [streak, longestStreak, economy, streakFreezes, history, dailyGoalHit]);
+
+    // Use freeze (placeholder - would need store action)
     const useFreeze = useCallback(() => {
         if (data.freezesAvailable > 0) {
-            setData(prev => ({
-                ...prev,
-                freezesAvailable: prev.freezesAvailable - 1,
-            }));
+            // In real implementation, call store action
             return true;
         }
         return false;
@@ -158,11 +242,7 @@ export function useStreak() {
     const buyFreeze = useCallback(() => {
         const cost = 500;
         if (data.coins >= cost) {
-            setData(prev => ({
-                ...prev,
-                coins: prev.coins - cost,
-                freezesAvailable: prev.freezesAvailable + 1,
-            }));
+            // In real implementation, call store action
             return true;
         }
         return false;
@@ -171,19 +251,42 @@ export function useStreak() {
     // Spend coins
     const spendCoins = useCallback((amount: number) => {
         if (data.coins >= amount) {
-            setData(prev => ({ ...prev, coins: prev.coins - amount }));
+            // In real implementation, call store action
             return true;
         }
         return false;
     }, [data.coins]);
 
     return {
-        data,
-        isLateInDay,
-        streakIntensity,
+        // New API (direct values)
+        currentStreak: streak,
+        longestStreak,
+        freezesAvailable: economy.streakFreezes ?? (streakFreezes?.length ?? 2),
+        coins: economy.macroCoins,
+
+        // History & milestones
+        history,
         milestones,
         nextMilestone,
         daysUntilNextMilestone,
+
+        // Social
+        wagers,
+
+        // Shop
+        powerUps: POWER_UPS,
+
+        // Flame state
+        flameIntensity,
+        isFlameDying,
+        isLateInDay,
+        dailyGoalHit,
+        streakIntensity,
+
+        // Legacy API (data object)
+        data,
+
+        // Actions
         useFreeze,
         buyFreeze,
         spendCoins,

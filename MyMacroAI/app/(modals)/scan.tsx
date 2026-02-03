@@ -172,6 +172,18 @@ export default function CoachModal() {
       <SoftDreamyBackground />
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        {/* Header with Close Button */}
+        <View style={styles.header}>
+          <View style={{ width: 40 }} />
+          <Text style={[styles.headerTitle, { color: colors.text }]}>MyMacro AI</Text>
+          <TouchableOpacity
+            onPress={() => { light(); router.back(); }}
+            style={[styles.closeButton, { backgroundColor: colors.surface }]}
+          >
+            <Ionicons name="close" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
         {/* Main Content */}
         <View style={styles.content}>
           {/* Welcome Section */}
@@ -306,6 +318,24 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

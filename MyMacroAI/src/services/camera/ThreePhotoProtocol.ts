@@ -198,18 +198,22 @@ class ThreePhotoProtocolService {
       const sideBase64 = await this.photoToBase64(side.uri);
       const backBase64 = await this.photoToBase64(back.uri);
 
-      // Analyze each angle with Gemini
+      // Analyze each angle with Gemini (using base64 encoded images)
       logger.info('Analyzing front photo...');
-      const frontAnalysis = await geminiService.analyzePhysique(front.uri, goal, userId);
+      const frontAnalysis = await geminiService.analyzePhysique(frontBase64, 'front');
 
       logger.info('Analyzing side photo...');
-      const sideAnalysis = await geminiService.analyzePhysique(side.uri, goal, userId);
+      const sideAnalysis = await geminiService.analyzePhysique(sideBase64, 'side');
 
       logger.info('Analyzing back photo...');
-      const backAnalysis = await geminiService.analyzePhysique(back.uri, goal, userId);
+      const backAnalysis = await geminiService.analyzePhysique(backBase64, 'back');
 
-      // Combine analyses
-      const comprehensive = this.combineAnalyses(frontAnalysis, sideAnalysis, backAnalysis);
+      // Combine analyses into PhysiqueAnalysisResult format
+      const comprehensive = this.combineAnalyses(
+        frontAnalysis as PhysiqueAnalysisResult,
+        sideAnalysis as PhysiqueAnalysisResult,
+        backAnalysis as PhysiqueAnalysisResult
+      );
 
       return comprehensive;
     } catch (error) {

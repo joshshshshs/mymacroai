@@ -1,9 +1,9 @@
 /**
  * Hardware Hub - Wearable Device Management
- * Connect and sync health data from multiple devices
+ * Premium redesign with custom icons, gradients, and status indicators
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,72 +12,255 @@ import {
   TouchableOpacity,
   StatusBar,
   Animated,
+  useColorScheme,
+  Easing,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import Svg, { Path, Circle, G, Rect, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 
 interface Device {
   id: string;
   name: string;
-  icon: string;
+  type: 'apple' | 'oura' | 'whoop' | 'garmin';
   color: string;
-  status: 'connected' | 'syncing' | 'queued';
-  lastSync?: string;
-  battery?: string;
-  statusText: string;
+  gradientColors: [string, string];
+  status: 'connected' | 'syncing' | 'disconnected';
+  lastSync?: Date;
+  battery?: number;
+  batteryDays?: number;
 }
 
 const DEVICES: Device[] = [
   {
     id: 'apple-health',
     name: 'Apple Health',
-    icon: '❤️',
-    color: '#EF4444',
+    type: 'apple',
+    color: '#FF2D55',
+    gradientColors: ['#FF2D55', '#FF6B6B'],
     status: 'connected',
-    statusText: 'Auto-Sync Active',
-    lastSync: 'Now',
+    lastSync: new Date(),
   },
   {
     id: 'oura',
     name: 'Oura Ring',
-    icon: '💍',
-    color: '#111827',
+    type: 'oura',
+    color: '#1A1A1A',
+    gradientColors: ['#2D2D2D', '#1A1A1A'],
     status: 'connected',
-    statusText: 'Last Sync: 2m ago',
-    battery: '92%',
+    lastSync: new Date(Date.now() - 2 * 60 * 1000),
+    battery: 92,
   },
   {
     id: 'whoop',
     name: 'Whoop 4.0',
-    icon: '💪',
-    color: '#1F2937',
+    type: 'whoop',
+    color: '#00A6FF',
+    gradientColors: ['#00A6FF', '#0066CC'],
     status: 'connected',
-    statusText: 'Sync: 45m ago',
-    battery: '34%',
+    lastSync: new Date(Date.now() - 45 * 60 * 1000),
+    battery: 34,
   },
   {
     id: 'garmin',
-    name: 'Garmin',
-    icon: '⌚',
-    color: '#2563EB',
+    name: 'Garmin Watch',
+    type: 'garmin',
+    color: '#007DC3',
+    gradientColors: ['#00A0E3', '#007DC3'],
     status: 'connected',
-    statusText: 'Sync: 5m ago',
-    battery: '14d',
+    lastSync: new Date(Date.now() - 5 * 60 * 1000),
+    batteryDays: 14,
   },
 ];
 
-const ScannerBeam = () => {
-  const translateY = React.useRef(new Animated.Value(-150)).current;
+// Custom SVG Device Icons
+const AppleHealthIcon = ({ size = 24, color = '#FF2D55' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+      fill={color}
+    />
+  </Svg>
+);
 
-  React.useEffect(() => {
+const OuraIcon = ({ size = 24, color = '#FFFFFF' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2.5" fill="none" />
+    <Circle cx="12" cy="12" r="5" stroke={color} strokeWidth="2" fill="none" />
+    <Circle cx="12" cy="12" r="1.5" fill={color} />
+  </Svg>
+);
+
+const WhoopIcon = ({ size = 24, color = '#FFFFFF' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x="3" y="6" width="18" height="12" rx="6" stroke={color} strokeWidth="2.5" fill="none" />
+    <Circle cx="8" cy="12" r="2" fill={color} />
+    <Path d="M12 9v6M15 10v4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </Svg>
+);
+
+const GarminIcon = ({ size = 24, color = '#FFFFFF' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="2" fill="none" />
+    <Path d="M12 6v6l4 2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <Circle cx="12" cy="12" r="1.5" fill={color} />
+  </Svg>
+);
+
+const DeviceIcon = ({ type, size = 24, color = '#FFFFFF' }: { type: Device['type']; size?: number; color?: string }) => {
+  switch (type) {
+    case 'apple':
+      return <AppleHealthIcon size={size} color={color} />;
+    case 'oura':
+      return <OuraIcon size={size} color={color} />;
+    case 'whoop':
+      return <WhoopIcon size={size} color={color} />;
+    case 'garmin':
+      return <GarminIcon size={size} color={color} />;
+    default:
+      return <Ionicons name="watch" size={size} color={color} />;
+  }
+};
+
+// Battery visualization component
+const BatteryIndicator = ({
+  level,
+  days,
+  isDark
+}: {
+  level?: number;
+  days?: number;
+  isDark: boolean;
+}) => {
+  const getBatteryColor = () => {
+    if (days) return '#10B981'; // Battery days always green
+    if (!level) return '#6B7280';
+    if (level > 60) return '#10B981';
+    if (level > 30) return '#F59E0B';
+    return '#EF4444';
+  };
+
+  const displayValue = days ? `${days}d` : level ? `${level}%` : '--';
+  const fillWidth = days ? 100 : (level || 0);
+
+  return (
+    <View style={styles.batteryContainer}>
+      <View style={[styles.batteryOuter, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }]}>
+        <View
+          style={[
+            styles.batteryFill,
+            {
+              width: `${fillWidth}%`,
+              backgroundColor: getBatteryColor(),
+            }
+          ]}
+        />
+      </View>
+      <Text style={[styles.batteryText, { color: isDark ? '#FFFFFF' : '#1A1A1A' }]}>
+        {displayValue}
+      </Text>
+    </View>
+  );
+};
+
+// Connection status indicator with pulse animation
+const StatusIndicator = ({ status, isDark }: { status: Device['status']; isDark: boolean }) => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    if (status === 'connected') {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(pulseAnim, {
+              toValue: 1.5,
+              duration: 1000,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+              toValue: 0,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(pulseAnim, {
+              toValue: 1,
+              duration: 0,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+              toValue: 0.6,
+              duration: 0,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [status]);
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'connected': return '#10B981';
+      case 'syncing': return '#F59E0B';
+      case 'disconnected': return '#6B7280';
+    }
+  };
+
+  return (
+    <View style={styles.statusIndicatorContainer}>
+      {status === 'connected' && (
+        <Animated.View
+          style={[
+            styles.statusPulse,
+            {
+              backgroundColor: getStatusColor(),
+              transform: [{ scale: pulseAnim }],
+              opacity: opacityAnim,
+            }
+          ]}
+        />
+      )}
+      <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+    </View>
+  );
+};
+
+// Format sync time
+const formatSyncTime = (date?: Date): string => {
+  if (!date) return 'Never';
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const ScannerBeam = ({ isDark }: { isDark: boolean }) => {
+  const translateY = useRef(new Animated.Value(-150)).current;
+
+  useEffect(() => {
     const animate = () => {
       translateY.setValue(-150);
       Animated.timing(translateY, {
         toValue: 600,
         duration: 2500,
         useNativeDriver: true,
+        easing: Easing.linear,
       }).start(() => animate());
     };
     animate();
@@ -89,6 +272,8 @@ const ScannerBeam = () => {
         styles.scannerBeam,
         {
           transform: [{ translateY }],
+          backgroundColor: isDark ? 'rgba(255, 69, 0, 0.08)' : 'rgba(255, 69, 0, 0.06)',
+          borderBottomColor: isDark ? 'rgba(255, 69, 0, 0.4)' : 'rgba(255, 69, 0, 0.3)',
         },
       ]}
       pointerEvents="none"
@@ -97,46 +282,77 @@ const ScannerBeam = () => {
 };
 
 export default function HardwareScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(72);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  const colors = {
+    bg: isDark ? '#0A0A0A' : '#F5F5F7',
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255,255,255,0.6)' : '#6B7280',
+    textTertiary: isDark ? 'rgba(255,255,255,0.4)' : '#9CA3AF',
+    card: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.9)',
+    cardBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+    accent: '#FF4500',
+  };
 
   const handleForceSync = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsSyncing(true);
-    // Simulate sync progress
-    setTimeout(() => {
+    setSyncProgress(0);
+    progressAnim.setValue(0);
+
+    Animated.timing(progressAnim, {
+      toValue: 100,
+      duration: 5000,
+      useNativeDriver: false,
+      easing: Easing.out(Easing.cubic),
+    }).start(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsSyncing(false);
-    }, 5000);
+    });
+
+    progressAnim.addListener(({ value }) => {
+      setSyncProgress(Math.round(value));
+    });
   };
 
   const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   return (
-    <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      {/* Soft Background Blobs */}
+      {/* Background gradient blobs */}
       <View style={styles.backgroundContainer}>
-        <View style={[styles.blob, styles.blobTopRight]} />
-        <View style={[styles.blob, styles.blobBottomLeft]} />
+        <LinearGradient
+          colors={isDark
+            ? ['rgba(255,69,0,0.15)', 'transparent']
+            : ['rgba(255,182,150,0.4)', 'transparent']
+          }
+          style={[styles.blob, styles.blobTopRight]}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+        <LinearGradient
+          colors={isDark
+            ? ['rgba(59,130,246,0.1)', 'transparent']
+            : ['rgba(147,197,253,0.4)', 'transparent']
+          }
+          style={[styles.blob, styles.blobBottomLeft]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 0 }}
+        />
       </View>
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Status Bar */}
-        <View style={styles.statusBar}>
-          <Text style={styles.statusTime}>
-            {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-          </Text>
-          <View style={styles.statusIcons}>
-            <Text style={styles.statusIcon}>📶</Text>
-            <Text style={styles.statusIcon}>📡</Text>
-            <Text style={styles.statusIcon}>🔋</Text>
-          </View>
-        </View>
-
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
@@ -146,42 +362,73 @@ export default function HardwareScreen() {
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerBadge}>
-                {isSyncing && <View style={styles.pulseDot} />}
-                <Text style={[styles.headerLabel, isSyncing && { color: '#FF4500' }]}>
-                  {isSyncing ? 'SYSTEM STATUS' : 'CONNECTIVITY'}
+                {isSyncing && (
+                  <Animated.View
+                    style={[
+                      styles.pulseDot,
+                      { backgroundColor: colors.accent }
+                    ]}
+                  />
+                )}
+                <Text style={[styles.headerLabel, { color: colors.textSecondary }]}>
+                  {isSyncing ? 'SYNCING' : 'DEVICES'}
                 </Text>
               </View>
-              <Text style={styles.headerTitle}>
-                {isSyncing ? 'Syncing CNS\nPipelines...' : 'Hardware\nHub'}
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                {isSyncing ? 'Pulling\nData...' : 'Hardware\nHub'}
               </Text>
 
               {/* Sync Progress Bar */}
               {isSyncing && (
                 <View style={styles.progressContainer}>
                   <View style={styles.progressHeader}>
-                    <Text style={styles.progressLabel}>Total Progress</Text>
-                    <Text style={styles.progressValue}>{syncProgress}%</Text>
+                    <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>
+                      Total Progress
+                    </Text>
+                    <Text style={[styles.progressValue, { color: colors.accent }]}>
+                      {syncProgress}%
+                    </Text>
                   </View>
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${syncProgress}%` }]} />
+                  <View style={[styles.progressBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+                    <Animated.View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: progressAnim.interpolate({
+                            inputRange: [0, 100],
+                            outputRange: ['0%', '100%'],
+                          }),
+                          backgroundColor: colors.accent,
+                        }
+                      ]}
+                    />
                   </View>
                 </View>
               )}
             </View>
-            <TouchableOpacity style={styles.profileButton} onPress={handleClose}>
-              <Ionicons name="close" size={24} color="#9CA3AF" />
+            <TouchableOpacity
+              style={[
+                styles.closeButton,
+                {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                }
+              ]}
+              onPress={handleClose}
+            >
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Devices List */}
           <View style={styles.devicesContainer}>
-            {isSyncing && <ScannerBeam />}
+            {isSyncing && <ScannerBeam isDark={isDark} />}
 
             <View style={styles.devicesList}>
               {DEVICES.map((device, index) => {
-                const deviceIsSyncing = isSyncing && index === 2; // Whoop is syncing
-                const deviceCompleted = isSyncing && index < 2; // First two completed
-                const deviceQueued = isSyncing && index > 2; // Rest queued
+                const deviceIsSyncing = isSyncing && index === Math.floor(syncProgress / 25);
+                const deviceCompleted = isSyncing && syncProgress > (index + 1) * 25;
+                const deviceQueued = isSyncing && syncProgress <= index * 25;
 
                 return (
                   <TouchableOpacity
@@ -192,92 +439,107 @@ export default function HardwareScreen() {
                     ]}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient
-                      colors={['rgba(255, 255, 255, 0.75)', 'rgba(255, 255, 255, 0.6)']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.deviceCardGradient}
+                    <BlurView
+                      intensity={isDark ? 40 : 80}
+                      tint={isDark ? 'dark' : 'light'}
+                      style={[
+                        styles.deviceCardBlur,
+                        {
+                          borderColor: deviceIsSyncing
+                            ? colors.accent
+                            : colors.cardBorder,
+                        }
+                      ]}
                     >
                       {deviceIsSyncing && (
-                        <View style={styles.deviceGlow} />
+                        <View style={[styles.deviceGlow, { backgroundColor: `${colors.accent}10` }]} />
                       )}
 
                       <View style={styles.deviceContent}>
                         <View style={styles.deviceInfo}>
-                          <View style={[styles.deviceIcon, { backgroundColor: device.color }]}>
-                            <Text style={styles.deviceEmoji}>{device.icon}</Text>
-                          </View>
+                          {/* Device Icon */}
+                          <LinearGradient
+                            colors={device.gradientColors}
+                            style={styles.deviceIcon}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                          >
+                            <DeviceIcon
+                              type={device.type}
+                              size={24}
+                              color={device.type === 'apple' ? '#FFFFFF' : '#FFFFFF'}
+                            />
+                          </LinearGradient>
+
                           <View style={styles.deviceText}>
-                            <Text style={styles.deviceName}>{device.name}</Text>
-                            <View style={styles.deviceStatus}>
-                              {deviceCompleted && (
-                                <View style={styles.statusDot} />
-                              )}
-                              {deviceQueued && (
-                                <View style={[styles.statusDot, { backgroundColor: '#D1D5DB' }]} />
-                              )}
-                              <Text
-                                style={[
-                                  styles.deviceStatusText,
-                                  deviceIsSyncing && styles.deviceStatusTextSyncing,
-                                  deviceQueued && styles.deviceStatusTextQueued,
-                                ]}
-                              >
-                                {deviceIsSyncing
-                                  ? 'Decrypting Packets...'
-                                  : deviceCompleted
-                                    ? device.id === 'apple-health'
-                                      ? 'Biometrics Secured'
-                                      : 'Data Stream Active'
-                                    : deviceQueued
-                                      ? 'Queued'
-                                      : device.statusText}
+                            <View style={styles.deviceNameRow}>
+                              <Text style={[styles.deviceName, { color: colors.text }]}>
+                                {device.name}
                               </Text>
+                              <StatusIndicator status={device.status} isDark={isDark} />
                             </View>
+                            <Text style={[styles.deviceStatusText, { color: colors.textSecondary }]}>
+                              {deviceIsSyncing
+                                ? 'Syncing data...'
+                                : deviceCompleted
+                                  ? 'Sync complete'
+                                  : deviceQueued
+                                    ? 'Waiting...'
+                                    : `Last sync: ${formatSyncTime(device.lastSync)}`}
+                            </Text>
                           </View>
                         </View>
 
                         <View style={styles.deviceRight}>
                           {deviceCompleted && (
-                            <View style={styles.checkBadge}>
-                              <Ionicons name="checkmark" size={20} color="#FF4500" />
+                            <View style={[styles.checkBadge, { backgroundColor: `${colors.accent}15` }]}>
+                              <Ionicons name="checkmark" size={20} color={colors.accent} />
                             </View>
                           )}
                           {deviceIsSyncing && (
-                            <View style={styles.syncBadge}>
-                              <Ionicons name="sync" size={20} color="#FF4500" />
+                            <View style={[styles.syncBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                              <Ionicons name="sync" size={20} color={colors.accent} />
                             </View>
                           )}
                           {deviceQueued && (
-                            <View style={styles.queuedBadge}>
-                              <Ionicons name="hourglass-outline" size={18} color="#9CA3AF" />
+                            <View style={[styles.queuedBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                              <Ionicons name="hourglass-outline" size={18} color={colors.textTertiary} />
                             </View>
                           )}
-                          {!isSyncing && device.battery && (
-                            <View style={styles.batteryBadge}>
-                              <Ionicons
-                                name="battery-full"
-                                size={14}
-                                color={
-                                  device.battery.includes('%')
-                                    ? parseInt(device.battery) > 50
-                                      ? '#10B981'
-                                      : '#F59E0B'
-                                    : '#10B981'
-                                }
-                                style={{ transform: [{ rotate: '90deg' }] }}
-                              />
-                              <Text style={styles.batteryText}>{device.battery}</Text>
-                            </View>
+                          {!isSyncing && (device.battery !== undefined || device.batteryDays !== undefined) && (
+                            <BatteryIndicator
+                              level={device.battery}
+                              days={device.batteryDays}
+                              isDark={isDark}
+                            />
                           )}
                         </View>
                       </View>
-                    </LinearGradient>
+                    </BlurView>
                   </TouchableOpacity>
                 );
               })}
             </View>
           </View>
+
+          {/* Add Device Card */}
+          <TouchableOpacity
+            style={[
+              styles.addDeviceCard,
+              {
+                borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+              }
+            ]}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.addDeviceIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+              <Ionicons name="add" size={24} color={colors.textSecondary} />
+            </View>
+            <Text style={[styles.addDeviceText, { color: colors.textSecondary }]}>
+              Add New Device
+            </Text>
+          </TouchableOpacity>
 
           {/* Action Button */}
           <View style={styles.actionContainer}>
@@ -291,7 +553,10 @@ export default function HardwareScreen() {
               disabled={isSyncing}
             >
               <LinearGradient
-                colors={isSyncing ? ['#FFFFFF', '#F9FAFB'] : ['#FF4500', '#FF4500']}
+                colors={isSyncing
+                  ? (isDark ? ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)'] : ['#FFFFFF', '#F9FAFB'])
+                  : ['#FF4500', '#FF6A00']
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.syncButtonGradient}
@@ -299,16 +564,15 @@ export default function HardwareScreen() {
                 <Ionicons
                   name={isSyncing ? 'refresh' : 'sync'}
                   size={22}
-                  color={isSyncing ? '#6B7280' : '#FFFFFF'}
-                  style={isSyncing ? styles.spinningIcon : undefined}
+                  color={isSyncing ? colors.textSecondary : '#FFFFFF'}
                 />
-                <Text style={[styles.syncButtonText, isSyncing && styles.syncButtonTextActive]}>
-                  Force Pull Data
+                <Text style={[styles.syncButtonText, isSyncing && { color: colors.textSecondary }]}>
+                  {isSyncing ? 'Syncing...' : 'Force Sync All'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
-            <Text style={styles.lastUpdateText}>
-              Last full system update: {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            <Text style={[styles.lastUpdateText, { color: colors.textTertiary }]}>
+              Last full sync: {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
             </Text>
           </View>
         </ScrollView>
@@ -320,7 +584,6 @@ export default function HardwareScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F2F4F6',
   },
   backgroundContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -330,52 +593,29 @@ const styles = StyleSheet.create({
   blob: {
     position: 'absolute',
     borderRadius: 9999,
-    opacity: 0.4,
   },
   blobTopRight: {
-    top: '-20%',
-    right: '-20%',
-    width: 600,
-    height: 600,
-    backgroundColor: '#FED7AA',
+    top: -100,
+    right: -100,
+    width: 400,
+    height: 400,
   },
   blobBottomLeft: {
-    bottom: '-10%',
-    left: '-20%',
-    width: 500,
-    height: 500,
-    backgroundColor: '#DBEAFE',
+    bottom: -50,
+    left: -100,
+    width: 350,
+    height: 350,
   },
   safeArea: {
     flex: 1,
     zIndex: 1,
   },
-  statusBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-  },
-  statusTime: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-    letterSpacing: 0.5,
-  },
-  statusIcons: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  statusIcon: {
-    fontSize: 12,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     gap: 24,
   },
   header: {
@@ -390,88 +630,69 @@ const styles = StyleSheet.create({
   headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
+    gap: 6,
+    marginBottom: 8,
   },
   pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FF4500',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   headerLabel: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#8E8E93',
+    fontWeight: '700',
     letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
   headerTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#121212',
-    lineHeight: 36,
+    fontSize: 34,
+    fontWeight: '800',
+    lineHeight: 40,
     letterSpacing: -0.5,
   },
   progressContainer: {
-    marginTop: 16,
+    marginTop: 20,
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   progressLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#9CA3AF',
   },
   progressValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FF4500',
   },
   progressBar: {
-    height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 999,
+    height: 6,
+    borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FF4500',
-    borderRadius: 999,
-    shadowColor: '#FF4500',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    borderRadius: 3,
   },
-  profileButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    borderWidth: 1,
   },
   devicesContainer: {
     position: 'relative',
-    paddingVertical: 16,
   },
   scannerBeam: {
     position: 'absolute',
-    left: -16,
-    right: -16,
-    height: 120,
-    backgroundColor: 'rgba(255, 69, 0, 0.1)',
+    left: -20,
+    right: -20,
+    height: 100,
     borderBottomWidth: 2,
-    borderBottomColor: 'rgba(255, 69, 0, 0.3)',
     zIndex: 20,
     pointerEvents: 'none',
   },
@@ -481,20 +702,19 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   deviceCard: {
-    borderRadius: 28,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   deviceCardSyncing: {
     shadowColor: '#FF4500',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
   },
-  deviceCardGradient: {
-    padding: 20,
+  deviceCardBlur: {
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 28,
+    borderRadius: 20,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -504,7 +724,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 69, 0, 0.05)',
   },
   deviceContent: {
     flexDirection: 'row',
@@ -514,103 +733,116 @@ const styles = StyleSheet.create({
   deviceInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 14,
     flex: 1,
   },
   deviceIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  deviceEmoji: {
-    fontSize: 24,
   },
   deviceText: {
     flex: 1,
   },
-  deviceName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-    lineHeight: 22,
-    marginBottom: 2,
-  },
-  deviceStatus: {
+  deviceNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 4,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
+  deviceName: {
+    fontSize: 17,
+    fontWeight: '700',
   },
   deviceStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '500',
   },
-  deviceStatusTextSyncing: {
-    color: '#FF4500',
+  statusIndicatorContainer: {
+    width: 10,
+    height: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  deviceStatusTextQueued: {
-    color: '#9CA3AF',
+  statusPulse: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   deviceRight: {
     alignItems: 'flex-end',
+    marginLeft: 12,
   },
   checkBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFF7ED',
-    borderWidth: 1,
-    borderColor: '#FED7AA',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   syncBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   queuedBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  batteryBadge: {
+  batteryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
+    gap: 8,
+  },
+  batteryOuter: {
+    width: 32,
+    height: 14,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    padding: 2,
+    overflow: 'hidden',
+  },
+  batteryFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   batteryText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#4B5563',
+    fontSize: 13,
+    fontWeight: '700',
+    minWidth: 32,
+  },
+  addDeviceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  addDeviceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addDeviceText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   actionContainer: {
     paddingTop: 8,
@@ -618,12 +850,12 @@ const styles = StyleSheet.create({
   },
   syncButton: {
     width: '100%',
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#FF4500',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 8,
   },
   syncButtonActive: {
@@ -636,26 +868,15 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 24,
   },
   syncButtonText: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  syncButtonTextActive: {
-    color: '#6B7280',
-  },
-  spinningIcon: {
-    // Animation would be added via Animated API
   },
   lastUpdateText: {
     marginTop: 12,
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

@@ -63,7 +63,7 @@ export default function ForgotPasswordScreen() {
           style={StyleSheet.absoluteFill}
         />
 
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.successContainer}>
             <View style={styles.successIcon}>
               <Ionicons name="mail" size={48} color="#10B981" />
@@ -97,7 +97,7 @@ export default function ForgotPasswordScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}

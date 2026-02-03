@@ -10,11 +10,15 @@ import {
     StyleSheet,
     TouchableOpacity,
     useColorScheme,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// AI logo asset
+
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -55,12 +59,18 @@ export default function AIHubModal() {
         border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
     };
 
-    // Pulse animation for the main orb
+    // Pulse animation for the glow with breathing effect
     const pulseScale = useSharedValue(1);
+    const pulseOpacity = useSharedValue(0.3);
 
     React.useEffect(() => {
         pulseScale.value = withRepeat(
-            withTiming(1.1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+            withTiming(1.3, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+            -1,
+            true
+        );
+        pulseOpacity.value = withRepeat(
+            withTiming(0.6, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
             -1,
             true
         );
@@ -68,6 +78,7 @@ export default function AIHubModal() {
 
     const pulseStyle = useAnimatedStyle(() => ({
         transform: [{ scale: pulseScale.value }],
+        opacity: pulseOpacity.value,
     }));
 
     const options: ActionOption[] = [
@@ -88,12 +99,28 @@ export default function AIHubModal() {
             bgColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.1)',
         },
         {
+            icon: 'camera',
+            title: '3-Photo Protocol',
+            description: 'Comprehensive physique analysis from 3 angles',
+            route: '/(modals)/three-photo',
+            color: '#F59E0B',
+            bgColor: isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)',
+        },
+        {
             icon: 'mic',
             title: 'Voice Log',
             description: 'Log meals and activities by voice',
             route: '/(modals)/voice-log',
             color: '#FF6F61',
             bgColor: isDark ? 'rgba(255,111,97,0.15)' : 'rgba(255,111,97,0.1)',
+        },
+        {
+            icon: 'book',
+            title: 'Journal',
+            description: 'Reflect on your day and track mood',
+            route: '/(modals)/journaling',
+            color: '#10B981',
+            bgColor: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)',
         },
     ];
 
@@ -116,7 +143,7 @@ export default function AIHubModal() {
                     >
                         <Ionicons name="close" size={20} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>AI Assistant</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>MyMacro AI</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -125,15 +152,19 @@ export default function AIHubModal() {
                     {/* AI Orb */}
                     <Animated.View entering={FadeInDown.duration(400)} style={styles.orbSection}>
                         <Animated.View style={[styles.orbGlow, pulseStyle, { backgroundColor: `${colors.primary}20` }]} />
-                        <View style={[styles.orb, { backgroundColor: colors.primary }]}>
-                            <Ionicons name="sparkles" size={32} color="#FFFFFF" />
+                        <View style={styles.orb}>
+                            <Image
+                                source={isDark ? require('../../assets/black bkg.png') : require('../../assets/white bkg.png')}
+                                style={styles.orbImage}
+                                resizeMode="cover"
+                            />
                         </View>
                     </Animated.View>
 
                     {/* Greeting */}
                     <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.greetingSection}>
                         <Text style={[styles.greeting, { color: colors.text }]}>
-                            How can I help, {userName}?
+                            Hey {userName}, let's crush it!
                         </Text>
                         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                             Choose an option below to get started
@@ -215,9 +246,9 @@ const styles = StyleSheet.create({
     },
     orbGlow: {
         position: 'absolute',
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
     },
     orb: {
         width: 80,
@@ -225,11 +256,17 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
         shadowColor: '#FF4500',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.4,
         shadowRadius: 24,
         elevation: 10,
+    },
+    orbImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
     },
     // Greeting
     greetingSection: {

@@ -1,16 +1,16 @@
 /**
- * Voice Log Modal - Voice recognition interface
- * Listening UI with waveform animation and entity recognition
+ * Voice Log Modal - Real Voice Recognition Interface
+ * Uses useOmniLogger hook for actual microphone input and AI transcription
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
     useColorScheme,
-    TextInput,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -29,7 +29,8 @@ import Animated, {
 
 import { SPACING } from '@/src/design-system/tokens';
 import { useHaptics } from '@/hooks/useHaptics';
-import { LivingVoiceOrb } from '@/src/components/animations';
+import { useOmniLogger } from '@/hooks/useOmniLogger';
+import { VoiceWaveform } from '@/src/components/animations/VoiceWaveform';
 
 export default function VoiceLogModal() {
     const colorScheme = useColorScheme();
@@ -37,9 +38,19 @@ export default function VoiceLogModal() {
     const router = useRouter();
     const { light, medium } = useHaptics();
 
-    const [isListening, setIsListening] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [recognizedText, setRecognizedText] = useState('');
+    // Use the real OmniLogger hook for voice recognition
+    const {
+        state,
+        isActive,
+        recordingText,
+        lastResult,
+        startListening,
+        stopListening,
+        reset,
+        isListening,
+        isProcessing,
+        audioLevel,
+    } = useOmniLogger();
 
     const colors = {
         bg: isDark ? '#1c1f22' : '#fcf8f4',
@@ -50,26 +61,38 @@ export default function VoiceLogModal() {
         accent: '#FF6F61',
         border: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)',
         glassBg: isDark ? 'rgba(28,31,34,0.6)' : 'rgba(255,255,255,0.4)',
+        success: '#10B981',
+        error: '#EF4444',
     };
 
-    // Simulate voice recognition
+    // Auto-start listening when modal opens
     useEffect(() => {
-        if (isListening) {
-            const timer = setTimeout(() => {
-                setIsProcessing(true);
+        const timer = setTimeout(() => {
+            startListening();
+        }, 500);
+        return () => {
+            clearTimeout(timer);
+            reset();
+        };
+    }, []);
+
+    // Handle successful result
+    useEffect(() => {
+        if (state === 'success' && lastResult) {
+            const successCount = lastResult.executionResults.filter(r => r.success).length;
+            if (successCount > 0) {
                 setTimeout(() => {
-                    setRecognizedText('Log a double espresso and a protein bar.');
-                    setIsProcessing(false);
-                }, 1000);
-            }, 1500);
-            return () => clearTimeout(timer);
+                    router.back();
+                }, 1500);
+            }
         }
-    }, [isListening]);
+    }, [state, lastResult]);
 
     // Get orb state
     const getOrbState = (): 'idle' | 'listening' | 'processing' | 'speaking' => {
-        if (isProcessing) return 'processing';
-        if (isListening) return 'listening';
+        if (state === 'processing' || state === 'executing') return 'processing';
+        if (state === 'listening') return 'listening';
+        if (state === 'success') return 'speaking';
         return 'idle';
     };
 
@@ -114,6 +137,9 @@ export default function VoiceLogModal() {
                 -1,
                 false
             );
+        } else {
+            pingScale.value = 1;
+            pingOpacity.value = 0.2;
         }
     }, [isListening]);
 
@@ -122,44 +148,87 @@ export default function VoiceLogModal() {
         opacity: pingOpacity.value,
     }));
 
-    const handleMicPress = () => {
+    const handleMicPress = useCallback(async () => {
         medium();
-        setIsListening(!isListening);
-        if (!isListening) {
-            setRecognizedText('');
+        if (isListening) {
+            // Stop listening and process
+            await stopListening();
+        } else if (state === 'idle' || state === 'error') {
+            // Start listening
+            await startListening();
         }
-    };
+    }, [isListening, state, medium, startListening, stopListening]);
 
     const handleChatPress = () => {
         light();
         router.push('/(modals)/ai-chat' as any);
     };
 
-    // Render entity-highlighted text
+    // Get status text
+    const getStatusText = () => {
+        switch (state) {
+            case 'listening':
+                return 'LISTENING...';
+            case 'processing':
+                return 'PROCESSING...';
+            case 'executing':
+                return 'LOGGING...';
+            case 'success':
+                return 'DONE!';
+            case 'error':
+                return 'TAP TO RETRY';
+            default:
+                return 'TAP MIC TO START';
+        }
+    };
+
+    // Render recognized text with entity highlighting
     const renderHighlightedText = () => {
-        if (!recognizedText) {
+        if (state === 'success' && lastResult) {
+            const successResults = lastResult.executionResults.filter(r => r.success);
+            if (successResults.length > 0) {
+                return (
+                    <Text style={[styles.recognizedText, { color: colors.success }]}>
+                        {successResults.map(r => r.message).join('\n')}
+                    </Text>
+                );
+            }
+        }
+
+        if (state === 'error') {
             return (
-                <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
-                    Listening for your input...
+                <Text style={[styles.placeholderText, { color: colors.error }]}>
+                    Could not understand. Please try again.
                 </Text>
             );
         }
 
-        // Simple entity detection (in production, this would come from AI)
-        const entities = ['double espresso', 'protein bar'];
-        let result = recognizedText;
+        if (!recordingText) {
+            if (isListening) {
+                return (
+                    <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+                        Listening for your input...
+                    </Text>
+                );
+            }
+            if (isProcessing) {
+                return (
+                    <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+                        Processing your voice...
+                    </Text>
+                );
+            }
+            return (
+                <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+                    Tap the mic to start speaking
+                </Text>
+            );
+        }
 
+        // Display the transcribed text
         return (
             <Text style={[styles.recognizedText, { color: colors.text }]}>
-                Log a{' '}
-                <Text style={[styles.entityText, { color: colors.accent }]}>
-                    double espresso
-                </Text>
-                {' '}and a{' '}
-                <Text style={[styles.entityText, { color: colors.accent }]}>
-                    protein bar
-                </Text>
-                .
+                "{recordingText}"
             </Text>
         );
     };
@@ -175,7 +244,7 @@ export default function VoiceLogModal() {
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity
-                        onPress={() => { light(); router.back(); }}
+                        onPress={() => { light(); reset(); router.back(); }}
                         style={[styles.closeButton, { backgroundColor: colors.surface }]}
                     >
                         <Ionicons name="close" size={20} color={colors.primary} />
@@ -183,8 +252,8 @@ export default function VoiceLogModal() {
 
                     <View style={styles.statusContainer}>
                         <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>STATUS</Text>
-                        <Text style={[styles.statusText, { color: colors.primary }]}>
-                            {isListening ? 'MYMACRO AI LISTENING' : 'TAP MIC TO START'}
+                        <Text style={[styles.statusText, { color: state === 'success' ? colors.success : state === 'error' ? colors.error : colors.primary }]}>
+                            {getStatusText()}
                         </Text>
                     </View>
 
@@ -198,7 +267,7 @@ export default function VoiceLogModal() {
                     {/* Recognition status */}
                     <Animated.View entering={FadeIn.duration(300)}>
                         <Text style={[styles.recognizingLabel, { color: colors.textSecondary }]}>
-                            {isListening ? 'Recognizing entities...' : 'Ready to listen'}
+                            {isListening ? 'Speak naturally...' : isProcessing ? 'Analyzing speech...' : state === 'success' ? 'Successfully logged!' : 'Voice Assistant'}
                         </Text>
                     </Animated.View>
 
@@ -212,10 +281,20 @@ export default function VoiceLogModal() {
                         <TouchableOpacity
                             activeOpacity={0.9}
                             onPress={handleMicPress}
+                            disabled={state === 'processing' || state === 'executing'}
                         >
-                            <LivingVoiceOrb state={getOrbState()} size={140} />
+                            <VoiceWaveform
+                                state={getOrbState() as any}
+                                size={140}
+                                audioLevel={audioLevel}
+                            />
                         </TouchableOpacity>
                     </View>
+
+                    {/* Hint Text */}
+                    <Text style={[styles.hintText, { color: colors.textSecondary }]}>
+                        {isListening ? 'Tap to stop' : 'Try: "Log 2 eggs and toast for breakfast"'}
+                    </Text>
                 </View>
 
                 {/* Bottom Controls */}
@@ -246,12 +325,16 @@ export default function VoiceLogModal() {
                                 />
                             )}
                             <TouchableOpacity
-                                style={[styles.micButton, { backgroundColor: colors.accent }]}
+                                style={[
+                                    styles.micButton,
+                                    { backgroundColor: state === 'success' ? colors.success : state === 'error' ? colors.error : colors.accent }
+                                ]}
                                 onPress={handleMicPress}
                                 activeOpacity={0.9}
+                                disabled={state === 'processing' || state === 'executing'}
                             >
                                 <Ionicons
-                                    name={isListening ? 'mic' : 'mic-outline'}
+                                    name={isListening ? 'stop' : state === 'success' ? 'checkmark' : 'mic'}
                                     size={32}
                                     color="#FFFFFF"
                                 />
@@ -271,7 +354,6 @@ const styles = StyleSheet.create({
     dotPattern: {
         ...StyleSheet.absoluteFillObject,
         opacity: 0.03,
-        // Simulated dot pattern via background
     },
     safeArea: {
         flex: 1,
@@ -331,36 +413,30 @@ const styles = StyleSheet.create({
     },
     textContainer: {
         paddingHorizontal: 8,
+        minHeight: 80,
     },
     placeholderText: {
+        fontSize: 24,
+        fontWeight: '600',
+        textAlign: 'center',
+        lineHeight: 32,
+    },
+    recognizedText: {
         fontSize: 28,
         fontWeight: '700',
         textAlign: 'center',
-        lineHeight: 36,
-    },
-    recognizedText: {
-        fontSize: 32,
-        fontWeight: '800',
-        textAlign: 'center',
-        lineHeight: 42,
+        lineHeight: 38,
         letterSpacing: -0.5,
     },
     entityText: {
         textDecorationLine: 'underline',
         textDecorationColor: 'rgba(255,111,97,0.3)',
     },
-    // Waveform
-    waveformContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        marginTop: 48,
-        height: 40,
-    },
-    wavebar: {
-        width: 4,
-        borderRadius: 2,
+    hintText: {
+        fontSize: 13,
+        textAlign: 'center',
+        marginTop: 24,
+        fontStyle: 'italic',
     },
     // Living Voice Orb
     orbContainer: {

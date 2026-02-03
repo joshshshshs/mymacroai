@@ -3,10 +3,37 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-// CORS Headers for client-side access
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Production origins only
+const PROD_ORIGINS = [
+    'https://mymacro.ai',
+    'https://www.mymacro.ai',
+];
+
+// Development origins (only used when ENVIRONMENT=development)
+const DEV_ORIGINS = [
+    'exp://localhost:19000',
+    'exp://127.0.0.1:19000',
+    'http://localhost:8081',
+    'http://localhost:19006',
+    'http://127.0.0.1:8081',
+];
+
+// Check if running in development mode
+const IS_DEV = Deno.env.get('ENVIRONMENT') === 'development';
+
+// Combine origins based on environment
+const ALLOWED_ORIGINS = IS_DEV ? [...PROD_ORIGINS, ...DEV_ORIGINS] : PROD_ORIGINS;
+
+// Get CORS headers with strict origin validation
+const getCorsHeaders = (origin: string | null) => {
+    // Strict matching - no wildcards
+    const isAllowed = origin && ALLOWED_ORIGINS.includes(origin);
+    const allowedOrigin = isAllowed ? origin : PROD_ORIGINS[0];
+
+    return {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    };
 };
 
 // Input Schema Definition
@@ -20,6 +47,9 @@ const RequestSchema = z.object({
 });
 
 serve(async (req) => {
+    const origin = req.headers.get("origin");
+    const corsHeaders = getCorsHeaders(origin);
+
     // 1. Handle CORS Preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -43,31 +73,66 @@ serve(async (req) => {
             throw new Error("Unauthorized: User not logged in.");
         }
 
-        // 4. Rate Limiting Check
-        // "Service Role" client needed to query usage_logs if RLS is strict, or we can use the user client if they have read access.
-        // For security, usually efficient to use a Service Role client to write/check logs authoritatively.
+        // 4. Rate Limiting Check (Tier-Based)
+        // Service Role client for secure DB operations
         const serviceClient = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
             Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
         );
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const { count, error: countError } = await serviceClient
-            .from('usage_logs')
-            .select('*', { count: 'exact', head: true })
+        // Get user's subscription tier
+        const { data: subscription } = await serviceClient
+            .from('user_subscriptions')
+            .select('tier')
             .eq('user_id', user.id)
-            .gte('created_at', today.toISOString());
+            .single();
 
-        if (countError) {
-            console.error("Rate Limit Check Error:", countError);
-            // Fail open or closed? Let's fail open but log error for now to avoid blocking users on DB glitch
-        } else if (count !== null && count >= 50) {
-            return new Response(JSON.stringify({ error: "Daily limit reached (50 requests/day)." }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 429,
-            });
+        const userTier = subscription?.tier || 'free';
+
+        // Tier-based limits
+        const TIER_LIMITS = {
+            free: 20,      // Free users: 20 AI requests/day
+            pro: 500,      // Pro users: 500 AI requests/day
+            founder: -1,   // Founders: Unlimited (-1)
+        };
+
+        const dailyLimit = TIER_LIMITS[userTier] || TIER_LIMITS.free;
+
+        // Skip rate limit check for unlimited tiers
+        if (dailyLimit !== -1) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const { count, error: countError } = await serviceClient
+                .from('usage_logs')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .gte('created_at', today.toISOString());
+
+            if (countError) {
+                console.error("Rate Limit Check Error:", countError);
+                // Fail closed - deny request on DB error for security
+                return new Response(JSON.stringify({ error: "Service temporarily unavailable. Please try again." }), {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    status: 503,
+                });
+            }
+
+            if (count !== null && count >= dailyLimit) {
+                const upgradeMessage = userTier === 'free'
+                    ? "Upgrade to Pro for 500 daily requests!"
+                    : "You've reached your daily limit.";
+
+                return new Response(JSON.stringify({
+                    error: `Daily limit reached (${dailyLimit} requests/day). ${upgradeMessage}`,
+                    limit: dailyLimit,
+                    used: count,
+                    tier: userTier,
+                }), {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    status: 429,
+                });
+            }
         }
 
         // 5. Input Validation
@@ -89,7 +154,8 @@ serve(async (req) => {
         if (!geminiKey) throw new Error("Server Misconfiguration: Missing Gemini Key");
 
         const modelName = "gemini-2.5-flash";
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+        // Use header instead of query param for API key (more secure - not logged in URLs)
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
         const nluPrompt = `You are a health assistant. Extract structured intents from the user input.
 
@@ -183,7 +249,10 @@ Return only JSON in this shape:
 
         const geminiRes = await fetch(endpoint, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': geminiKey,
+            },
             body: JSON.stringify(apiBody)
         });
 

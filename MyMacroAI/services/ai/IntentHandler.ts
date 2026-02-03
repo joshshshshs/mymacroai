@@ -1,5 +1,13 @@
 import { useUserStore } from '@/src/store/UserStore';
-import type { Intent, IntentExecutionResult } from './GeminiService';
+import type { Intent } from '@/src/services/ai/GeminiService';
+
+export interface IntentExecutionResult {
+    success: boolean;
+    message: string;
+    intent?: Intent;
+    data?: any;
+    error?: string;
+}
 
 /**
  * 意图处理器服务

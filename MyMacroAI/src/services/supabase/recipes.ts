@@ -4,8 +4,9 @@
  * Handles public recipe CRUD, feed queries, and reactions.
  */
 
-import { supabase } from '../lib/supabase';
-import { StorageService } from './supabase/storage';
+import { supabase } from '@/src/lib/supabase';
+import { StorageService } from './storage';
+import { getSampleRecipeById } from '@/src/data/sampleRecipes';
 
 // ============================================================================
 // TYPES
@@ -136,7 +137,7 @@ export async function publishRecipe(input: PublishRecipeInput): Promise<{ succes
             .single();
 
         if (error) {
-            console.error('[RecipesService] Insert error:', error);
+            if (__DEV__) console.warn('[RecipesService] Insert error:', error.code);
             return { success: false, error: error.message };
         }
 
@@ -145,7 +146,7 @@ export async function publishRecipe(input: PublishRecipeInput): Promise<{ succes
 
         return { success: true, recipeId: data.id };
     } catch (error) {
-        console.error('[RecipesService] Publish exception:', error);
+        if (__DEV__) console.warn('[RecipesService] Publish exception:', error);
         return { success: false, error: 'Failed to publish recipe' };
     }
 }
@@ -160,6 +161,12 @@ export async function getPublicFeed(
     pageSize: number = 20
 ): Promise<PublicRecipe[]> {
     try {
+        // Check if supabase is properly initialized
+        if (!supabase) {
+            console.warn('[RecipesService] Supabase not initialized');
+            return [];
+        }
+
         let query = supabase
             .from('public_recipes')
             .select(`
@@ -210,13 +217,16 @@ export async function getPublicFeed(
         const { data, error } = await query;
 
         if (error) {
-            console.error('[RecipesService] Feed error:', error);
+            // PGRST205 = table doesn't exist - expected during development, return empty
+            if (error.code !== 'PGRST205' && __DEV__) {
+                console.warn('[RecipesService] Feed error:', error.code);
+            }
             return [];
         }
 
         return data as PublicRecipe[];
     } catch (error) {
-        console.error('[RecipesService] Feed exception:', error);
+        if (__DEV__) console.warn('[RecipesService] Feed exception:', error);
         return [];
     }
 }
@@ -251,13 +261,21 @@ export async function getRandomTopRecipes(count: number = 3): Promise<PublicReci
         const shuffled = data.sort(() => Math.random() - 0.5);
         return shuffled.slice(0, count) as PublicRecipe[];
     } catch (error) {
-        console.error('[RecipesService] Random fetch error:', error);
+        if (__DEV__) console.warn('[RecipesService] Random fetch error:', error);
         return [];
     }
 }
 
 export async function getRecipeById(recipeId: string): Promise<PublicRecipe | null> {
     try {
+        // First check if it's a sample recipe (starts with 'recipe-')
+        if (recipeId.startsWith('recipe-')) {
+            const sampleRecipe = getSampleRecipeById(recipeId);
+            if (sampleRecipe) {
+                return sampleRecipe;
+            }
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
 
         const { data, error } = await supabase
@@ -276,7 +294,14 @@ export async function getRecipeById(recipeId: string): Promise<PublicRecipe | nu
             .eq('id', recipeId)
             .single();
 
-        if (error || !data) return null;
+        if (error || !data) {
+            // Fall back to sample recipe if Supabase fails
+            const sampleRecipe = getSampleRecipeById(recipeId);
+            if (sampleRecipe) {
+                return sampleRecipe;
+            }
+            return null;
+        }
 
         // Get user's reaction if logged in
         let userReaction: ReactionType | null = null;
@@ -298,7 +323,11 @@ export async function getRecipeById(recipeId: string): Promise<PublicRecipe | nu
             user_reaction: userReaction,
         } as PublicRecipe;
     } catch (error) {
-        console.error('[RecipesService] Get recipe error:', error);
+        // Silently fall back to sample recipe on error (table may not exist yet)
+        const sampleRecipe = getSampleRecipeById(recipeId);
+        if (sampleRecipe) {
+            return sampleRecipe;
+        }
         return null;
     }
 }
@@ -353,7 +382,7 @@ export async function reactToRecipe(
 
         return { success: true };
     } catch (error) {
-        console.error('[RecipesService] Reaction error:', error);
+        if (__DEV__) console.warn('[RecipesService] Reaction error:', error);
         return { success: false, error: 'Failed to react' };
     }
 }

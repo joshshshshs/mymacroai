@@ -6,10 +6,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, useColorScheme, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { SoftDreamyBackground } from '@/src/components/ui/SoftDreamyBackground';
+import { GradientMeshBackground } from '@/src/components/ui/GradientMeshBackground';
 import { SPACING } from '@/src/design-system/tokens';
 import { useHealthData } from '@/hooks/useHealthData';
 import { useWidgetPreferences } from '@/hooks/useWidgetPreferences';
@@ -27,11 +27,13 @@ import {
   RespirationCard,
   StressCard,
   OxygenCard,
+  HRVCard,
 } from '@/src/components/health';
 
 export default function HealthScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
   const { data, isLoading, refresh } = useHealthData();
   const { preferences, getOrderedVisibleWidgets, isWidgetVisible } = useWidgetPreferences();
   const { connectedDevices } = useConnectedDevices();
@@ -47,10 +49,16 @@ export default function HealthScreen() {
   };
 
   const colors = {
-    bg: isDark ? '#121214' : '#FAFAFA',
+    bg: isDark ? '#121214' : '#F0F0F5', // Matches Dashboard contrast fix
     text: isDark ? '#FFFFFF' : '#1A1A1A',
     textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
     surface: isDark ? '#2C2C2E' : '#FFFFFF',
+  };
+
+  // Navigation handlers for each widget
+  const navigateToDetail = (route: string) => {
+    light();
+    router.push(route as any);
   };
 
   // Render a widget based on its ID
@@ -60,24 +68,54 @@ export default function HealthScreen() {
 
     const unlocked = isWidgetUnlocked(widget, connectedDevices);
 
-    // Widget content
+    // Widget content with navigation handlers
     let content: React.ReactNode = null;
     switch (widgetId) {
       case 'SLEEP':
         content = <SleepCard data={data.sleep} />;
         break;
       case 'RESPIRATION':
-        content = <RespirationCard data={data.respiration} />;
+        content = (
+          <RespirationCard
+            data={data.respiration}
+            onPress={() => navigateToDetail('/(modals)/respiration-detail')}
+          />
+        );
         break;
       case 'STRESS':
-        content = <StressCard level={data.stress} history={data.stressHistory} />;
+        content = (
+          <StressCard
+            level={data.stress}
+            history={data.stressHistory}
+            onPress={() => navigateToDetail('/(modals)/stress-detail')}
+          />
+        );
         break;
       case 'SPO2':
-        content = <OxygenCard spo2={data.spo2} />;
+        content = (
+          <OxygenCard
+            spo2={data.spo2}
+            onPress={() => navigateToDetail('/(modals)/spo2-detail')}
+          />
+        );
+        break;
+      case 'HRV':
+        content = (
+          <HRVCard
+            hrv={data.hrv}
+            trend={data.hrvTrend}
+            onPress={() => navigateToDetail('/(modals)/heart-detail')}
+          />
+        );
         break;
       case 'CYCLE':
         if (data.cycle) {
-          content = <CycleStatusCard data={data.cycle} />;
+          content = (
+            <CycleStatusCard
+              data={data.cycle}
+              onPress={() => navigateToDetail('/(modals)/cycle-detail')}
+            />
+          );
         }
         break;
       default:
@@ -100,7 +138,7 @@ export default function HealthScreen() {
 
   // Get the ordered visible widgets, split into pairs for grid
   const visibleWidgets = getOrderedVisibleWidgets();
-  const gridWidgets = visibleWidgets.filter(id => ['SLEEP', 'RESPIRATION', 'STRESS', 'SPO2'].includes(id));
+  const gridWidgets = visibleWidgets.filter(id => ['SLEEP', 'RESPIRATION', 'STRESS', 'SPO2', 'HRV'].includes(id));
   const fullWidgets = visibleWidgets.filter(id => ['CYCLE'].includes(id));
 
   if (isLoading || !data) {
@@ -114,7 +152,7 @@ export default function HealthScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <SoftDreamyBackground />
+      <GradientMeshBackground variant="health" />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
@@ -145,13 +183,15 @@ export default function HealthScreen() {
           <AIInsightCard data={data} />
 
           {/* 2. Hero: Recovery Battery */}
-          <RecoveryBattery
-            score={data.recoveryScore}
-            hrv={data.hrv}
-            hrvTrend={data.hrvTrend}
-            rhr={data.rhr}
-            rhrTrend={data.rhrTrend}
-          />
+          <TouchableOpacity onPress={() => navigateToDetail('/(modals)/recovery')} activeOpacity={0.8}>
+            <RecoveryBattery
+              score={data.recoveryScore}
+              hrv={data.hrv}
+              hrvTrend={data.hrvTrend}
+              rhr={data.rhr}
+              rhrTrend={data.rhrTrend}
+            />
+          </TouchableOpacity>
 
           {/* Section Label */}
           {gridWidgets.length > 0 && (

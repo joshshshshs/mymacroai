@@ -83,7 +83,7 @@ export async function awardHeartReward(): Promise<number> {
 
     // Check if user has hit the daily cap
     if (state.coinsEarnedToday >= DAILY_CAP) {
-        console.log('[ReactionRewards] Daily cap reached, no reward given');
+        if (__DEV__) console.log('[ReactionRewards] Daily cap reached, no reward given');
         return 0;
     }
 
@@ -94,7 +94,7 @@ export async function awardHeartReward(): Promise<number> {
     state.coinsEarnedToday += coinsToAward;
     await saveRewardState(state);
 
-    console.log(`[ReactionRewards] Awarded ${coinsToAward} coins (${state.coinsEarnedToday}/${DAILY_CAP} today)`);
+    if (__DEV__) console.log(`[ReactionRewards] Awarded ${coinsToAward} coins (${state.coinsEarnedToday}/${DAILY_CAP} today)`);
 
     return coinsToAward;
 }

@@ -347,6 +347,54 @@ class CyclePhaseAdapterService {
   }
 
   /**
+   * Get current cycle phase for a user
+   * Used by UI components to display phase-specific content
+   */
+  async getCurrentPhase(userId: string): Promise<CyclePhase | null> {
+    try {
+      const cycleData = await this.getLatestCycleData(userId);
+      if (!cycleData) return null;
+
+      const dayOfCycle = this.calculateDayOfCycle(cycleData.lastPeriodStart);
+      return this.determinePhase(dayOfCycle, cycleData.cycleLength);
+    } catch (error) {
+      logger.error('Error getting current phase:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Log a cycle phase entry
+   * Used when user manually logs their cycle phase
+   */
+  async logCyclePhase(
+    userId: string,
+    phase: CyclePhase,
+    lastPeriodStart?: string,
+    symptoms?: string[]
+  ): Promise<boolean> {
+    try {
+      const now = new Date();
+      const periodStart = lastPeriodStart || now.toISOString();
+      const dayOfCycle = this.calculateDayOfCycle(periodStart);
+
+      const cycleData: CycleData = {
+        phase,
+        dayOfCycle,
+        cycleLength: 28, // Default, can be customized
+        lastPeriodStart: periodStart,
+        symptoms,
+        timestamp: now.toISOString(),
+      };
+
+      return await this.logCycleData(userId, cycleData);
+    } catch (error) {
+      logger.error('Error logging cycle phase:', error);
+      return false;
+    }
+  }
+
+  /**
    * Calculate day of cycle from last period start
    */
   calculateDayOfCycle(lastPeriodStart: string): number {
@@ -402,3 +450,13 @@ class CyclePhaseAdapterService {
 // Singleton instance
 export const cyclePhaseAdapter = new CyclePhaseAdapterService();
 export default cyclePhaseAdapter;
+
+// Type alias for backward compatibility
+export type CyclePhaseAdjustments = {
+  adjustedCalories: number;
+  adjustedProtein: number;
+  adjustedCarbs: number;
+  adjustedFat: number;
+  reason: string;
+  recommendations: string[];
+};

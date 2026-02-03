@@ -71,6 +71,7 @@ export default function BodyScanCaptureScreen() {
     const [countdown, setCountdown] = useState<number | null>(null);
     const [showReview, setShowReview] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [cameraFacing, setCameraFacing] = useState<CameraType>('back');
 
     const flashOpacity = useSharedValue(0);
 
@@ -222,7 +223,7 @@ export default function BodyScanCaptureScreen() {
         return (
             <View style={styles.container}>
                 <Stack.Screen options={{ headerShown: false }} />
-                <SafeAreaView style={styles.permissionContainer}>
+                <SafeAreaView style={styles.permissionContainer} edges={['top']}>
                     <Ionicons name="camera-outline" size={64} color="rgba(255,255,255,0.5)" />
                     <Text style={styles.permissionTitle}>Camera Access Required</Text>
                     <Text style={styles.permissionText}>
@@ -251,7 +252,7 @@ export default function BodyScanCaptureScreen() {
             <CameraView
                 ref={cameraRef}
                 style={StyleSheet.absoluteFill}
-                facing="front"
+                facing={cameraFacing}
             />
 
             {/* Ghost Overlay */}
@@ -267,8 +268,8 @@ export default function BodyScanCaptureScreen() {
             <SafeAreaView style={styles.topUI} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                        <Ionicons name="close" size={28} color="#FFF" />
+                    <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
+                        <Ionicons name="close" size={26} color="#FFF" />
                     </TouchableOpacity>
 
                     <View style={styles.stepIndicator}>
@@ -278,7 +279,15 @@ export default function BodyScanCaptureScreen() {
                         <Text style={styles.stepName}>{currentStep} POSE</Text>
                     </View>
 
-                    <View style={styles.closeButton} />
+                    <TouchableOpacity
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setCameraFacing(prev => prev === 'front' ? 'back' : 'front');
+                        }}
+                        style={styles.headerButton}
+                    >
+                        <Ionicons name="camera-reverse-outline" size={26} color="#FFF" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Progress Bar */}
@@ -396,11 +405,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
     },
-    closeButton: {
+    headerButton: {
         width: 48,
         height: 48,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        borderRadius: 24,
     },
     stepIndicator: {
         alignItems: 'center',

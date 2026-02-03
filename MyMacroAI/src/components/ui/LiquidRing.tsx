@@ -6,7 +6,7 @@ import Animated, {
     useSharedValue,
     withSpring
 } from 'react-native-reanimated';
-import { VISCOUS_SPRING } from '../../utils/physics';
+import { VISCOUS_SPRING } from '../../utils/animations';
 
 interface LiquidRingProps {
     value: number; // 0-100

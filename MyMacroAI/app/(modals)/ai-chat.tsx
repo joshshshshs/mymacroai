@@ -1,9 +1,16 @@
 /**
- * AI Chat Modal - Chat interface with MyMacro AI Coach
- * Uses AsyncStorage for persistent storage
+ * AI Coach Chat - Premium Design with Light/Dark Mode
+ * 
+ * Features:
+ * - Light and Dark mode support
+ * - Gradient mesh background
+ * - Glassmorphism chat bubbles
+ * - Clean circular avatar (no pulsing glow)
+ * - Premium typography
+ * - Smooth micro-interactions
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -11,26 +18,92 @@ import {
     TouchableOpacity,
     TextInput,
     SectionList,
-    useColorScheme,
     KeyboardAvoidingView,
     Platform,
-    ActivityIndicator,
+    Image,
+    Dimensions,
+    ScrollView,
+    useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import Animated, {
+    FadeIn,
+    FadeInDown,
+    FadeInUp,
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withSequence,
+    withTiming,
+    withSpring,
+    withDelay,
+    Easing,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
-import { SoftDreamyBackground } from '@/src/components/ui/SoftDreamyBackground';
-import { SPACING } from '@/src/design-system/tokens';
-import { useHaptics } from '@/hooks/useHaptics';
 import { ChatService, ChatContextBuilder, ChatMessage } from '@/src/services/chat';
 import { geminiService } from '@/src/services/ai/GeminiService';
 import { parseWidgetFromMessage, WidgetRenderer } from '@/src/components/chat/WidgetParser';
+import { SPACING } from '@/src/design-system/tokens';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CoachLogo = require('@/assets/white bkg.png');
 
 // ============================================================================
-// Types
+// THEME COLORS
 // ============================================================================
+
+const getColors = (isDark: boolean) => ({
+    // Backgrounds
+    bg: isDark ? '#0A0A0C' : '#F8F9FA',
+    bgSecondary: isDark ? '#141418' : '#FFFFFF',
+    bgGradient: isDark
+        ? ['#0A0A0C', '#141418', '#0A0A0C'] as [string, string, string]
+        : ['#F8F9FA', '#FFFFFF', '#F8F9FA'] as [string, string, string],
+
+    // Surfaces
+    surface: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+    surfaceHover: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+
+    // Accent
+    accent: '#FF5C00',
+    accentLight: '#FF8A50',
+    accentGlow: isDark ? 'rgba(255, 92, 0, 0.3)' : 'rgba(255, 92, 0, 0.15)',
+
+    // Text
+    text: isDark ? '#FFFFFF' : '#1A1A1A',
+    textSecondary: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)',
+    textMuted: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
+
+    // Borders
+    border: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+
+    // Status
+    success: '#34C759',
+
+    // Bubbles
+    userBubble: '#FF5C00',
+    aiBubble: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+
+    // Orbs
+    orbColor1: isDark ? 'rgba(255, 92, 0, 0.3)' : 'rgba(255, 92, 0, 0.12)',
+    orbColor2: isDark ? 'rgba(124, 58, 237, 0.2)' : 'rgba(124, 58, 237, 0.08)',
+
+    // Blur intensity
+    blurIntensity: isDark ? 20 : 60,
+});
+
+const QUICK_ACTIONS = [
+    { id: '1', emoji: '🔥', text: 'Log my meal', gradient: ['#FF5C00', '#FF8A50'] as [string, string] },
+    { id: '2', emoji: '📊', text: 'Check macros', gradient: ['#7C3AED', '#A78BFA'] as [string, string] },
+    { id: '3', emoji: '🎯', text: 'Am I on track?', gradient: ['#10B981', '#34D399'] as [string, string] },
+    { id: '4', emoji: '💡', text: 'Meal ideas', gradient: ['#F59E0B', '#FBBF24'] as [string, string] },
+    { id: '5', emoji: '💪', text: 'Workout fuel', gradient: ['#EF4444', '#F87171'] as [string, string] },
+];
 
 interface MessageSection {
     title: string;
@@ -38,35 +111,258 @@ interface MessageSection {
 }
 
 // ============================================================================
-// Helpers
+// ANIMATED BACKGROUND
+// ============================================================================
+
+const AnimatedBackground: React.FC<{ colors: ReturnType<typeof getColors> }> = ({ colors }) => {
+    const orb1Y = useSharedValue(0);
+    const orb2X = useSharedValue(0);
+
+    useEffect(() => {
+        orb1Y.value = withRepeat(
+            withSequence(
+                withTiming(-50, { duration: 8000, easing: Easing.inOut(Easing.ease) }),
+                withTiming(50, { duration: 8000, easing: Easing.inOut(Easing.ease) })
+            ),
+            -1,
+            true
+        );
+        orb2X.value = withRepeat(
+            withSequence(
+                withTiming(30, { duration: 10000, easing: Easing.inOut(Easing.ease) }),
+                withTiming(-30, { duration: 10000, easing: Easing.inOut(Easing.ease) })
+            ),
+            -1,
+            true
+        );
+    }, []);
+
+    const orb1Style = useAnimatedStyle(() => ({
+        transform: [{ translateY: orb1Y.value }],
+    }));
+
+    const orb2Style = useAnimatedStyle(() => ({
+        transform: [{ translateX: orb2X.value }],
+    }));
+
+    return (
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+            <Animated.View style={[styles.gradientOrb, styles.orb1, { backgroundColor: colors.orbColor1 }, orb1Style]} />
+            <Animated.View style={[styles.gradientOrb, styles.orb2, { backgroundColor: colors.orbColor2 }, orb2Style]} />
+        </View>
+    );
+};
+
+// ============================================================================
+// SIMPLE AVATAR (No pulsing, circular)
+// ============================================================================
+
+const CoachAvatar: React.FC<{ size?: number }> = ({ size = 48 }) => {
+    return (
+        <View style={[styles.coachAvatarContainer, { width: size, height: size, borderRadius: size / 2 }]}>
+            <Image
+                source={CoachLogo}
+                style={{ width: size, height: size, borderRadius: size / 2 }}
+                resizeMode="cover"
+            />
+        </View>
+    );
+};
+
+// ============================================================================
+// TYPING INDICATOR
+// ============================================================================
+
+const TypingIndicator: React.FC<{ color: string }> = ({ color }) => {
+    const dots = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
+
+    useEffect(() => {
+        dots.forEach((dot, i) => {
+            dot.value = withDelay(
+                i * 150,
+                withRepeat(
+                    withSequence(
+                        withTiming(-6, { duration: 300, easing: Easing.out(Easing.ease) }),
+                        withTiming(0, { duration: 300, easing: Easing.in(Easing.ease) })
+                    ),
+                    -1,
+                    true
+                )
+            );
+        });
+    }, []);
+
+    return (
+        <View style={styles.typingContainer}>
+            {dots.map((dot, i) => {
+                const style = useAnimatedStyle(() => ({
+                    transform: [{ translateY: dot.value }],
+                }));
+                return (
+                    <Animated.View
+                        key={i}
+                        style={[styles.typingDot, { backgroundColor: color }, style]}
+                    />
+                );
+            })}
+        </View>
+    );
+};
+
+// ============================================================================
+// QUICK ACTION CARD
+// ============================================================================
+
+const QuickActionCard: React.FC<{
+    action: typeof QUICK_ACTIONS[0];
+    colors: ReturnType<typeof getColors>;
+    onPress: () => void;
+    delay: number;
+}> = ({ action, colors, onPress, delay }) => {
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withSpring(scale.value) }],
+    }));
+
+    return (
+        <Animated.View entering={FadeInUp.duration(400).delay(delay)}>
+            <TouchableOpacity
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    onPress();
+                }}
+                onPressIn={() => { scale.value = 0.95; }}
+                onPressOut={() => { scale.value = 1; }}
+                activeOpacity={1}
+            >
+                <Animated.View style={animatedStyle}>
+                    <BlurView intensity={colors.blurIntensity} tint="default" style={[styles.quickActionCard, { borderColor: colors.border }]}>
+                        <View style={styles.quickActionInner}>
+                            <LinearGradient
+                                colors={action.gradient}
+                                style={styles.quickActionIcon}
+                            >
+                                <Text style={styles.quickActionEmoji}>{action.emoji}</Text>
+                            </LinearGradient>
+                            <Text style={[styles.quickActionText, { color: colors.text }]}>{action.text}</Text>
+                        </View>
+                    </BlurView>
+                </Animated.View>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
+// ============================================================================
+// MESSAGE BUBBLE
+// ============================================================================
+
+const MessageBubble: React.FC<{
+    message: ChatMessage;
+    colors: ReturnType<typeof getColors>;
+    onPin: (msg: ChatMessage) => void;
+}> = ({ message, colors, onPin }) => {
+    const isAI = message.role === 'assistant';
+    const isUser = message.role === 'user';
+
+    let displayText = message.content;
+    let widgetData = null;
+
+    if (isAI) {
+        const parsed = parseWidgetFromMessage(message.content);
+        displayText = parsed.text || message.content;
+        widgetData = parsed.widgetData;
+    }
+
+    const formatTime = (timestamp: string) => {
+        return new Date(timestamp).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+    };
+
+    if (isUser) {
+        return (
+            <Animated.View
+                entering={FadeInUp.duration(300)}
+                style={styles.userMessageWrapper}
+            >
+                <LinearGradient
+                    colors={[colors.accent, colors.accentLight]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.userBubble}
+                >
+                    <Text style={styles.userBubbleText}>{displayText}</Text>
+                </LinearGradient>
+                <Text style={[styles.userTime, { color: colors.textMuted }]}>{formatTime(message.timestamp)}</Text>
+            </Animated.View>
+        );
+    }
+
+    return (
+        <Animated.View
+            entering={FadeInUp.duration(300)}
+            style={styles.aiMessageWrapper}
+        >
+            <View style={styles.aiMessageRow}>
+                <CoachAvatar size={32} />
+                <View style={styles.aiMessageContent}>
+                    <View style={styles.aiMessageHeader}>
+                        <Text style={[styles.aiSenderName, { color: colors.accent }]}>Coach</Text>
+                        <Text style={[styles.aiTime, { color: colors.textMuted }]}>{formatTime(message.timestamp)}</Text>
+                    </View>
+                    <BlurView intensity={colors.blurIntensity} tint="default" style={[styles.aiBubble, { borderColor: colors.border }]}>
+                        <Text style={[styles.aiBubbleText, { color: colors.text }]}>{displayText}</Text>
+                    </BlurView>
+                    <View style={styles.aiActions}>
+                        <TouchableOpacity
+                            onPress={() => onPin(message)}
+                            style={styles.actionBtn}
+                        >
+                            <Ionicons
+                                name={message.is_pinned ? 'bookmark' : 'bookmark-outline'}
+                                size={14}
+                                color={message.is_pinned ? colors.accent : colors.textMuted}
+                            />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.actionBtn}>
+                            <Ionicons name="copy-outline" size={14} color={colors.textMuted} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+            {widgetData && <WidgetRenderer widgetData={widgetData} />}
+        </Animated.View>
+    );
+};
+
+// ============================================================================
+// HELPERS
 // ============================================================================
 
 function formatDateHeader(sessionId: string): string {
-    const date = new Date(sessionId);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (sessionId === today.toISOString().split('T')[0]) {
-        return 'Today';
-    }
-    if (sessionId === yesterday.toISOString().split('T')[0]) {
-        return 'Yesterday';
-    }
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    if (sessionId === today) return 'Today';
+    if (sessionId === yesterday) return 'Yesterday';
+    return new Date(sessionId).toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric'
+    });
 }
 
 function groupMessagesBySession(messages: ChatMessage[]): MessageSection[] {
-    const groups: Map<string, ChatMessage[]> = new Map();
-
+    const groups = new Map<string, ChatMessage[]>();
     messages.forEach(msg => {
         const existing = groups.get(msg.session_id) || [];
         existing.push(msg);
         groups.set(msg.session_id, existing);
     });
-
     return Array.from(groups.entries())
-        .sort((a, b) => b[0].localeCompare(a[0])) // Most recent first
+        .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([sessionId, data]) => ({
             title: formatDateHeader(sessionId),
             data: data.sort((a, b) => a.timestamp.localeCompare(b.timestamp)),
@@ -74,14 +370,15 @@ function groupMessagesBySession(messages: ChatMessage[]): MessageSection[] {
 }
 
 // ============================================================================
-// Component
+// MAIN COMPONENT
 // ============================================================================
 
 export default function AIChatModal() {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
+    const colors = getColors(isDark);
+
     const router = useRouter();
-    const { light, medium } = useHaptics();
     const listRef = useRef<SectionList>(null);
 
     const [inputText, setInputText] = useState('');
@@ -90,21 +387,8 @@ export default function AIChatModal() {
     const [isTyping, setIsTyping] = useState(false);
     const [hasMore, setHasMore] = useState(true);
 
-    const colors = {
-        bg: isDark ? '#121214' : '#FAF9F6',
-        surface: isDark ? '#2C2C2E' : '#FFFFFF',
-        text: isDark ? '#FFFFFF' : '#1A1A1A',
-        textSecondary: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)',
-        primary: '#FF4500',
-        userBubble: '#FF4500',
-        aiBubble: isDark ? '#2C2C2E' : '#F0F0F0',
-        border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-        inputBg: isDark ? '#2C2C2E' : '#FFFFFF',
-        sectionHeader: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
-        pinned: '#FFD700',
-    };
+    const sendButtonScale = useSharedValue(1);
 
-    // Load initial messages
     useEffect(() => {
         loadMessages();
     }, []);
@@ -116,10 +400,9 @@ export default function AIChatModal() {
             setMessages(msgs);
             setHasMore(msgs.length >= 50);
 
-            // If no messages, add welcome message
             if (msgs.length === 0) {
                 const welcomeMsg = await ChatService.addMessage({
-                    content: `System Online. 🟢 Let's calibrate. What's the first meal of the day?`,
+                    content: `Hey! I'm your AI nutrition coach. Ready to crush your goals today? 💪\n\nTap a quick action below or just tell me what's on your mind.`,
                     role: 'assistant',
                 });
                 setMessages([welcomeMsg]);
@@ -133,52 +416,37 @@ export default function AIChatModal() {
 
     const loadMoreMessages = async () => {
         if (!hasMore || messages.length === 0) return;
-
         const oldestTimestamp = messages[0]?.timestamp;
         const moreMsgs = await ChatService.getMessagesPage(oldestTimestamp, 50);
-
-        if (moreMsgs.length < 50) {
-            setHasMore(false);
-        }
-
+        if (moreMsgs.length < 50) setHasMore(false);
         setMessages(prev => [...moreMsgs, ...prev]);
     };
 
-    const handleSend = async () => {
-        if (!inputText.trim() || isTyping) return;
+    const handleSend = async (text?: string) => {
+        const userText = (text || inputText).trim();
+        if (!userText || isTyping) return;
 
-        const userText = inputText.trim();
         setInputText('');
-        medium();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-        // Add user message to DB and state
-        const userMessage = await ChatService.addMessage({
-            content: userText,
-            role: 'user',
-        });
+        const userMessage = await ChatService.addMessage({ content: userText, role: 'user' });
         setMessages(prev => [...prev, userMessage]);
 
-        // Build context with RAG
         setIsTyping(true);
         try {
             const payload = await ChatContextBuilder.buildPromptPayload(userText);
-
-            // Call Gemini API
             const aiResponse = await geminiService.chat(
                 payload.messages.map(m => ({ role: m.role, content: m.content })),
                 payload.systemPrompt
             );
-
-            // Save AI response to DB
             const assistantMessage = await ChatService.addMessage({
                 content: aiResponse,
-                role: 'assistant',
+                role: 'assistant'
             });
             setMessages(prev => [...prev, assistantMessage]);
         } catch (error) {
-            console.error('AI response failed:', error);
             const errorMessage = await ChatService.addMessage({
-                content: "I'm having trouble connecting right now. Please try again in a moment.",
+                content: "I'm here to help with nutrition and health questions! What would you like to know? (Currently in offline mode)",
                 role: 'assistant',
             });
             setMessages(prev => [...prev, errorMessage]);
@@ -188,87 +456,39 @@ export default function AIChatModal() {
     };
 
     const handlePinMessage = async (message: ChatMessage) => {
-        light();
+        Haptics.selectionAsync();
         const newPinnedState = !message.is_pinned;
         await ChatService.pinMessage(message.id, newPinnedState);
-
         setMessages(prev =>
-            prev.map(m =>
-                m.id === message.id ? { ...m, is_pinned: newPinnedState } : m
-            )
+            prev.map(m => m.id === message.id ? { ...m, is_pinned: newPinnedState } : m)
         );
     };
 
     const handleVoiceLog = () => {
-        light();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         router.push('/(modals)/voice-log' as any);
     };
 
     const sections = groupMessagesBySession(messages);
+    const showQuickActions = messages.length <= 2 && !isTyping;
 
-    const renderMessage = ({ item }: { item: ChatMessage }) => {
-        // Parse widget from AI messages
-        const isAI = item.role === 'assistant';
-        let displayText = item.content;
-        let widgetData = null;
+    const sendAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withSpring(sendButtonScale.value) }],
+    }));
 
-        if (isAI) {
-            const parsed = parseWidgetFromMessage(item.content);
-            displayText = parsed.text || item.content;
-            widgetData = parsed.widgetData;
-        }
-
-        return (
-            <View style={styles.messageWrapper}>
-                <View
-                    style={[
-                        styles.messageRow,
-                        item.role === 'user' ? styles.userRow : styles.aiRow,
-                    ]}
-                >
-                    <View
-                        style={[
-                            styles.messageBubble,
-                            item.role === 'user'
-                                ? [styles.userBubble, { backgroundColor: colors.userBubble }]
-                                : [styles.aiBubble, { backgroundColor: colors.aiBubble }],
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.messageText,
-                                { color: item.role === 'user' ? '#FFFFFF' : colors.text },
-                            ]}
-                        >
-                            {displayText}
-                        </Text>
-                    </View>
-
-                    {/* Pin button for AI messages */}
-                    {isAI && (
-                        <TouchableOpacity
-                            style={styles.pinButton}
-                            onPress={() => handlePinMessage(item)}
-                        >
-                            <Ionicons
-                                name={item.is_pinned ? 'bookmark' : 'bookmark-outline'}
-                                size={16}
-                                color={item.is_pinned ? colors.pinned : colors.textSecondary}
-                            />
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                {/* Render widget if present */}
-                {widgetData && <WidgetRenderer widgetData={widgetData} />}
-            </View>
-        );
-    };
-
+    // Loading state
     if (isLoading) {
         return (
-            <View style={[styles.container, styles.centered, { backgroundColor: colors.bg }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
+            <View style={[styles.container, { backgroundColor: colors.bg }]}>
+                <LinearGradient
+                    colors={colors.bgGradient}
+                    style={StyleSheet.absoluteFillObject}
+                />
+                <AnimatedBackground colors={colors} />
+                <View style={styles.loadingContainer}>
+                    <CoachAvatar size={80} />
+                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading conversation...</Text>
+                </View>
             </View>
         );
     }
@@ -276,82 +496,141 @@ export default function AIChatModal() {
     return (
         <View style={[styles.container, { backgroundColor: colors.bg }]}>
             <Stack.Screen options={{ headerShown: false }} />
-            <SoftDreamyBackground />
 
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {/* Header */}
-                <View style={styles.header}>
+            {/* Background */}
+            <LinearGradient
+                colors={colors.bgGradient}
+                locations={[0, 0.5, 1]}
+                style={StyleSheet.absoluteFillObject}
+            />
+            <AnimatedBackground colors={colors} />
+
+            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+                {/* Premium Header - LOWERED with extra padding */}
+                <Animated.View
+                    entering={FadeInDown.duration(400)}
+                    style={[styles.header, { borderBottomColor: colors.border }]}
+                >
                     <TouchableOpacity
-                        onPress={() => { light(); router.back(); }}
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            router.back();
+                        }}
                         style={[styles.backButton, { backgroundColor: colors.surface }]}
                     >
-                        <Ionicons name="arrow-back" size={20} color={colors.text} />
+                        <Ionicons name="chevron-back" size={24} color={colors.text} />
                     </TouchableOpacity>
+
                     <View style={styles.headerCenter}>
-                        <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
-                            <Ionicons name="sparkles" size={18} color="#FFFFFF" />
-                        </View>
-                        <View>
-                            <Text style={[styles.headerTitle, { color: colors.text }]}>Coach</Text>
-                            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                                {isTyping ? 'Typing...' : 'Online'}
-                            </Text>
+                        <CoachAvatar size={44} />
+                        <View style={styles.headerInfo}>
+                            <View style={styles.headerTitleRow}>
+                                <Text style={[styles.headerTitle, { color: colors.text }]}>AI Coach</Text>
+                                <View style={[styles.aiBadge, { backgroundColor: colors.accent }]}>
+                                    <Text style={styles.aiBadgeText}>PRO</Text>
+                                </View>
+                            </View>
+                            <View style={styles.statusRow}>
+                                <View style={[
+                                    styles.statusDot,
+                                    { backgroundColor: isTyping ? colors.accent : colors.success }
+                                ]} />
+                                <Text style={[
+                                    styles.statusText,
+                                    { color: isTyping ? colors.accent : colors.success }
+                                ]}>
+                                    {isTyping ? 'Thinking...' : 'Online'}
+                                </Text>
+                            </View>
                         </View>
                     </View>
+
                     <TouchableOpacity
                         onPress={handleVoiceLog}
-                        style={[styles.voiceButton, { backgroundColor: colors.surface }]}
+                        style={styles.voiceButton}
                     >
-                        <Ionicons name="mic" size={20} color={colors.primary} />
+                        <LinearGradient
+                            colors={[colors.accent, colors.accentLight]}
+                            style={styles.voiceButtonGradient}
+                        >
+                            <Ionicons name="mic" size={20} color="#FFF" />
+                        </LinearGradient>
                     </TouchableOpacity>
-                </View>
+                </Animated.View>
 
-                {/* Messages */}
+                {/* Chat Area */}
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.messagesContainer}
-                    keyboardVerticalOffset={100}
+                    style={styles.flex}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
                 >
                     <SectionList<ChatMessage, MessageSection>
                         ref={listRef as any}
                         sections={sections}
                         keyExtractor={item => item.id}
-                        renderItem={renderMessage}
+                        renderItem={({ item }) => (
+                            <MessageBubble
+                                message={item}
+                                colors={colors}
+                                onPin={handlePinMessage}
+                            />
+                        )}
                         renderSectionHeader={({ section }) => (
                             <View style={styles.sectionHeader}>
-                                <Text style={[styles.sectionHeaderText, { color: colors.sectionHeader }]}>
-                                    {section.title}
-                                </Text>
+                                <View style={[styles.sectionLine, { backgroundColor: colors.border }]} />
+                                <Text style={[styles.sectionText, { color: colors.textMuted }]}>{section.title}</Text>
+                                <View style={[styles.sectionLine, { backgroundColor: colors.border }]} />
                             </View>
                         )}
-                        contentContainerStyle={styles.messagesContent}
+                        contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
-                        inverted={false}
                         onEndReached={loadMoreMessages}
                         onEndReachedThreshold={0.3}
                         stickySectionHeadersEnabled={false}
-                        ListFooterComponent={
-                            isTyping ? (
-                                <View style={[styles.messageRow, styles.aiRow]}>
-                                    <View style={[styles.messageBubble, styles.aiBubble, { backgroundColor: colors.aiBubble }]}>
-                                        <View style={styles.typingIndicator}>
-                                            <View style={[styles.typingDot, { backgroundColor: colors.textSecondary }]} />
-                                            <View style={[styles.typingDot, { backgroundColor: colors.textSecondary }]} />
-                                            <View style={[styles.typingDot, { backgroundColor: colors.textSecondary }]} />
-                                        </View>
-                                    </View>
+                        ListFooterComponent={isTyping ? (
+                            <View style={styles.aiMessageWrapper}>
+                                <View style={styles.aiMessageRow}>
+                                    <CoachAvatar size={32} />
+                                    <BlurView intensity={colors.blurIntensity} tint="default" style={[styles.aiBubble, { borderColor: colors.border }]}>
+                                        <TypingIndicator color={colors.textSecondary} />
+                                    </BlurView>
                                 </View>
-                            ) : null
-                        }
+                            </View>
+                        ) : null}
                     />
 
+                    {/* Quick Actions */}
+                    {showQuickActions && (
+                        <View style={styles.quickActionsContainer}>
+                            <Text style={[styles.quickActionsLabel, { color: colors.textMuted }]}>Quick Actions</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.quickActionsScroll}
+                            >
+                                {QUICK_ACTIONS.map((action, idx) => (
+                                    <QuickActionCard
+                                        key={action.id}
+                                        action={action}
+                                        colors={colors}
+                                        onPress={() => handleSend(action.text)}
+                                        delay={idx * 80}
+                                    />
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
+
                     {/* Input Area */}
-                    <View style={[styles.inputContainer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
-                        <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                    <Animated.View
+                        entering={FadeInUp.duration(400).delay(200)}
+                        style={[styles.inputContainer, { borderTopColor: colors.border }]}
+                    >
+                        <BlurView intensity={colors.blurIntensity} tint="default" style={[styles.inputWrapper, { borderColor: colors.border }]}>
                             <TextInput
                                 style={[styles.input, { color: colors.text }]}
-                                placeholder="Message Coach..."
-                                placeholderTextColor={colors.textSecondary}
+                                placeholder="Ask anything..."
+                                placeholderTextColor={colors.textMuted}
                                 value={inputText}
                                 onChangeText={setInputText}
                                 multiline
@@ -359,143 +638,304 @@ export default function AIChatModal() {
                                 editable={!isTyping}
                             />
                             <TouchableOpacity
-                                style={[
-                                    styles.sendButton,
-                                    { backgroundColor: colors.primary, opacity: inputText.trim() && !isTyping ? 1 : 0.5 },
-                                ]}
-                                onPress={handleSend}
+                                onPress={() => handleSend()}
+                                onPressIn={() => { sendButtonScale.value = 0.9; }}
+                                onPressOut={() => { sendButtonScale.value = 1; }}
                                 disabled={!inputText.trim() || isTyping}
+                                style={{ opacity: inputText.trim() && !isTyping ? 1 : 0.4 }}
                             >
-                                <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                                <Animated.View style={sendAnimatedStyle}>
+                                    <LinearGradient
+                                        colors={[colors.accent, colors.accentLight]}
+                                        style={styles.sendButton}
+                                    >
+                                        <Ionicons name="arrow-up" size={20} color="#FFF" />
+                                    </LinearGradient>
+                                </Animated.View>
                             </TouchableOpacity>
-                        </View>
-                    </View>
+                        </BlurView>
+                    </Animated.View>
                 </KeyboardAvoidingView>
             </SafeAreaView>
         </View>
     );
 }
 
+// ============================================================================
+// STYLES
+// ============================================================================
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    centered: {
-        justifyContent: 'center',
-        alignItems: 'center',
+    flex: {
+        flex: 1,
     },
     safeArea: {
         flex: 1,
     },
-    // Header
+
+    // Background
+    gradientOrb: {
+        position: 'absolute',
+        borderRadius: 999,
+    },
+    orb1: {
+        width: SCREEN_WIDTH * 0.8,
+        height: SCREEN_WIDTH * 0.8,
+        top: -SCREEN_WIDTH * 0.3,
+        left: -SCREEN_WIDTH * 0.2,
+        opacity: 0.4,
+    },
+    orb2: {
+        width: SCREEN_WIDTH * 0.6,
+        height: SCREEN_WIDTH * 0.6,
+        bottom: SCREEN_HEIGHT * 0.2,
+        right: -SCREEN_WIDTH * 0.2,
+        opacity: 0.3,
+    },
+
+    // Loading
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 15,
+    },
+
+    // Coach Avatar (simple, circular)
+    coachAvatarContainer: {
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255, 92, 0, 0.1)',
+    },
+
+    // Header - LOWERED
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
+        paddingTop: SPACING.lg, // Extra top padding to lower the header
+        paddingBottom: SPACING.md,
         gap: 12,
+        borderBottomWidth: 1,
     },
     backButton: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        alignItems: 'center',
         justifyContent: 'center',
+        alignItems: 'center',
     },
     headerCenter: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        gap: 12,
     },
-    headerAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    headerTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-    },
-    headerSubtitle: {
-        fontSize: 12,
-    },
-    voiceButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    // Messages
-    messagesContainer: {
+    headerInfo: {
         flex: 1,
     },
-    messagesContent: {
-        padding: SPACING.lg,
-        paddingBottom: 20,
-    },
-    sectionHeader: {
-        alignItems: 'center',
-        paddingVertical: 12,
-    },
-    sectionHeaderText: {
-        fontSize: 12,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    messageRow: {
-        marginBottom: 12,
+    headerTitleRow: {
         flexDirection: 'row',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         gap: 8,
     },
-    userRow: {
-        justifyContent: 'flex-end',
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
     },
-    aiRow: {
-        justifyContent: 'flex-start',
+    aiBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
     },
-    messageBubble: {
-        maxWidth: '80%',
-        padding: 14,
+    aiBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#FFF',
+        letterSpacing: 0.5,
+    },
+    statusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 2,
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    statusText: {
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    voiceButton: {
         borderRadius: 20,
+        overflow: 'hidden',
+    },
+    voiceButtonGradient: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    // Messages
+    listContent: {
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: SPACING.lg,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 20,
+        gap: 12,
+    },
+    sectionLine: {
+        flex: 1,
+        height: 1,
+    },
+    sectionText: {
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+
+    // User Message
+    userMessageWrapper: {
+        alignItems: 'flex-end',
+        marginBottom: 16,
     },
     userBubble: {
-        borderBottomRightRadius: 4,
+        maxWidth: '80%',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 20,
+        borderBottomRightRadius: 6,
+    },
+    userBubbleText: {
+        fontSize: 15,
+        lineHeight: 22,
+        color: '#FFF',
+    },
+    userTime: {
+        fontSize: 11,
+        marginTop: 6,
+    },
+
+    // AI Message
+    aiMessageWrapper: {
+        marginBottom: 16,
+    },
+    aiMessageRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+    },
+    aiMessageContent: {
+        flex: 1,
+        maxWidth: '80%',
+    },
+    aiMessageHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 6,
+    },
+    aiSenderName: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    aiTime: {
+        fontSize: 11,
     },
     aiBubble: {
-        borderBottomLeftRadius: 4,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 20,
+        borderBottomLeftRadius: 6,
+        borderWidth: 1,
+        overflow: 'hidden',
     },
-    messageText: {
+    aiBubbleText: {
         fontSize: 15,
         lineHeight: 22,
     },
-    pinButton: {
+    aiActions: {
+        flexDirection: 'row',
+        gap: 16,
+        marginTop: 8,
+        marginLeft: 4,
+    },
+    actionBtn: {
         padding: 4,
     },
-    typingIndicator: {
+
+    // Typing
+    typingContainer: {
         flexDirection: 'row',
-        gap: 4,
+        alignItems: 'center',
+        gap: 6,
         paddingVertical: 4,
-        paddingHorizontal: 8,
     },
     typingDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
     },
-    messageWrapper: {
-        marginBottom: 4,
+
+    // Quick Actions
+    quickActionsContainer: {
+        paddingHorizontal: SPACING.lg,
+        paddingBottom: 12,
     },
+    quickActionsLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 12,
+    },
+    quickActionsScroll: {
+        gap: 10,
+    },
+    quickActionCard: {
+        borderRadius: 16,
+        borderWidth: 1,
+        overflow: 'hidden',
+    },
+    quickActionInner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        gap: 10,
+    },
+    quickActionIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    quickActionEmoji: {
+        fontSize: 16,
+    },
+    quickActionText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+
     // Input
     inputContainer: {
-        padding: SPACING.md,
-        paddingBottom: SPACING.lg,
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: 12,
         borderTopWidth: 1,
     },
     inputWrapper: {
@@ -503,21 +943,22 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         borderRadius: 24,
         borderWidth: 1,
-        paddingLeft: 16,
+        paddingLeft: 18,
         paddingRight: 6,
         paddingVertical: 6,
+        overflow: 'hidden',
     },
     input: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 16,
         maxHeight: 100,
-        paddingVertical: 8,
+        paddingVertical: 10,
     },
     sendButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         justifyContent: 'center',
+        alignItems: 'center',
     },
 });

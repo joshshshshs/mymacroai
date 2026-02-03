@@ -11,14 +11,17 @@ import { CoachOrb } from './CoachOrb';
 import { ThemedText } from '@/src/components/ui/ThemedText';
 import { SoftGlassCard } from '../../ui/SoftGlassCard';
 import { Ionicons } from '@expo/vector-icons';
-import { useUserStore, useAdjustedDailyTarget } from '@/src/store/UserStore';
+import { useUserStore, useAdjustedDailyTarget, useHealthMetrics } from '@/src/store/UserStore';
 import { MacroCoinIcon } from '../../ui/MacroCoinIcon';
+import { useCombinedTheme } from '@/src/design-system/theme';
+import { COLORS } from '@/src/design-system/tokens';
 
 const { width } = Dimensions.get('window');
 
 export const CockpitDashboard: React.FC = () => {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { colors, isDark } = useCombinedTheme();
     const {
         user,
         currentIntake,
@@ -28,6 +31,7 @@ export const CockpitDashboard: React.FC = () => {
         streak
     } = useUserStore();
     const adjustedTarget = useAdjustedDailyTarget();
+    const healthMetrics = useHealthMetrics();
 
     const coachState = 'idle';
 
@@ -39,7 +43,16 @@ export const CockpitDashboard: React.FC = () => {
         carbs: { current: currentIntake.carbs, target: adjustedTarget.carbs },
         fats: { current: currentIntake.fats, target: adjustedTarget.fats },
     };
-    const recoveryScore = 78; // TODO: Connect to HealthKit/Wearable data in future phase
+
+    // Recovery score from health metrics (HRV-based or sleep quality)
+    // Falls back to calculated estimate if no wearable data
+    const recoveryScore = healthMetrics.sleepQuality
+        || Math.min(100, Math.round(
+            (healthMetrics.sleepMinutes ? (healthMetrics.sleepMinutes / 480) * 50 : 40) +
+            (healthMetrics.heartRate && healthMetrics.heartRate < 70 ? 30 : 20) +
+            (streak > 7 ? 20 : streak * 2)
+        ))
+        || 75;
 
     // Format Date
     const today = new Date();
@@ -53,7 +66,8 @@ export const CockpitDashboard: React.FC = () => {
         } else if (id === 'profile') {
             router.push('/(modals)/profile' as any);
         } else if (id === 'edit_widget') {
-            // TODO: Open widget editor modal
+            // Navigate to health tab where widget management is available
+            router.push('/(tabs)/health' as any);
         } else {
             // Handle Quick Actions
             if (id === 'food') router.push('/(modals)/scan' as any);
@@ -79,32 +93,32 @@ export const CockpitDashboard: React.FC = () => {
                 <View style={styles.topNav}>
                     <View style={styles.statsRow}>
                         {/* MacroCoins */}
-                        <SoftGlassCard variant="soft" style={styles.statPill} onPress={() => handleAction('shop')}>
+                        <SoftGlassCard variant="soft" style={[styles.statPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.25)' }]} onPress={() => handleAction('shop')}>
                             <MacroCoinIcon size={16} />
-                            <ThemedText variant="caption" style={{ color: '#FFF', fontWeight: '600' }}>
+                            <ThemedText variant="caption" style={{ color: colors.textInverse, fontWeight: '600' }}>
                                 {economy.macroCoins}
                             </ThemedText>
                         </SoftGlassCard>
 
                         {/* Streak */}
-                        <SoftGlassCard variant="soft" style={styles.statPill} onPress={() => handleAction('streak')}>
-                            <Ionicons name="flame" size={14} color="#EF4444" />
-                            <ThemedText variant="caption" style={{ color: '#FFF', fontWeight: '600' }}>
+                        <SoftGlassCard variant="soft" style={[styles.statPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.25)' }]} onPress={() => handleAction('streak')}>
+                            <Ionicons name="flame" size={14} color={COLORS.gamification.vitaminOrange} />
+                            <ThemedText variant="caption" style={{ color: colors.textInverse, fontWeight: '600' }}>
                                 {streak}
                             </ThemedText>
                         </SoftGlassCard>
                     </View>
 
                     {/* Profile Button */}
-                    <SoftGlassCard variant="soft" style={styles.profileButton} onPress={() => handleAction('profile')}>
-                        <Ionicons name="person" size={20} color="rgba(0,0,0,0.7)" />
+                    <SoftGlassCard variant="soft" style={[styles.profileButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} onPress={() => handleAction('profile')}>
+                        <Ionicons name="person" size={20} color={colors.textSecondary} />
                     </SoftGlassCard>
                 </View>
 
                 {/* Greeting / Date Title */}
                 <View style={styles.greetingSection}>
-                    <ThemedText variant="caption" style={{ color: 'rgba(0,0,0,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>{dateString}</ThemedText>
-                    <ThemedText variant="h3" style={{ color: '#1F2937' }}>Hello, {user?.name || 'Guest'}</ThemedText>
+                    <ThemedText variant="caption" style={{ color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 1 }}>{dateString}</ThemedText>
+                    <ThemedText variant="h3" style={{ color: colors.textPrimary }}>Hello, {user?.name || 'Guest'}</ThemedText>
                 </View>
 
                 {/* Hero Section */}
@@ -121,11 +135,11 @@ export const CockpitDashboard: React.FC = () => {
 
                 {/* Recovery Gauge */}
                 <View style={styles.section}>
-                    <ThemedText variant="label" style={styles.sectionTitle}>RECOVERY STATUS</ThemedText>
+                    <ThemedText variant="label" style={[styles.sectionTitle, { color: colors.textMuted }]}>RECOVERY STATUS</ThemedText>
                     <SoftGlassCard variant="soft" style={styles.recoveryCard}>
                         <RecoveryGauge score={recoveryScore} />
                         <View style={styles.recoveryInfo}>
-                            <ThemedText variant="body" style={{ color: 'rgba(0,0,0,0.7)', textAlign: 'center', marginTop: 10 }}>
+                            <ThemedText variant="body" style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 10 }}>
                                 HRV is stable. You are ready for peak performance today.
                             </ThemedText>
                         </View>
@@ -134,11 +148,11 @@ export const CockpitDashboard: React.FC = () => {
 
                 {/* Insight Banner */}
                 <SoftGlassCard variant="medium" style={styles.insightBanner}>
-                    <View style={styles.insightIcon}>
-                        <Ionicons name="bulb" size={18} color="#A78BFA" />
+                    <View style={[styles.insightIcon, { backgroundColor: `${COLORS.semantic.social.glow}25` }]}>
+                        <Ionicons name="bulb" size={18} color={COLORS.semantic.social.light} />
                     </View>
-                    <ThemedText variant="caption" style={{ color: '#1F2937', flex: 1, lineHeight: 20 }}>
-                        <ThemedText style={{ fontWeight: '700', color: '#A78BFA' }}>AI TIP:</ThemedText> Sleep debt is high. Consider a 20min power nap before 2PM to restore alertness.
+                    <ThemedText variant="caption" style={{ color: colors.textPrimary, flex: 1, lineHeight: 20 }}>
+                        <ThemedText style={{ fontWeight: '700', color: COLORS.semantic.social.light }}>AI TIP:</ThemedText> Sleep debt is high. Consider a 20min power nap before 2PM to restore alertness.
                     </ThemedText>
                 </SoftGlassCard>
 
@@ -181,7 +195,6 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.3)',
         gap: 6,
     },
     profileButton: {
@@ -190,7 +203,6 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     greetingSection: {
         marginBottom: 20,
@@ -199,7 +211,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     sectionTitle: {
-        color: 'rgba(0,0,0,0.4)',
         marginBottom: 10,
         marginLeft: 4,
     },
@@ -222,7 +233,6 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: 'rgba(167, 139, 250, 0.2)',
         alignItems: 'center',
         justifyContent: 'center',
     },

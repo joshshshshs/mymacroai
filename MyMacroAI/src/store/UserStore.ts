@@ -34,6 +34,25 @@ let _storage: MMKV | null = null;
 let _storageError = false;
 
 /**
+ * Gets the MMKV encryption key from environment variable.
+ * In production, requires proper key configuration.
+ */
+const getEncryptionKey = (): string => {
+    const envKey = process.env.EXPO_PUBLIC_MMKV_ENCRYPTION_KEY;
+    if (envKey && envKey.length >= 16) {
+        return envKey;
+    }
+    // In development, use a dev-only fallback
+    if (__DEV__) {
+        return 'dev-only-encryption-key-16';
+    }
+    // Production requires proper encryption key
+    throw new Error(
+        'MMKV encryption key not configured. Set EXPO_PUBLIC_MMKV_ENCRYPTION_KEY (min 16 chars) in environment.'
+    );
+};
+
+/**
  * Lazy MMKV getter - only initializes when first accessed.
  * This prevents crashes when JSI isn't ready (e.g., remote debugger).
  */
@@ -44,11 +63,19 @@ const getStorage = (): MMKV | null => {
     try {
         _storage = new MMKV({
             id: 'user-storage-v3-encrypted',
-            encryptionKey: 'my-macro-ai-secure-key'
+            encryptionKey: getEncryptionKey()
         });
         return _storage;
     } catch (error) {
-        console.warn('[UserStore] MMKV initialization failed, using memory fallback:', error);
+        if (__DEV__) {
+            // Suppress the warning if it's the known JSI error from remote debugging
+            const errorMessage = String(error);
+            if (errorMessage.includes('JSI') || errorMessage.includes('synchronous')) {
+                console.log('[UserStore] Running in Remote Debugger mode: Persistence disabled (Memory Fallback active)');
+            } else {
+                console.warn('[UserStore] MMKV initialization failed, using memory fallback:', error);
+            }
+        }
         _storageError = true;
         return null;
     }
@@ -84,11 +111,24 @@ const mmkvStorage: StateStorage = {
 };
 
 // Export storage getter for external use
+// Note: getString is synchronous (MMKV is sync), cast to remove Promise type
 export const storage = {
     get instance() { return getStorage(); },
-    set: (key: string, value: string) => mmkvStorage.setItem(key, value),
-    getString: (key: string) => mmkvStorage.getItem(key),
-    delete: (key: string) => mmkvStorage.removeItem(key),
+    set: (key: string, value: string): void => {
+        mmkvStorage.setItem(key, value);
+    },
+    getString: (key: string): string | null => {
+        const result = mmkvStorage.getItem(key);
+        // MMKV getItem is synchronous, but StateStorage type allows Promise
+        // We know this is sync, so cast appropriately
+        if (typeof result === 'string' || result === null) {
+            return result;
+        }
+        return null; // Fallback for type safety
+    },
+    delete: (key: string): void => {
+        mmkvStorage.removeItem(key);
+    },
 };
 
 // ============================================================================
@@ -124,7 +164,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
         evening: false
     },
     // Default reaction emojis
-    customReactionEmojis: ['🔥', '💪', '👏', '❤️']
+    customReactionEmojis: ['🔥', '💪', '👏', '❤️'],
+    // App experience
+    haptics: true,
+    aiVoice: 'coach_alex',
 };
 
 const INITIAL_ECONOMY = {
@@ -132,7 +175,8 @@ const INITIAL_ECONOMY = {
     totalSpent: 0,
     totalEarned: 1000,
     purchaseHistory: [],
-    unlockedThemes: []
+    unlockedThemes: [],
+    streakFreezes: 2, // Default streak freezes
 };
 
 const INITIAL_SOCIAL = {
@@ -236,6 +280,7 @@ export const useUserStore = create<UserState>()(
             healthLayout: ['recovery', 'calories', 'strain', 'sleep', 'heart_rate'],
 
             streak: 0,
+            longestStreak: 0, // Track longest streak achieved
             coins: 1000,
             purchaseHistory: [],
             economy: INITIAL_ECONOMY,
@@ -253,6 +298,14 @@ export const useUserStore = create<UserState>()(
 
             freeAdjustmentsUsed: 0,
 
+            // Shop Item Properties (initialized)
+            streakFreezes: [],
+            ghostModeActive: false,
+            ghostModeExpiresAt: undefined,
+            unlockedFrames: [],
+            unlockedNudgePatterns: [],
+            unlockedAppIcons: [],
+
             // Training Identity System
             trainingStyles: [] as TrainingStyle[],
 
@@ -261,6 +314,11 @@ export const useUserStore = create<UserState>()(
 
             // AI Personalization
             coachIntensity: 50, // Default: balanced (0=Gentle, 100=Spartan)
+
+            // Water Tracking
+            waterIntake: 0,
+            waterGoal: 2500,
+            waterHistory: [] as { id: string; amount: number; time: string; type: string }[],
 
             // Theme System (Chromatosphere)
             activeThemeId: INITIAL_THEME_STATE.activeThemeId,
@@ -283,14 +341,27 @@ export const useUserStore = create<UserState>()(
                     }
                 })),
 
-            logFood: (calories, protein, carbs, fats, name = 'Quick Add') => {
+            logFood: (calories, protein, carbs, fats, name = 'Quick Add', mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snacks') => {
                 const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+                // Auto-determine meal type based on current time if not specified
+                const determineMealType = (): 'breakfast' | 'lunch' | 'dinner' | 'snacks' => {
+                    if (mealType) return mealType;
+
+                    const hour = new Date().getHours();
+                    if (hour >= 6 && hour < 10) return 'breakfast';
+                    if (hour >= 11 && hour < 14) return 'lunch';
+                    if (hour >= 17 && hour < 21) return 'dinner';
+                    return 'snacks'; // Default to snacks for all other times
+                };
+
                 const newLog: DailyLog = {
                     id: Math.random().toString(36).substr(2, 9),
                     type: 'food',
                     date: new Date().toISOString(),
                     timestamp: Date.now(),
                     foodName: name,
+                    mealType: determineMealType(), // Auto-detect meal type based on time
                     calories,
                     protein,
                     carbs,
@@ -378,10 +449,27 @@ export const useUserStore = create<UserState>()(
                     dailyLog: { history: [], lastUpdated: Date.now() }
                 })),
 
-            incrementStreak: () => set((state) => ({
-                streak: state.streak + 1,
-                social: { ...state.social, streak: state.social.streak + 1 }
+            // Free adjustment tracking (for non-pro users)
+            incrementFreeAdjustments: () => set((state) => ({
+                freeAdjustmentsUsed: state.freeAdjustmentsUsed + 1
             })),
+
+            // Health sync placeholder
+            syncHealthData: async () => {
+                // This would integrate with HealthKit/Google Fit
+                // For now, just return success
+                if (__DEV__) console.log('[UserStore] syncHealthData called');
+                return true;
+            },
+
+            incrementStreak: () => set((state) => {
+                const newStreak = state.streak + 1;
+                return {
+                    streak: newStreak,
+                    longestStreak: Math.max(state.longestStreak, newStreak),
+                    social: { ...state.social, streak: state.social.streak + 1 }
+                };
+            }),
 
             addCoins: (amount) => set((state) => ({
                 coins: state.coins + amount,
@@ -391,6 +479,34 @@ export const useUserStore = create<UserState>()(
                     totalEarned: state.economy.totalEarned + amount
                 }
             })),
+
+            // Water Logging
+            logWater: (amount: number, type: string = 'Water') => set((state) => {
+                const newEntry = {
+                    id: Date.now().toString(),
+                    amount,
+                    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                    type,
+                };
+                return {
+                    waterIntake: state.waterIntake + amount,
+                    waterHistory: [newEntry, ...state.waterHistory],
+                    // Award 5 coins for logging water
+                    coins: state.coins + 5,
+                    economy: {
+                        ...state.economy,
+                        macroCoins: state.economy.macroCoins + 5,
+                        totalEarned: state.economy.totalEarned + 5,
+                    },
+                };
+            }),
+
+            setWaterGoal: (goal: number) => set({ waterGoal: goal }),
+
+            resetWaterIntake: () => set({
+                waterIntake: 0,
+                waterHistory: [],
+            }),
 
             purchaseItem: (item: StoreItem) => {
                 const state = get();
@@ -766,7 +882,11 @@ export const useUserActions = () => {
         addDailyLog: store.addDailyLog, // Legacy support
         purchaseItem: store.purchaseItem,
         addCoins: store.addCoins,
-        incrementStreak: store.incrementStreak
+        incrementStreak: store.incrementStreak,
+        incrementFreeAdjustments: store.incrementFreeAdjustments,
+        syncHealthData: store.syncHealthData,
+        // @ts-ignore - updatePreferences exists on state but TS needs explicit type
+        updatePreferences: (store as any).updatePreferences,
     };
 };
 

@@ -5,8 +5,9 @@
  * Uses Supabase Storage buckets.
  */
 
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 import * as FileSystem from 'expo-file-system';
+// @ts-ignore - base64-arraybuffer may not have types
 import { decode } from 'base64-arraybuffer';
 
 // Storage bucket names
