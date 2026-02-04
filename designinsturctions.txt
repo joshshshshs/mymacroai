@@ -1,0 +1,504 @@
+Executive Summary
+
+MyMacro AI’s design will fuse Apple-grade “glass” materials, meaning-coded glow halos, and a signature motion language to create a premium, iOS-first health experience. The interface will feel softly layered and alive – translucent glass panels provide depth, subtle colored glows communicate health signals at a glance, and fluid animations make every interaction feel responsive and organic. Crucially, all visual effects are implemented with care for performance (60fps on {{target_min_device}} or better) and accessibility (supporting Reduce Motion and Reduce Transparency preferences). The result is a “health OS” UI that is both beautiful and trustworthy: it looks high-end and modern without ever feeling gimmicky or overwhelming.
+
+Top 10 Rules for an “Apple-Grade” Feel:
+
+Use Dynamic Glass Materials Purposefully: Choose translucent “materials” of varying blur “thickness” based on context – thin blur when users should see background context, thick blur when you need to obscure background for contrast. Maintain consistent material usage for similar components across the app.
+
+Ensure Legibility with Tints & Vibrancy: Always layer tints or vibrancy effects so text and icons remain readable atop glass. Apple uses vibrancy to dynamically blend foreground text with the background, preventing it from getting too light or dark. Similarly, use a subtle tint or saturation boost on blur backgrounds to ensure sufficient contrast in both light and dark modes.
+
+Add Subtle Physicality (Highlights & Shadows): Give glass panels a sense of material. Use specular highlights and soft shadows sparingly to suggest light and depth (e.g. a faint light edge along the top, a diffused shadow below). Apple’s latest designs even animate highlights with device motion, though a static hint of sheen is sufficient for MyMacro’s minimalist approach.
+
+Design a Semantic Color-Glow System: Assign each health category (Heart, Hydration, Sleep, etc.) a signature color and halo glow. Glows should be very subtle (soft blur edges, low opacity) and only visible at meaningful moments (e.g. a heart-rate card emits a gentle pink pulse on a new reading). This ties UI feedback to real data, but never rely on color alone – always pair glows with icons or text labels for clarity.
+
+Keep Glows Tasteful – “Premium, not RGB gamer”: Use glows as accents, not neon underlighting. Favor soft, diffuse radiance over hard glows. For example, a hydration widget might have a faint blue aura when highlighted, but it shouldn’t cast a bright blue haze. Limit glow radius and intensity to avoid visual noise, especially on light mode where it can reduce readability.
+
+Craft Fluid, Purposeful Motion: Animate interface changes to clarify and delight – not to distract. Each animation must serve a purpose (e.g. draw attention to new info, confirm an action). Use physics-like easing (smooth acceleration/deceleration) so movements feel natural and “liquid”, never choppy or “toy-like.” Avoid excessive or gratuitous effects that could annoy or disorient users.
+
+Establish a Clear Motion Hierarchy: Not everything should move at once. Define primary actions that animate first and most prominently (e.g. a card expanding), and secondary elements that follow slightly later and subtler (e.g. icon fades in) for a layered effect. This staged choreography creates a sense of harmony and directs the eye. All custom animations should feel as polished as Apple’s native ones.
+
+Introduce Novel, Memorable Interactions: Implement a set of signature micro-interactions that feel unique to MyMacro AI – e.g. a “liquid seam” transition when opening the logger, or a “magnetic snap” when dropping a pin on a chart. These should be fun and innovative yet remain intuitive. (We detail 8+ such patterns in the Motion section.) The goal is a fresh experience that still feels usable and familiar.
+
+Prepare Graceful Fallbacks: All advanced visuals degrade safely on lower-end hardware or different platforms. For instance, on Android (where BlurView is experimental), the app can fall back to a semi-transparent backdrop instead of heavy blur. If the device or OS accessibility setting reduces motion/transparency, the app switches to simpler visuals (no animations, solid backgrounds) automatically.
+
+Test for “Premium Polishing”: Rigorously QA the app’s look and feel. Conduct a squint test (UI still readable with reduced detail), a glance test (key info pops within 1–2 seconds), and a “no cheap glow” test (ensure no glow or animation feels tacky). Verify high contrast in all modes, smooth 60fps performance, and that the interface feels high-end – the ultimate sign of Apple-grade design is that it delights without drawing attention to the tech behind it.
+
+<br/>
+The “Apple Glass” Material System (Research + Recipe)
+
+MyMacro AI will use an Apple-inspired glassmorphism: translucent layers that create depth and separation while blending beautifully with content. This means implementing true blur materials (not just transparency) to achieve that frosted glass look, along with subtle details like tints, grain, and shadows that make the “glass” feel real. Below we define the core material styles and how to recreate them in Expo React Native.
+
+Material Definitions & Properties
+
+We define four tiers of glass material in the design, echoing Apple’s system materials (from ultra-thin to ultra-thick blur):
+
+Thin Glass: A very translucent backdrop (light blur radius). It preserves much of the background context. Use: overlay elements where seeing underlying content is helpful (e.g. a mini-player over a dashboard, so user knows what’s behind). Recipe: low blur (e.g. BlurView intensity ~10–20%), high transparency. Minimal tint (just enough to ensure contrast).
+
+Frosted Glass: A medium blur material (moderate thickness). It noticeably blurs background but still shows vague shapes/colors. Use: main surfaces like widget cards or panels where some background context is okay but content on the card must pop. Recipe: medium blur (≈40–60% intensity), with a light tint layer (e.g. white or dark tint at 10–20% opacity) to further diffuse background and boost contrast in dark mode.
+
+Thick Glass (Hero): A heavy blur, “ultra-thick” material akin to Apple’s Chrome blur. Little of the backdrop is recognizable, maximizing foreground legibility. Use: primary modals or hero elements (e.g. an important summary card, full-screen blur behind a popup). Recipe: high blur (≈80–90% intensity) plus a stronger tint or desaturation layer. Often paired with a subtle inner shadow or border to give it a distinct edge as a floating “sheet.”
+
+Solid Tile (Fallback): A non-blurred translucent or solid background. Use: in contexts where blur can’t be used (e.g. performance constraints on Android or when Reduce Transparency is on). Also serves as a design alternative in bright sunlight or extreme low-contrast conditions. Recipe: a translucent color (e.g. frosted white at 70% opacity for light mode, or charcoal at 80% opacity for dark mode) or even an opaque card with a slight transparency pattern. Ensure it still feels “layered” by maybe adding a slight grain texture for warmth.
+
+Material Visual Details: To achieve a realistic glass effect, we incorporate:
+
+Blur and Saturation: Use Gaussian blur for smoothness. Optionally increase saturation of the blurred content slightly (Apple often boosts vibrancy so colors “shine through” a bit). In Expo, BlurView with tint="light" or "dark" internally applies appropriate vibrancy blending. We’ll pick the tint mode that best suits each theme (e.g. light-tinted blur for light mode, etc.).
+
+Tint & Opacity Layers: On top of the blur, apply a translucent overlay to adjust brightness/contrast. For example, a white 5% opaque overlay in dark mode can lift the background luminance, avoiding overly dark glass; conversely, a black 5% overlay in light mode can tone down glare. These tints ensure the glass stands out from the background in all conditions.
+
+Edge Highlights: Give glass surfaces a faint border or top-edge highlight (1px or so, white with 20% opacity in light mode, black with 20% in dark). This subtle stroke outlines the glass, catching light as a real pane would. It’s barely noticeable but adds to the perceived quality.
+
+Shadows: Use diffuse shadows rather than hard shadows. A blurred shadow (e.g. 10px radius, 20% opacity) beneath a glass card creates separation without looking like a cut-out. Avoid very dark shadows; instead use medium gray at low opacity to simulate ambient shadow. This reinforces layering and depth.
+
+Grain/Noise: A super-fine noise texture over the glass can prevent color banding and lend a tactile feel. Apple often includes a tiny bit of noise in translucent materials to avoid a plasticky look. We can overlay a transparent PNG of noise at ~5% opacity – invisible to the user, but it makes the blur feel more organic.
+
+Specular Cues: As an optional enhancement, simulate a specular highlight (glossy shine) when appropriate. For instance, a hero card might have a very subtle radial gradient at the top corner to imply light reflecting. Keep it subtle (no obvious glares). We can also explore slight device-tilt interactions – e.g., using the accelerometer to very slightly shift a highlight or the background blur center, mimicking how real glass catches light. This would push the premium feel, though it must be used sparingly to avoid distraction.
+
+Light/Dark Mode Behavior
+
+The glass materials adapt to theme changes to maintain contrast and a consistent look:
+
+Dynamic Materials: We leverage iOS’s approach of adaptive blur styles. On iOS, .systemMaterial types automatically switch between light and dark appearances. In Expo, we achieve this by setting BlurView’s tint prop to “default” (which uses system dynamic material) or explicitly to light/dark variants. Each material token (thin, frosted, thick) will have light and dark definitions (e.g. systemThinMaterialLight vs systemThinMaterialDark for Thin Glass). This way, the blur amount stays consistent but the coloration adjusts for the backdrop (light mode glass is brighter; dark mode glass is more opaque for contrast).
+
+Contrast Safeguards: Dark mode can reduce overall contrast, so our dark theme glass will generally be more opaque than light theme. For example, Thin Glass might be 15% opacity in light mode but 25% in dark mode, to ensure text in white isn’t lost on a too-transparent panel. Also, we might slightly tweak the tint color in dark mode towards the background color (e.g. add a bit of very dark blue to the tint) to harmonize with dark content.
+
+Consistent Text/Vibrancy: We use vibrancy effects for text on glass – e.g., a primary vibrancy for main text ensures it remains visible regardless of background. In practice, Expo’s BlurView doesn’t automatically vibrancy-blend text, so instead we’ll manually adjust text color for contrast (like using light theme text color on dark glass backgrounds and vice versa). Alternatively, we can place text in a <BlurView> with appropriate tint to achieve a similar blending effect.
+
+Gradients for Readability: For especially important text on glass (like large headers), consider a background gradient within the glass: e.g. the top of a glass pane could be slightly less transparent than the bottom, creating a gentle transition that naturally draws the eye to the title area. This gradient also counters cases where background imagery might clash with text at one end of the card.
+
+Implementing Glass in Expo React Native
+
+Expo provides the BlurView component (from expo-blur) to create iOS-like translucent backgrounds. Key points for implementation:
+
+Using BlurView: Wrap any content that should have a blurred backdrop in a BlurView. Set its intensity (1–100) to control blur amount, and use the tint prop to choose a base material color/tone (e.g. "light", "dark", or specific iOS material identifiers like "systemThinMaterialDark"). For instance, a dashboard widget could be <BlurView intensity={50} tint="light" style={styles.card}>...</BlurView> for a frosted glass effect in light mode. On Android, enable the experimental blur (we must set experimentalBlurMethod="dimezisBlurView"), but be cautious: this can impact performance.
+
+Layering Tricks: Because BlurView blurs whatever is behind it in the view stack, we might sometimes need to position it carefully. For example, to blur the app background under a modal, the BlurView must cover the screen behind the modal content. We’ll use absolutely positioned BlurViews or put BlurView as a background element in cards. We can also layer additional views on top of BlurView for tints and highlights: e.g., a <View style={styles.tintOverlay} pointerEvents="none"/> with a semi-transparent background color on top of the BlurView to achieve the desired tint.
+
+Platform Differences: On iOS, BlurView uses the native UIVisualEffectView which is very efficient. On Android, blur is not as optimized – using it extensively (e.g. multiple overlapping BlurViews) can drop frame rates. Therefore, we will use at most one BlurView per screen layer (e.g. one for all widgets container instead of one per widget, if necessary). Additionally, we can detect if blur is causing jank (via performance testing) and then either reduce intensity or switch experimentalBlurMethod="none" to fallback to a static translucent color.
+
+Performance Fallbacks: For older devices or if the user enables “Reduce Transparency,” we replace BlurViews with non-blur alternatives. The app can maintain a set of material tokens that include both a blur style and a solid color fallback. For example, material.thinGlass = { blurTint: "systemThinMaterial", blurIntensity: 20, fallbackColor: "#ffffff90" }. Our components can check a context or setting and if blur is disabled, just use fallbackColor backgrounds instead of BlurView. (On iOS, if Reduce Transparency is on, BlurView might automatically not blur – we’ll ensure our code accounts for that by showing the fallbackColor underneath so the user still sees a translucent panel.)
+
+Common Mistakes and Fixes (Glass):
+
+Too Much Transparency: Mistake: Using a super thin blur with low opacity for all panels (because it looks cool) – this can ruin legibility (text becomes hard to read) and hierarchy. Fix: Use thin glass only when background context is important; otherwise step up to frosted or thick materials for contrast. Always test text over the glass and add tint/vibrancy until it’s comfortably readable.
+
+Overusing Multiple Blur Layers: Mistake: Stacking many blurred views (e.g. a blur panel on top of a blurred background) can compound and hurt performance. Fix: Where possible, use a single BlurView that covers the necessary area, and layer non-blurred content on top. If multiple blur layers are needed (e.g. modal over a blurred background), keep their regions minimal and consider using a static image snapshot for the far background if it’s mostly static.
+
+Ignoring Dark Mode Contrast: Mistake: Not adjusting blur/tint for dark mode, leading to glass that’s too transparent on dark backgrounds (causing low contrast text). Fix: Increase opacity or use a darker tint in dark mode. The material should appear “denser” in dark theme to offset the lighter text color. Use dynamic material styles (Expo’s systemMaterialDark, etc.) which automatically choose appropriate blur effect for dark mode.
+
+Unwanted Blurring of Content: Mistake: Placing interactive content inside a BlurView incorrectly so it gets blurred (e.g. adding a child image inside the blurred view). Fix: Remember that BlurView only blurs the background behind it. You typically place content inside BlurView so that content is not itself blurred, only the backdrop is. If something is blurring that shouldn’t, restructure the view hierarchy. Use overflow: 'hidden' and borderRadius carefully; note that on some platforms BlurView with rounded corners may require wrapping in a container with those corners applied.
+
+Heavy GPU Effects without Fallbacks: Mistake: Relying on real-time blur for large full-screen effects (like a constantly updating background blur) on low-power devices without alternatives. Fix: Implement detection or settings to reduce effect: e.g., if frame rate drops, swap a live blur for a static blurred image behind the scenes. Always provide a non-blur option (solid color or image) if performance or battery suffers, so the app never forces heavy effects at the cost of user experience.
+
+<br/>
+Semantic Glow System (Meaning-Coded Glows)
+
+To enrich the UI with intuitive cues, MyMacro AI will employ a semantic glow system – a design language where soft colored glows around elements convey category-specific meaning. Each key health and fitness metric is associated with a color “halo.” For example, heart-related stats use a warm pink-red glow, hydration uses a cool blue, etc. These glows provide a subliminal signal (even at a glance, users learn to associate “blue aura” with hydration) while keeping the aesthetic premium and subtle.
+
+Category Glow Taxonomy
+
+We define the following semantic categories and their associated base colors in the MyMacro AI design. Each category corresponds to certain app features or data:
+
+Category	Base Color Hue	Light Mode Variant	Dark Mode Variant	Glow Intensity	Usage Notes
+Heart / HRV	Pink-red (heart)	Rose pink (slightly desaturated)	Vivid deep red-pink (glows on dark bg)	Medium halo, moderate radius	For heart rate, HRV, cardiovascular stats. Use on Heart widget edges or heart icons. Subtle pulsing effect when heart data updates.
+Hydration / Water	Blue (water)	Aqua blue (medium brightness)	Bright cyan-blue	Medium halo, large radius	For water intake, hydration status. Blue glow around water log icon or progress ring, perhaps a gentle wave-like pulse when user logs water.
+Sleep	Purple/Indigo	Soft purple (slightly muted)	Lavender-blue (soft glow on dark)	Low halo, medium radius	For sleep duration/quality. A calmer glow – only on significant events (e.g. good sleep streak). Purple glow might gently appear behind a moon or bed icon.
+Recovery	Green (recovery)	Mint or light green	Teal-green (slightly neon on dark)	Medium halo, moderate radius	For recovery score, HRV recovery, etc. Green glow indicates positive status (e.g. fully recovered today). Avoid using green glow for error states to prevent confusion.
+Nutrition / Protein	Orange (nutrition)	Warm orange (slightly pastel)	Amber orange (glows on dark)	Small halo, medium radius	For nutrition logs, protein intake, calorie goals. Orange glow can highlight the nutrition macro bar when a goal is met (e.g. a brief glow when hitting daily protein target).
+Training Load	Red or Orange-Red	Tomato red (sporty)	Fiery red-orange	High intensity on alerts, small radius	For workout load/strain. Mostly no glow unless user is near overtraining (then a subtle warning red glow on the workout icon). Because Heart is also red-toned, ensure context distinguishes them (heart glow is pulsing, training load glow might be a one-time flash on overload).
+Stress	Red or Magenta	Soft magenta (alert)	Hot pink-red (alert on dark)	Pulsing halo on high, medium radius	For stress level or cortisol proxies. Normally no glow; when stress is high, a gentle pulsating red-magenta glow appears on the stress indicator to draw attention (with an accompanying icon change or alert).
+Social	Purple or Gold accent	Gold or violet (brand accent)	Gold or violet (slightly muted for dark)	Low constant halo, small radius	For social features (squad interactions, leaderboard). Could use a special accent color (e.g. gold to imply winning, or a fun violet). Use glows sparingly – e.g. the top rank user might have a faint gold glow around their avatar.
+MacroCoins	Gold/Yellow	Golden yellow	Golden yellow (brighter on dark)	Small halo, high intensity on earn event	For the in-app currency and store. No continuous glow (to avoid looking like a game jackpot), but when the user earns coins, a quick gold sparkle or halo appears around the coin icon. Possibly a gentle glow on the coin balance if it’s active, then it fades.
+
+Light vs Dark Variants: Each base hue is adjusted for theme. In light mode, glows are generally a bit more muted (to avoid overpowering white backgrounds). In dark mode, glows can be slightly more vibrant since the dark backdrop allows the color to “pop” – but we still avoid full neon. The above table lists representative colors; these will be defined precisely in the theme’s {{new_color_system}} tokens (e.g., colorHeartLight = #ff6b8e, colorHeartDark = #ff3b6e, etc., chosen based on visual testing).
+
+Glow Design Rules
+
+Radius & Opacity: Glows will be implemented as outward drop-shadows or shadow-like effects (in RN, an shadowColor with spread, or using an outer blurred view) behind elements. The radius (blur spread) and opacity are tuned per category and context. For example, hydration’s blue glow might spread wider (to convey a diffuse water feel) but at low opacity, whereas MacroCoins’ gold glow is tighter and brighter when it appears (to feel energetic like a spark). In general, keep opacity low (~0.3 or less in light mode, up to 0.5 in dark mode) and a soft blur of 10–20px for most glows.
+
+When to Glow: Use glows to indicate state changes or emphasis. They should not be all on at full strength all the time. Guidelines:
+
+Focus/Selection: If a card or icon is actively selected or pressed, a faint glow can show focus. E.g., tapping the heart widget could emit a quick pink glow ring to acknowledge selection.
+
+Success/Completion: When a goal is met or an action completed, do a brief glow pulse. For instance, upon logging a meal (nutrition category), the nutrition icon could emit a one-time orange pulse halo (maybe synced with a haptic “tick”).
+
+Alert/Warning: If a metric is in a critical range, a gentle repeating glow can draw attention. E.g., stress high – the stress icon softly throbs red. However, pair this with an icon change or text warning; glow alone shouldn’t be the only alert signal.
+
+Idle State: Generally, keep glows off in idle state or extremely subtle. A possible exception is a very slight constant halo on something like the active day’s ring in a calendar or the current step count – but even then, it should be barely perceptible unless you look for it. We want to avoid a Las Vegas effect of everything glowing.
+
+When Not to Glow:
+
+Don’t use glows for purely decorative effect without meaning. Every glow color must map to a semantic purpose (no random rainbow glows).
+
+Avoid overlapping glows. If two glowing elements are near each other, their glows can merge into an unsightly blur. Design layout or timing such that usually only one glow is prominent at once (e.g., if multiple goals achieved simultaneously, trigger their glows sequentially).
+
+Never use glows under text or in place of legibility aids. For example, don’t put a glow behind a text label thinking it will highlight it – use contrast, font weight, or an underline for that purpose. Glows are for ambient signaling, not direct emphasis of text.
+
+Refrain from long-duration or permanent glows that could become annoying. If something needs continuous highlighting (like a live recording indicator), consider a gentle pulse animation rather than a constant glow, and allow users to dismiss or ignore it easily.
+
+Tokens and Implementation for Glows
+
+We will extend the design token schema to include glow tokens for each semantic color. For example:
+
+// Pseudo-code for design tokens (for colors and glows)
+const theme = {
+  colors: {
+    heartLight: "#ff6b8e", heartDark: "#ff3b6e",
+    hydrationLight: "#4dadf7", hydrationDark: "#4dcfff",
+    // ... other category base colors
+  },
+  glows: {
+    heart: { color: theme.colors.heartLight, radius: 15, opacity: 0.2 },   // light mode example
+    heart_dark: { color: theme.colors.heartDark, radius: 15, opacity: 0.3 },
+    hydration: { color: theme.colors.hydrationLight, radius: 20, opacity: 0.15 },
+    hydration_dark: { color: theme.colors.hydrationDark, radius: 20, opacity: 0.25 },
+    // ...and so on for each category
+  },
+  // ...
+};
+
+
+At runtime, a GlowHalo component can use these tokens: e.g., <GlowHalo category="heart"> ... </GlowHalo> would wrap children with a styled absolute View or shadow that renders the pink glow. Implementation options:
+
+Use React Native’s Shadow styles on iOS (which support colored shadows with blur). For Android, colored shadows are not natively supported, so another approach is needed: we can use a slightly blurred outward SVG or an Animated.View with a radial gradient background as the halo. Another cross-platform trick is to use a blurred View behind the element, colored via a semi-transparent background and larger size to act as glow.
+
+Use Reanimated to animate glows for pulses. For example, a pulse can be done by animating the opacity or spread of the shadow: starting from 0 to full to 0 over, say, 1 second with easing. This could be triggered on events (like new data).
+
+All glows will be subtle by default (the design choice is Option A: Premium Minimal, meaning we err on the side of less glow unless the user performs an action or something noteworthy happens). We can allow the user or future design iterations to dial this up (Option B: more expressive) or down (Option C: minimal viable – almost no glows) by adjusting these token values.
+
+Accessibility Considerations for Glows
+
+Color is Not the Only Channel: Every meaning indicated by a glow will also be indicated by another UI element. For example, if a high stress level triggers a red glow, it will also trigger an exclamation icon or a text label “High” so color-blind users or users not noticing the glow still get the info. This follows accessibility best practices for semantic color usage.
+
+Contrast and Subtlety: Glows are intentionally low-contrast with the background; they should not reduce readability of nearby text. We ensure that any background or card that has a glow still passes contrast guidelines for text (the glow is outside main content area usually, but we double-check that, for instance, a glow behind a widget doesn’t drop the text contrast below 4.5:1 by washing the background).
+
+Reduced Motion: If the OS’s “Reduce Motion” is on, we will disable animated glow pulses or throbs. Glows might still appear as static highlights (since a static glow isn’t motion), but anything that animates (pulsing, shimmering) will either happen instantly or not at all. This prevents potential discomfort from repetitive light flashes.
+
+User Control: If needed, we could provide a setting to turn off decorative glows entirely (for users who prefer a very flat look or have light sensitivity). This would simply use the fallback of no shadow. But by keeping glows very restrained in our default design, we aim to not require users to toggle them off.
+
+<br/>
+Motion Language: The MyMacro Signature Animation System
+
+Motion in MyMacro AI is treated as a core part of the brand’s experience. We establish a signature motion language that makes interactions feel fluid, responsive, and gently playful. The animations draw inspiration from natural physics (e.g. easing that feels like objects gliding to a stop) and subtle cues from the app’s health theme (e.g. pulses that mimic a heartbeat, or a liquid-like transition for hydration-related actions). All motion is consistent and purposeful – enhancing usability by guiding attention and providing feedback, never distracting the user or feeling cheap.
+
+Motion Principles
+
+Fluid & Organic: Animations use smooth easing curves (typically ease-out or spring dynamics) to mimic real-world motion. Elements accelerate and decelerate in a way that feels “liquid” rather than linear. We avoid stiff or robotic movements. For example, swiping to open a panel might have a slight spring to a stop, as if it has a bit of weight and momentum.
+
+Responsive & Direct: Motion is tied to user input whenever possible. Interactive gestures (like dragging a card) track the finger closely with a slight delay or elasticity – giving a sense of physical interaction. The user should feel in control; we minimize animation latency.
+
+Purpose-Driven: Every animation should communicate something (navigation context, hierarchy, confirmation, etc.). If an animation doesn’t serve a clear purpose, it’s removed. We especially leverage motion to clarify spatial relations: e.g. when moving from the dashboard to a detail screen, the card might expand to full screen – showing continuity rather than an unrelated new screen.
+
+Consistent Language: We use a cohesive set of animation patterns app-wide. This means similar actions produce similar motion. For instance, all modal presentations might use a fade + scale-in, all new list items slide up with the same timing, etc. This consistency makes the experience feel polished and predictable.
+
+Delightful but Subtle: Small delightful touches are scattered throughout (a button press has a tiny bounce, a success checkmark does a quick flip), but subtlety is key. We want users to subconsciously enjoy the slickness, not be consciously distracted by flashy moves. We avoid exaggerated, overly long animations that could frustrate someone trying to use the app quickly.
+
+Accessible & Optional: As per Apple’s guidance, all animations will respect user accessibility settings. If “Reduce Motion” is on, we switch to minimal motion (e.g. cross-fade transitions instead of flying animations). We also keep motion minimal in contexts where too much could cause nausea (for example, avoid big parallax effects in a moving background during a workout).
+
+Timing Tiers & Easing Guidelines
+
+We define tiers of animation timing for different scales of interaction. These timings ensure a harmony – micro-interactions feel snappy, while larger scene changes feel smooth but not sluggish. Generally:
+
+Micro Animations: ~100–200ms. Used for tiny responses like button taps, toggle switches, icon jiggles. Easing: typically ease-out (to feel quick, with no overshoot) or a very subtle spring. Example: a tap on a logging button triggers a 150ms scale-down then up, with a slight bounce.
+
+Flow Transitions: ~300–500ms. These cover screen transitions, card expansions, major UI rearrangements. Easing: ease-in-out or spring with mild damping (smooth settle). For instance, navigating from the dashboard to a detail takes ~400ms total: initial movement fast, then easing into place for a graceful finish.
+
+Continuous/Environmental: 600ms and beyond. These are background or ambient effects that run continuously or for extended periods, often very slowly so as not to be distracting. E.g., a gentle “breathing” glow that fades in-out over 2 seconds, or a scrolling parallax shift that responds as you scroll. Long durations ensure these feel like part of the environment and don’t demand attention.
+
+Easing & Curves: We favor spring animations for most interactive elements (using Reanimated’s spring presets or custom damping). Springs give a nice “bounce then settle” if an element overshoots, which adds to the liquid feel. For non-spring animations, we use cubic Bézier curves approximating iOS defaults (e.g. 0.25, 0.8, 0.5, 1 for ease-out). Critical is that multiple elements in one interaction share a similar curve, so they feel like one unified motion. Fast animations (100ms range) we often do linear or ease-out to avoid feeling abrupt.
+
+We will codify these in a motion token set (e.g. durationMicro = 120, durationShort = 300, durationLong = 600, easingInteractive = spring(damping 0.8), easingSmooth = cubicBezier(0.4,0.0,0.2,1) etc.).
+
+Motion Hierarchy & Choreography
+
+Not everything moves with the same priority. We define a hierarchy so the user’s focus is naturally guided to what moves first/most. Here’s a breakdown of element types and how we animate them in coordinated sequences:
+
+Element	Priority (Order)	Typical Timing	Movement Style	Purpose	Accessibility Note
+Primary Container (Screen or Major Card)	First (Primary)	300–400ms (flow tier)	Slide or scale from origin with ease-out; may include slight overshoot	Establish context: e.g., when a screen appears, the main container’s motion defines the transition. It’s the boldest movement to focus user attention on the new content.	If reduce motion: use a simple fade/instant appearance instead of slide.
+Secondary Elements (Headers, Key Icons)	Parallel with primary (slightly delayed by ~50ms)	300ms (slightly shorter)	Fade in and slight upward motion (10–20px)	Support context: e.g., a screen’s title and icon appear just after the container to maintain continuity. They move less distance since the container already moved.	Reduce motion: show these instantly or with just a fade (no move).
+Tertiary Content (Buttons, Text blocks)	Second wave	300ms (staggered)	Fade/slide in with small delay in groups	Populate details: things like a list of stats or buttons on a card animate in sequence (50ms stagger) after the main frame is in place. This guides the eye down the content.	If animations off, present content already in place (no stagger).
+Micro-Interactions (Controls, Icons on tap)	On-demand (triggered by user)	100–200ms (micro tier)	Scale or bounce, with spring for overshoot if appropriate	Feedback: e.g., a toggle switch thumb might “pop” when toggled, or a pressed button shrinks slightly. This gives a satisfying response and confirms the action.	Provide haptic feedback (vibration) as alternative feedback if motion is reduced (so user still feels it).
+Overlay/Modal Entrance	Primary when invoked	300–500ms	Fade in background + slide or scale up modal; modal has easing-out spring	Focus shift: dims background and brings modal to front. The motion (e.g. scaling from 95% to 100%) draws attention to the modal content.	If reduce transparency: skip background fade (use solid); if reduce motion: do instant appear or very short fade.
+Background Effects (Ambient)	Continuous (lowest priority)	Ongoing (slow pulses 2–5s, etc.)	Subtle opacity or position shifts, often infinite loop with ease in-out	Atmosphere: e.g., a background gradient might slowly shift hues, or a glow gently pulses to indicate waiting. This adds life without user needing to notice actively.	These should stop or be removed with reduce motion, as they are purely decorative.
+
+This hierarchy ensures the eye naturally follows the flow: big structures move first, details follow, and feedback is immediate where needed. By tuning durations and delays, we achieve a cascade effect that feels cohesive and intentional.
+
+Novel Interaction Pattern Library
+
+To give MyMacro AI a standout personality, we introduce a set of novel interaction patterns. These go beyond standard stock animations and reinforce the app’s themes (health, data, human body, etc.) in creative ways. Below is a library of 8 signature interactions, each with usage context, the premium feel rationale, and how we’d implement it:
+
+1. Liquid Seam Reveal: Where used: Opening transitions for key actions, e.g., when the Omni-Logger expands or when navigating from a widget to a detailed screen. The screen appears as if a liquid curtain has parted along a seam. Why it feels premium: It’s reminiscent of water or fluid cell membranes – apt for a health app – and far from a generic slide. The smooth, flowing separation motion suggests high technical polish. Implementation: Two halves of a translucent overlay (perhaps with a curved edge) animate apart revealing the new screen, using Reanimated for synchronized timing. We’d create an initial mask that covers the screen, then animate its path or two panels from center to edges (like a gel being pulled open). The edges could have a slight blur distortion (achieved with an SVG mask or Skia if available) for that refractive liquid feel. This would be tuned carefully to run at 60fps (the effect is mostly geometric scaling, which is performant). If performance is an issue, a simpler variant is a normal fade-through with a curved wipe.
+
+2. Refractive Peel Transition: Where used: Possibly when dismissing a screen or a card (like closing a detailed view back to the dashboard). The outgoing view peels away like a piece of glass, bending light as it goes. Why premium: It gives a physical metaphor (like peeling off a HUD lens), creating a memorable mental model that the screen was a layer of glass. Feels high-end, as if the UI has tangible layers. Implementation: This could be a combination of a 3D rotation (the card rotates on a Y-axis as if one edge is lifting) and a scaling down. During the rotation, we can apply a slight increase in blur or a shader effect to exaggerate refraction on its surface (this might be simulated by increasing the BlurView intensity briefly). Use Reanimated’s 3D transforms and interpolate blur intensity from 0 to say 10 as it rotates. The element’s shadow could also stretch to enhance the peel effect. If 3D is not smooth on all devices, a fallback is a simpler slide-down combined with a fade.
+
+**3. Glass Refraction Pivot: Where used: On certain interactive tiles or the camera HUD, when a user focuses on something. For example, tapping a metric card might make it pivot slightly in 3D as if examining a piece of glass, with background refracting. Why premium: It leverages the glass metaphor fully – the user sees the UI behaving like real glass under light, which is unexpected in apps. It’s subtle yet delightful, implying the app’s materials are “alive.” Implementation: On tap-and-hold or focus, apply a small 3D rotation (e.g. 5 degrees along X or Y axis) to the card using Reanimated. Simultaneously, perhaps ramp up the BlurView intensity or adjust a background gradient to simulate light refraction changes. Also could briefly brighten the edge highlight on the card (specular highlight) as if it caught the light. This animation would be very quick (0.2s in, and if released, 0.2s back to flat). Ensure using useAnimatedStyle with shared values for rotation for buttery smooth updates.
+
+4. Magnetic Snap with Viscous Drag: Where used: List scrolling or draggable interactions, like reordering items or the social leaderboard positions. If the user drags an item near a drop target or scrolls past a threshold, it has a magnetic snap effect with a slight overshoot, like two magnets clicking together. Why premium: It conveys a sense of real physics and careful tuning. The viscous feeling (a bit of resistance, then snap) makes interactions feel tactile and satisfying, as opposed to jumpy or linear movement. Implementation: Use Reanimated spring physics for drag interactions. For example, in a sortable list, when an item is close to its destination, increase the spring stiffness so it “snaps” into place quickly. Add a tiny scale bump (1.05x then back to 1) on drop to emphasize the snap. Similarly, for a scroll view, implement an overscroll effect: if pulled beyond the end, content drags with resistance (maybe using ScrollView bounces on iOS, or a custom Reanimated gesture on Android), then snaps back with a bounce. Adjust damping to get that viscous feel (higher damping at start, lower at end to overshoot then settle).
+
+5. Depth-Lens Focus Shift: Where used: When focusing on one element among many – e.g., tapping a widget on the dashboard to expand it or entering a focus mode for a particular metric. The idea is the selected element comes into sharp focus while others blur into the background, like using a camera depth of field. Why premium: It creates a cinematic focus effect, guiding user attention elegantly. This effect, if done subtly, feels very modern (similar to how iOS’s spotlight search dims the rest of the screen). Implementation: When an item is focused, increase its elevation (bring to front), and simultaneously apply a slight blur or dimming to the surrounding elements. Technically, we can wrap non-focused content in a <BlurView> with low intensity or just reduce their opacity. The focused card might also slightly scale up (e.g. 1.02x) to enhance the focus. Use a short timeline: blur/dim over 200ms as the card enlarges over 300ms, so the card motion leads and the blur catches up – yielding a smooth depth transition. Reversed when closing focus. Ensure the blur amount is low (we don’t want a full screen blur, just a hint) to avoid performance issues; alternatively, use a dark semi-transparent overlay on background content as a cheaper depth cue.
+
+6. Breathing Material: Where used: Idle states or waiting for data/AI. For example, while the AI is “thinking” or processing a voice command, a particular panel (maybe the AI response panel or a microphone button) exhibits a gentle pulsating glow or scale – as if it’s breathing. Why premium: It’s a modern way to indicate loading/idle without a generic spinner. The slow, calm pulse is reminiscent of Apple’s approach (like the subtle pulsing of the iOS pairing animation). It reassures the user softly. Implementation: This can be a looped animation using Reanimated’s withRepeat. For instance, animate a view’s opacity from 1 to 0.7 and back to 1 over 2 seconds with ease in-out – creating a breathing glow behind an icon or the panel. Alternatively, animate scale from 1 to 1.03 and back. We will sync this with a slight color change if appropriate (maybe the panel’s tint shifts a bit warmer on inhale, cooler on exhale – very subtly). Important: pause or stop this animation as soon as the AI responds (so as not to keep running unnecessarily). Also, if prefers-reduced-motion, we either shorten this to a single blink or replace with a static indicator (like a mic icon changing state).
+
+7. Heatmap Shimmer: Where used: Visualization moments, e.g., the body-scan UI or a workout intensity graph. A faint shimmer of color might pass over a figure or bar to indicate scanning or progress. For instance, when scanning the body with the camera, a blue glow might sweep down the silhouette to show which part is being analyzed. Why premium: A moving shimmer suggests advanced tech (like scanning lasers) but done in a soft, non-cheesy way (no harsh neon grids). It’s visually interesting and gives feedback on something that’s otherwise invisible (the scan process). Implementation: This can be done with an animated linear gradient or a masked view. For the body scan, we could have a transparent outline of a body with a gradient fill that moves from top to bottom over ~1.5s, repeated maybe twice. Use expo-linear-gradient and animate its locations or an Animated.Value tied to the gradient start position. Keep the colors low contrast (maybe the same as the glow colors for hydration or recovery, depending on what is being scanned). We ensure it’s not too bright and it only plays during the scanning action. On low-performance devices, a simpler “progress bar” might replace this effect.
+
+8. Signal Pulse (Metric-Linked): Where used: Real-time metric indicators, such as a heart rate display or step counter. The UI element subtly animates in sync with the metric if possible. E.g., the heart icon could pulse at the actual heartbeat rate when a live heart rate is being shown. Or a small dot on a graph might blink as each data point comes in. Why premium: It merges data with UI in real-time, giving a sense the app is deeply connected to your body. This is a nuanced touch that users might not immediately notice intellectually, but it creates a biofeedback ambiance. It’s also visually satisfying to see the heart icon gently throbbing in time with your own pulse. Implementation: If live data is available (from HealthKit, etc.), we use it to drive animation timing (e.g., if heart BPM is 60, one pulse per second). If not live, we simulate a reasonable rate. The pulse can be a combination of scale (1 to 1.1 and back) and glow opacity (heart’s pink glow brightens slightly on each beat). Implement with Reanimated by deriving an animation duration from the data (e.g. 60 BPM = 1000ms cycle). Use withTiming or withRepeat for continuous loop, updating duration as data changes. We’ll double-check performance – these are lightweight animations but running constantly; ensure using useAnimatedStyle to only update properties, which should be fine at these rates. We also provide an off switch if needed (and definitely disable if reduce motion is on, or if user finds it uncanny).
+
+Each of these patterns will be documented for the engineering team with the exact properties to use (e.g., degrees of rotation, durations, curves) – possibly as reusable functions in our Motion library (e.g., runLiquidSeamReveal() that triggers the coordinated animations). The creative animations are balanced with practical fallbacks (for example, if the seam reveal is too heavy, we can degrade to a simpler reveal animation on older devices). The result is an app experience full of small moments of joy that reinforce its identity.
+
+<br/>
+Screen-by-Screen Application of the Design System
+
+We now map the above material, glow, and motion systems to each major surface of MyMacro AI. For each core screen or feature, we outline which glass material style is used, how the semantic glow system appears, and key animations or interactions applied.
+
+Dashboard & Widgets:
+
+Material: The dashboard uses a Frosted Glass backdrop for cards – e.g., each widget tile is a semi-translucent panel (medium blur) so the user’s background wallpaper or gradient is softly visible. Primary summary cards (like the day’s calorie count or recovery score) might use slightly thicker glass to emphasize importance. The overall dashboard background (behind all widgets) can even be a full-screen Thin Glass layer over a background image, creating an immersive depth effect.
+
+Glows: Each widget highlights its category with subtle glows on interaction or status changes. For example, the Heart widget (showing HR or HRV) has no constant glow by default, but when you finish a cardio workout or the heart rate reading spikes, the widget border might emit a gentle pink heart glow pulse. The Hydration widget (water intake) could have a tiny constant blue glow on the water glass icon, indicating it’s interactive, and when the user logs a drink, that icon gives a quick blue shimmer. The Recovery widget might glow green when you reach 100% recovery for the day (a celebratory cue). All these glows are brief or subtle enough that the dashboard doesn’t look like a carnival – typically one widget glows at a time, triggered by user action or a new data sync.
+
+Motion: The dashboard employs depth-lens focus when you tap a widget: the tapped card slightly enlarges and others fade back, reinforcing focus. Widgets also animate on entry – when the app opens or when switching to the dashboard tab, each widget could pop in with a stagger (e.g. a slight slide-up and fade, 50ms apart) to give a cohesive load-in. Micro-interactions: pulling down on the dashboard (maybe to refresh data) could cause the widgets to collectively stretch down and snap back (the magnetic drag effect). If the dashboard has a daily rings graphic, it might use signal pulse – e.g., a step count ring might pulse in sync with step cadence when a workout is active (just an idea to explore). Scrolling or page-swiping between sections of the dashboard can use a subtle parallax: background layers move slightly slower than foreground cards to accentuate depth.
+
+Diary (Nutrition Log):
+
+Material: The diary list (meals logged, nutrients) can use a Solid Tile or very subtle frosted background for list items – readability is paramount here (lots of text and numbers). We’ll likely use a solid light card (with maybe 5% translucency) for each log entry for clarity. The header or summary section at top (totals, macro bars) might be on a Frosted Glass panel to give it a distinctive look against the list. If the diary has sections (Breakfast, Lunch, etc.), those section headers could use Thin Glass to lightly separate them from entries.
+
+Glows: Nutrition categories can use the orange glow when appropriate. For instance, if the user hits their protein goal, the protein progress bar might emanate a soft orange glow as a congrats. Logging a meal might cause the calorie total icon to blink or glow briefly. Hydration or other categories could appear here too (if diary covers all intake). Because the diary is text-heavy, glows will be used sparingly around icons or progress rings, not behind text. Accessibility note: any glow indicating a goal hit will also have a text or icon indicator (like a checkmark or trophy icon next to the nutrient).
+
+Motion: Logging a new item into the diary triggers a satisfying animation: e.g., when you add a meal, the new entry slides in from the top of the list (or bottom if that’s where it goes) with a slight bounce, and maybe a green checkmark briefly scales out then disappears. Macro bars (for carbs/protein/fat) could animate their fill smoothly when updated, rather than jumping to the new percentage. We might incorporate a liquid seam reveal for expanding detailed nutrition info: tapping on a nutrient could smoothly expand a panel (as if the list item “liquefies” into a detail card – a bit of a stretch, but perhaps a simple crossfade with a curved reveal). Overall navigation to and from the diary uses a standard iOS-like slide transition, augmented by our design: e.g., the diary screen could slide up from bottom (since it’s often a sub-flow) with a slight spring making it feel like it’s attached to the tab bar being pressed.
+
+Workout Logger:
+
+Material: Likely similar to the diary, the workout logging screen might be a scrollable list of exercises or a timer, etc. Key interactions like selecting an exercise or showing stats can use Frosted Glass overlays. For example, an overlay panel showing workout metrics (heart rate, calories) during an active workout could be a translucent glass sheet over the rest of UI, allowing you to still see the app background or video if any. Buttons or controls (pause, stop) might sit on thin glass buttons to blend with any video background (if the user is following a workout video, for instance).
+
+Glows: The workout domain ties to Training Load and Heart categories. So, a live heart rate indicator in the logger could do the signal pulse (red glow pulsing with heartbeat). If the user reaches a new personal best or an intensity zone, perhaps a quick red or orange glow flares around that metric to celebrate/warn (with text also saying e.g. “Zone 5!”). If the workout logger has a rep counter or similar, maybe a slight glow on completion of a set (like a blue or green glow if hitting target reps). We’ll restrain glows to avoid distraction during a workout; they should be peripheral cues (the user’s likely focusing on the exercise, not staring at app animations).
+
+Motion: Real-time feedback is key. For example, a rep counter number could pop/bounce each time it increments (micro-interaction feedback). If there’s a timer, at milestones (like each minute) the timer text could do a brief enlarge and shrink to draw attention. Navigating into the logger (from the dashboard or quick action) might use a Glass refraction pivot: e.g., the transition to the workout screen could involve the whole screen doing a quick flip or rotate as if entering a new mode (to make it feel like a distinct space). Use case: pressing “Start Workout” causes the dashboard to flip to the workout controls with a card-flip animation (with blur increasing during flip to emphasize change of context). Within the logger, if switching between views (stats vs controls), use a smooth crossfade or a swipe gesture with elasticity (like swiping between Apple Watch workout screens). Also, tying motion to haptics: finishing a workout could trigger a strong haptic and a celebratory animation (confetti or ring completion animation). Possibly incorporate magnetic snap if there’s a slider for intensity or so – it should snap to preset values smoothly.
+
+Recovery & Cycle Tracking:
+
+Material: Recovery screens (maybe showing HRV, sleep, stress over cycle) likely benefit from a Thick Glass Hero style for any main summary card. For example, a Recovery Score gauge could sit on a thick frosted card in the center, so it’s highly legible. Surrounding info might be on slightly translucent panels as well, but we’ll ensure background graphs and such are behind at least a thin blur so they don’t interfere. Cycle tracking (if referring to menstrual cycle tracking) might have its own color scheme (often apps use purple or pink). We can incorporate that with a semi-transparent overlay in that hue. Materials here should avoid too much transparency because these often convey critical info that needs to be clear (possibly including small text). So heavier frost or even solid backgrounds with a glassy flourish (like a blurred modal for extra info) could be used.
+
+Glows: Recovery is tied to Green (Recovery) and Sleep (Purple) possibly. If the user’s recovery is excellent (green zone), the recovery icon or score might glow green softly as a positive reinforcement. Conversely, if it’s poor, maybe no glow (or a different color? But we likely use glows for positive states mostly, and red glows for alerts like high stress). Sleep tracking might use a purple glow to indicate sleep status – e.g., a bedtime reminder notification could cause a widget to glow purple as a nudge. Cycle tracking (if applicable) might have a color (maybe use the pink/red but that’s taken by heart; some cycle apps use purple or a distinct red). If cycle tracking is a feature, we could give it a unique glow color token (say indigo or a combination like a small gradient glow) for when certain phases or alerts happen.
+
+Motion: The recovery screen might feature a breathing material effect: for instance, a ring that shows recovery could gently pulse or glow to imply vitality. If there’s a visualization of stress vs recovery over time, perhaps a heatmap shimmer goes across a week graph indicating today’s status. Cycle tracking views might incorporate a circular calendar that animates (e.g., the current day’s segment enlarges slightly to show focus). Transitioning into the recovery screen from dashboard might use a calm fade/scale (since it’s more data-heavy and reflective). For novelty, we could use the depth-lens focus: when you open recovery details, the background (dashboard) blurs heavily, spotlighting the recovery content. If there’s a meditation or breath exercise integration, definitely a slow breathing animation fits (which doubles as a nice visual design and functional breathing pacer).
+
+Omni-Logger (Voice & Camera interface):
+
+Material: The Omni-Logger likely opens as an overlay modal that covers most of the UI – here we will use a Thick Glass full-screen blur behind the logging UI. For example, when the voice logger is activated, we blur the entire app behind a translucent dark panel (so you get that depth-of-field effect focusing on the mic). The microphone button itself might be on a circular glass panel (like iOS Siri or Shazam style – a blurred circle). The camera logging UI (barcode scanner or 3-photo food logging) will use the camera feed as background; we can overlay parts of the UI on thin glass panels (to see the camera view but still have legible text on top). Also, a scanning reticle or HUD might be partially transparent but not fully blurred (so the user can see what they are scanning clearly).
+
+Glows: For voice logging, the microphone icon can have a semantic glow based on context: maybe blue when listening (since voice might be considered a Siri-like context, blue is common), or use the category being logged (if the AI is logging nutrition via voice, maybe an orange glow). Alternatively, use a distinct color for voice AI (perhaps a multicolor equalizer-type glow). Regardless, the mic likely will glow/pulse indicating it’s recording. The camera scanner might use a blue glow around the scanning frame when it detects something (blue often signifies scanning). If doing a body scan, perhaps a teal or green glow outlines the body shape when posture is correct. Again, glows here are functional (feedback that the system is capturing info). They should be obvious enough to notice even in camera view (which could have varying backgrounds), so using a bright-ish but still soft-edged glow is ideal.
+
+Motion: The Omni-Logger is a showcase for our signature motion:
+
+The Voice logger could use a signal pulse on the mic icon corresponding to sound level (like the icon throbs as you speak). We can also visualize voice input with a waveform animation – using an animated path or bars that move with your speech. This waveform can have a slight glow itself or a gradient effect. The transition to the voice logger might be a liquid seam reveal: imagine pressing “log voice” and the UI sort of fluidly opens a panel from the bottom with the mic (like the interface is pouring in). This aligns with voice being an “organic” input. When you finish, perhaps the panel refractive peels away (mic card flips down and closes).
+
+The Camera logger (barcode or photo) might have a scanner line shimmer (a horizontal line that slides down the camera preview with a slight glow to indicate scanning in progress). When a barcode is recognized, that line could do a quick flash (green glow on success, for example). For the 3-photo food logging, as each photo is captured, maybe a quick white border glow appears on the frame. Transition into the camera view can be a standard modal from bottom, but we can spice it with a depth focus: the background app UI blurs heavily as the camera activates, giving a feeling of entering a different mode. The camera icon itself could do a magnetic snap when switching between back and front camera (tiny playful flip). We’ll also incorporate haptics here (camera shutter = slight vibration, voice capture start = gentle tick, etc.).
+
+Social (Squad & Leaderboard):
+
+Material: The social screens might show a leaderboard (a list of friends and scores) and a squad feed of reactions. We want a fun, energetic feel here. We might use Thin Glass backgrounds to allow a colorful background image or gradient to show through (social can have a bit more vibrant backdrop than purely data screens). For example, the leaderboard could be on a translucent panel over a dynamic background (maybe the background shifts color based on squad mood or time of day – optional flair). Individual list items (friends) could be on minimal glass or just transparent if readability is okay. If there’s a chat or reaction overlay, that might be on Frosted Glass bubble so it stands out.
+
+Glows: The social context might use gold or purple glows as noted. For instance, the top leaderboard rank might have a subtle gold glow around the user’s avatar or crown icon to denote their status. When someone in your squad sends a reaction (like a heart or a high-five, presumably via haptic taps), you could see that icon pop up with a colored glow (heart reaction = pink glow burst). Social notifications (like a friend hitting a PR) might momentarily highlight that friend’s entry with a category-colored glow (e.g., they hit a running goal – their row glows orange briefly). We’ll carefully time these so they feel like quick highlights, not persistent glows. Also, ensure an alternative text callout (like “John hit 5km!” label) accompanies any glow highlight.
+
+Motion: Fun physics can shine here. The leaderboard bump effect: when you surpass a friend, your row might animate upward with a bouncing motion and maybe a subtle confetti or bump effect, while their row shifts down. A slight overshoot on positions emphasizes the change in rank. Reactions in the squad feed could animate in a whimsical way – e.g., if a friend sends a heart by tapping their device (haptic reaction), on your screen you might see a heart icon pop at their avatar and then fade. We can use a spring scale-up and fade-out for that icon (with a corresponding pink glow). We can incorporate a magnetic snap on interactions like dragging the leaderboard to refresh (it snaps back). If the social feed has pages or filters, maybe a Glass refraction pivot effect when switching tabs (like the whole view flips around to show “Achievements” vs “Leaderboard”). These patterns make the social area feel lively. Importantly, all these are short animations (we don’t want to delay real-time info), so ~300ms for a bump or pop. Haptics: a strong bump vibration when you move up a rank, a light tick for receiving a reaction. Reduced-motion mode would simplify these to maybe just highlight the row with color and no movement.
+
+MacroCoins Store & Streak Freeze:
+
+Material: The MacroCoins store (hidden store) likely has a more fun UI, but we still keep it consistent. Use Frosted or Thick Glass for any modal store panels to give it a premium “Apple Pay” feel. For example, an overlay showing an item or confirming a purchase could be a thick blur card with clear info. The store background might actually be a bit playful – maybe a subtle animated background of coins – but likely we stick to a static design with glass panels for the items. The streak freeze UI (if it’s a special feature) can be represented with an icy theme: perhaps a translucent frosty overlay with a blue tint and even a subtle snowflake particle effect (tasteful, if time permits). The frost could literally be a heavier blur with a bluish tint to feel “frozen.”
+
+Glows: MacroCoins are gold, so any glow likely gold/yellow. When the user earns coins, the coin icon or coin balance might sparkle – a quick gold glow or starburst to draw attention. In the store, the selected item or the purchase button could glow subtly to guide the user’s eye (e.g., a pulsing gold glow behind the “Buy for 100 coins” button to indicate you have enough coins). The streak freeze might involve a blue glow effect: e.g., if your streak is about to break, a blue glow could outline the freeze button to hint “use freeze to save it.” Or after using it, a cool blue glow could emanate as the streak is preserved (like freezing effect).
+
+Motion: For MacroCoins and store, a coin animation is a must: perhaps when you gain a coin, an icon flies into your coin balance with a twirl (a classic but satisfying game-like feedback, done minimally). The store could have fun transitions – opening the store might use a scale-up from a coin icon (like the coin icon enlarges into the store screen). Purchasing an item could trigger a celebratory animation: the item card might do a flip or the background might flash a gold glow. We could use the magnetic snap for dragging to scroll through items (like a carousel that snaps to item centers). For streak freeze, maybe when activated, the screen briefly shows an ice crack or frost overlay that quickly dissipates – we can simulate this by a full-screen semi-transparent graphic that scales out. Or a simpler approach: the streak counter gets a blue highlight and a tiny “freeze” icon appears with a short bounce. The breathing material concept might also appear: if you have an active streak freeze, an icon could softly pulse blue to remind you it’s in effect (again, respect reduce-motion and turn that off if needed).
+
+Onboarding / Paywall:
+
+Material: Onboarding and paywall screens often have a polished marketing look. Here we might deviate slightly in that they could use more imagery and less blur, but we can still integrate our design language: for instance, a paywall screen could have a hero image with a Glass overlay on top containing the text and CTA. That overlay could be a Thick Glass Hero panel to really stand out (like “Pro Upgrade” details appear on a sleek frosted card above a backdrop of app images). Onboarding slides might each use a background image with a translucent overlay for captions, maintaining consistency with the rest of the app’s glass theme. We will be careful that the glass doesn’t reduce readability of marketing text – likely these screens will use additional solid color backing for any small text (e.g., a high-opacity blur or an added dim layer behind text).
+
+Glows: Glows can reinforce call-to-action or highlights. For example, the “Continue” button on onboarding might have a gentle pulse glow (maybe using the app’s primary brand color, e.g., a turquoise or blue) to draw the eye. If the onboarding highlights certain features, we might use category glows: e.g., when talking about heart tracking, a heart icon with pink glow appears briefly. The paywall may use glows to indicate premium features (maybe small iconography with their category colors). However, we’ll avoid anything too flashy on paywall to keep it professional. Perhaps the subscribe button has a subtle gold or blue glow to attract clicks.
+
+Motion: Onboarding typically can use swipe transitions – we’ll implement these as smooth swipes with a little depth. For example, swiping between onboarding pages: we can add a slight 3D rotation as the card moves out and next comes in (like a carousel). Or use the liquid seam metaphor: perhaps each onboarding screen transitions with a nice wipe that feels fluid (e.g., a wavy shape moving across). For paywall modals, a springy pop-up works: the paywall could drop in from the top with a bounce (like Apple’s modal dialogs). We could incorporate an illustrative animation (maybe a Lottie illustration of the app’s features), but if not, we can still animate elements: bullet points fading in one by one, the price tag doing a brief highlight flash. Ensuring these don’t annoy the user is key – they should be quick and delightful. Also, tie in haptics: a light bump when the paywall appears (to emphasize it), and a success vibration when the user completes purchase.
+
+Each screen’s design will be documented thoroughly so that developers know which material variant and animations to apply. The above just highlights the major components. By applying the same material + glow + motion logic everywhere, the app will feel unified – e.g., the user will notice that everything has a slight glassy depth, every important status glows a bit in its color, and everything moves with the same physics, which together creates that “premium Apple-like” consistency.
+
+<br/>
+Implementation Playbook (Expo React Native)
+
+Finally, we translate the design system into a concrete plan for implementation using Expo (React Native) with NativeWind (Tailwind CSS in RN), Reanimated for animations, expo-blur for blur effects, and other Expo capabilities. The goal is to build reusable components and tokens so that the design is implemented systematically and maintainably. We also cover performance techniques to keep the app smooth and respectful of the device.
+
+Component Architecture
+
+To enforce consistency, we will create base components that encapsulate the glass, glow, and motion behaviors:
+
+<GlassCard> Component: A container that applies one of the glass material styles. It will wrap children in a BlurView (or a fallback View if blur is off). Props might include variant (thin, frosted, thick, etc.), which maps to intensity and tint settings from our theme. For example, <GlassCard variant="frosted"> ... </GlassCard> would render something like:
+
+{isTransparencyEnabled ? 
+  <BlurView intensity={theme.materials.frosted.intensity} tint={theme.materials.frosted.tint} style={styles.card}>
+    {children}
+  </BlurView>
+  :
+  <View style={[styles.card, { backgroundColor: theme.materials.frosted.fallbackColor }]}>
+    {children}
+  </View>
+}
+
+
+This component also handles styling like borderRadius, default padding, etc., so designers can drop anything into a GlassCard and get the right look. If needed, it can also apply the edge highlight by adding an inner View with a border (we can do that via StyleSheet – e.g., a style that draws a 1px border with a translucent color).
+
+<GlowHalo> Component: A decorative wrapper to add a semantic glow. Usage: <GlowHalo category="heart" active={highlightOn}> <Icon name="heart"/> </GlowHalo>. This component will conditionally render a glow effect around its children. Implementation could be: on iOS, use a View with shadowColor={theme.glows.heart.color}, shadowOpacity, shadowRadius (with appropriate spread by setting shadowOffset to {width:0,height:0}). On Android, since shadowColor won’t produce an outer glow, we have a couple of fallback methods: one is to absolutely position a blurred view behind the child. For instance, we could render a duplicate of the child (or a rounded rectangle) behind, apply a colored blur or filter effect. Alternatively, use an SVG or Canvas (via expo’s GL or Skia) to draw a glow. A simpler approach: for icons specifically, we could pre-render glow versions of them (like png assets with glow). But that’s less flexible. Given performance constraints, we might limit continuous glows on Android. The component would also listen to active prop or triggers (like on focus, on press) to possibly animate the glow (e.g., using Reanimated to animate the shadowRadius or opacity).
+
+Motion Primitives & Hooks: We will build a small in-house library of animation functions using Reanimated 3 (which works with Fabric). Examples: useFadeIn() hook that returns animated styles for opacity and slight translation, to use when a component mounts. usePulse(loop) for infinite pulse animations (maybe returns an animated value and we tie it to style). We might also have higher-level functions like runSequential([anim1, anim2,...]) to easily choreograph sequences, though Reanimated’s sequence and delay functions can handle that too. We will likely create custom components for specific patterns: e.g., <AnimatedNumber> for the rep counter that smooths the number change, or <HeartbeatIcon> that encapsulates the heart-beat pulse logic. The idea is to reuse these so that, for instance, every number count animation uses the same easing and looks consistent.
+
+Haptics & Sound Integration: Use Expo’s Haptics API to complement animations. We could create a hook like useHapticFeedback(type) that triggers on certain state changes. E.g., when a button’s press animation completes, call Haptics.impactAsync('medium'). Similarly, subtle sound feedback can be added (expo-av to play a tiny tick sound on important interactions). These are not visual, but part of the holistic experience. We ensure these hooks are called in tandem with animations (maybe in the onFinish callback of an animation, or when a state flips). We also respect user settings (if system haptics are off, or if sound is muted, we avoid these).
+
+Design Token Schema
+
+We will manage theming through NativeWind (Tailwind style utilities) and possibly a theme config object. Key token groups:
+
+Color Tokens: Defined for light and dark: e.g., primaryBackgroundLight, primaryBackgroundDark, textPrimaryLight, textPrimaryDark, plus the semantic colors for categories (as listed under Semantic Glow System). These will be used not only for glows but also for icon colors, charts, etc., to maintain consistency (e.g., heart icon might itself be tinted pink when active).
+
+Material Tokens: An object detailing the material styles. For example:
+
+materials: {
+  thin:    { intensity: 15, tint: 'default', fallbackColorLight: '#FFFFFF40', fallbackColorDark: '#1A1A1A60' },
+  frosted: { intensity: 40, tint: 'default', fallbackColorLight: '#FFFFFF80', fallbackColorDark: '#1A1A1ACC' },
+  thick:   { intensity: 80, tint: 'default', fallbackColorLight: '#FFFFFFE6', fallbackColorDark: '#1A1A1AF0' },
+  // ... could also directly use 'systemThinMaterial' etc if on iOS
+}
+
+
+We may refine these values by testing on device. Using tint: 'default' usually means BlurView will auto-switch between light/dark material on iOS; for Android or more control, we might separate them explicitly. The fallback colors here have been chosen with some transparency (#1A1A1A is roughly 10% gray etc.) – these we adjust for best appearance.
+
+Glow Tokens: As shown earlier, an object per category for light and dark mode. Also possibly general states (like glowSuccess, glowAlert if we want generic ones separate from category).
+
+Motion Tokens: This will include timing values and easing definitions. E.g.,
+
+motion: {
+  duration: { micro: 100, short: 300, medium: 400, long: 600 }, 
+  easing: { easeOut: [0.0,0.0,0.2,1], easeInOut: [0.4,0.0,0.2,1], spring: { damping: 15, stiffness: 150 } },
+  // We could even include standardized keyframe definitions if needed
+}
+
+
+By centralizing these, if we ever need to adjust the “speed of the app,” we can tweak here. (For example, if testing shows animations feel slow, we might drop medium from 400ms to 350ms globally).
+
+Typography & Icon tokens: (This is more standard design system, not core to our task, but we’ll note placeholders like {{typography_system}} and {{icon_set}} to integrate if needed, ensuring font sizes and iconography match the new design’s style).
+
+We will likely store these tokens in a JSON or TS object and leverage them in styling via NativeWind (which supports theming) or via JS styles. NativeWind can consume a theme object for colors, etc., and we can define utility classes for things like bg-glass-frosted (mapping to the fallback background color or to a BlurView style). We must coordinate the BlurView usage with NativeWind carefully – possibly we’ll apply NativeWind classes to non-blur fallback and use inline styles for BlurView itself.
+
+Performance Checklist
+
+We take a proactive approach to ensure the rich visuals do not compromise app performance or battery life, especially given the local-first, always-on nature of a health app. Key checks:
+
+ Minimize Overdraw: Avoid layering multiple translucent views unnecessarily. Use tools (Android GPU overdraw debug, Xcode gauges) to ensure we don’t paint the screen multiple times. For example, if a background image is already slightly blurred, we might not need an extra BlurView on top of it. We also reuse one BlurView to cover an area instead of many small ones.
+
+ Use Appropriate Blur Areas: Don’t blur the whole screen at high intensity when a smaller region will do. For modals, limit the blur to behind the modal’s bounds instead of full-screen if possible. Also consider using lower intensity blur for large areas to reduce GPU load (since blur cost often grows with radius and area).
+
+ Optimize Blur on Android: Recognizing that BlurView on Android can be expensive, use it sparingly. Consider toggling experimentalBlurMethod to 'none' (transparent fallback) for low-end Android devices or when heavy animations are running simultaneously. We can programmatically detect device performance (perhaps via expo-device info or measuring frame drops) to dynamically downgrade effects.
+
+ Caching Where Possible: Static images or backgrounds that are blurred can be pre-blurred offline (e.g., if the app has a static wallpaper, include a blurred version to use behind glass components). When navigating, if an expensive animation can be replaced with a prerendered sequence or fewer moving layers, do so. Example: the liquid seam reveal might be complex to compute dynamically, so we might use a precomputed clip path or simpler approach.
+
+ Batch and Coordinate Animations: Use useAnimatedProps and combined animations to avoid too many concurrent animation threads. We should run related animations on the same useSharedValue clock when possible (so Reanimated can optimize). Also, ensure no expensive JS-driven animations – everything uses Reanimated (native) or CSS/UIView animations under the hood for 60fps.
+
+ Pause Offscreen Animations: If a screen with a looping animation (like breathing glow) is navigated away from or the phone is locked, pause those animations (to save battery). We can listen to app state or navigation focus events to stop any continuous loops.
+
+ Memory and Battery: Regularly profile the app’s memory usage especially with BlurView (as it can use extra buffers). Ensure removing components (unmounting screens) also unmounts BlurViews to free memory. Keep an eye on battery by testing a long session; high-frequency animations (like a heart pulsing at 120 BPM constantly) could wake up the GPU often – maybe throttle or disable such features when not needed (e.g., only pulse heart icon when that screen is active).
+
+ Frame Rate Monitoring: During development, use the RN performance monitor (or an overlay) to watch FPS as we add features. Our acceptance criteria is 60fps steady on our {{target_min_device}} (for example, an iPhone 12 or equivalent Android). Minor dips during heavy transitions are acceptable but should quickly stabilize. No screen should consistently churn at low FPS.
+
+Reduced Motion & Transparency Support
+
+Implementing support for users’ accessibility preferences is a must:
+
+Prefers-Reduced-Motion: We will detect this setting (Expo doesn’t have a built-in, but we can use the useReducedMotion hook from react-native-reanimated or check via AccessibilityInfo.isReduceMotionEnabled() if available). When true, our app will:
+
+Disable non-essential animations: no looping decorative animations (e.g. breathing effects, shimmer).
+
+Simplify transitions: use fades or instant cuts instead of slides and complex transitions. We can configure our Navigator to use no animation or a crossfade when this is on.
+
+Still provide necessary feedback: e.g., instead of a bouncing button, we might just change its color or instantly scale it 1.1x without animation to show it was pressed. Haptic feedback becomes more important here as a substitute.
+
+Ensure any vital info conveyed by motion (though ideally we don’t rely on that solely) is conveyed otherwise. For instance, if our only indication that something succeeded was a checkmark flying, we should also show a static “Success” message or keep the checkmark visible.
+
+Reduce Transparency: On iOS, if this is enabled, it will automatically make system UIs solid. For our app, we need to manually adjust since our custom blur might still show unless we handle it. We can check AccessibilityInfo.isReduceTransparencyEnabled() (in native iOS there is UIAccessibilityReduceTransparency, not sure if RN exposes it; if not, possibly treat it same as reduce motion because usually people enable both for accessibility). When true, we will:
+
+Replace all <BlurView> usage with the fallback solid backgrounds (our <GlassCard> is designed for this). Essentially our material tokens have fallbackColor which becomes the actual background.
+
+Ensure text still has high contrast on those solid backgrounds (likely yes, since they’re more opaque by design).
+
+Any translucency elsewhere (e.g. semi-transparent icons or overlays) we might also increase opacity to 100% if it’s affecting comprehension. The goal is an equally usable interface without the fancy transparency. It will look less “wow” but should remain clean and functional.
+
+Testing: We will test these by toggling the device settings. We’ll include automated checks if possible (like unit tests that ensure when a global accessibility.reduceMotion flag is set, certain animation functions become no-ops or return immediate styles).
+
+User-facing Option: While the OS settings will govern, we might additionally expose an in-app “Reduce Effects” toggle for users who might want to turn off just some of the flair (perhaps gamers who want battery save). This would similarly tie into disabling glows and heavy animations, though it’s optional and would be in settings if at all.
+
+Implementing these fallbacks ensures that we meet the needs of users who either can’t enjoy the visual effects or prefer not to, and it also often simplifies the app’s state for older devices (some overlap with performance mode).
+
+<br/>
+QA & Acceptance Criteria
+
+To confirm that the design system truly achieves its goals, we’ll use a thorough QA checklist. Before release, designers, developers, and testers will verify each aspect against these criteria:
+
+Visual Fidelity & Design QA:
+
+ “Squint Test” (Glanceability): When viewing each screen and squinting (or from a few feet away), the structure of the app should still be clear. Major sections, cards, and buttons remain distinguishable. Glows should not create ambiguous blobs. (Test: blur your eyes – you should see distinct card shapes and content areas, meaning our contrast and layout are solid.)
+
+ Legibility in All Conditions: Verify text over glass backgrounds in both light and dark mode for various devices and lighting. All text passes contrast standards (ideally WCAG AA, 4.5:1 contrast). If any text is hard to read due to background show-through, we increase tint opacity or font weight.
+
+ Glass & Glow Quality (“No Cheap Glow” Test): The translucent panels should look smooth (no jagged edges, no banding – thanks to noise). Glows should appear as refined halos, not harsh neon. Review on both standard and high-density displays. If a glow looks too intense or out of place, adjust its opacity/radius. Essentially, nothing in the UI should appear visually tacky or unintended; every glow and blur should feel like a deliberate design choice.
+
+ Consistency: Check that recurring elements use the same styles. E.g., all widget cards have the same corner radius, blur style; all Heart-related items use the same pink glow token (not different pinks). Motion behaviors for similar actions (like opening any modal) should follow the same pattern. This consistency often requires scanning through every screen and noting any outlier that doesn’t match the system rules. Fix any “one-off” styles unless absolutely necessary.
+
+ Theft of Focus: Ensure that the eye is drawn to intended focal points, not stolen by excessive effects. For example, on the dashboard, the data should take focus, not an overly bright glow or animation. If testers often mention a visual effect being distracting, tone it down.
+
+Animation & Interaction QA:
+
+ Smoothness: All animations must run at 60fps in release builds on target devices. Test heavy scenarios (many widgets glowing or animating at once, or rapidly switching screens) to catch dropped frames. Use profiling tools or the built-in RN FPS monitor. If any animation consistently stutters, refactor or simplify it.
+
+ Timing Cohesion: Observe composite animations (like screen transitions with multiple sub-animations). They should feel synchronized and well-paced (no awkward delays or elements popping in too late). We fine-tune delays and durations based on test feedback – e.g., if a stagger is too slow and people start tapping before things settle, tighten it.
+
+ No Motion Sickness (“Nausea Test”): Have sensitive users try features like the liquid seam or parallax to ensure it doesn’t make them dizzy. Rapid, large movements or zooms can be problematic – our rule is to avoid any full-screen translation that’s faster than ~300ms across the whole screen, and avoid oscillating animations that cover large distances. We also test in landscape (if supported) because motion can feel different there. If any effect even hints at causing discomfort (e.g., too much parallax), we will either remove it or ensure it’s off by default unless specifically enabled.
+
+ Interactivity & Reversibility: Test that interactive animations can be interrupted or reversed naturally. For example, if you drag a card and then cancel, does it smoothly slide back? If you open a modal and quickly close it, does it gracefully reverse? According to principles, if an element slid in, it should slide out in a way that makes sense. We simulate fast user behavior (tapping buttons rapidly, swiping quickly) to ensure the motion system handles it (no stuck states or bizarre intermediate frames).
+
+ Haptic/Sound Sync: Whenever an animation is meant to coincide with a haptic or sound (like a success pulse with a “ding”), verify they are in sync and that the feedback is noticeable but not annoying. Also check that haptics don’t fire when they shouldn’t (like multiple overlapping triggers).
+
+ Reduced Motion/Transparency Behavior: Manually enable Reduce Motion and Reduce Transparency on devices and run through the app. Verify: no unnecessary animations play (things should just appear/disappear), and all formerly blurred areas are now nice solid backgrounds. The app should still look good – perhaps less fancy but still well-designed (no weird layout gaps where blur was). Also ensure glows are either removed or static. Essentially, with these settings, the app should feel like a standard flat design app with no quirks.
+
+Performance & Stability:
+
+ Mid/Low Device Performance: Test on a mid-tier Android device and an older iPhone if possible (e.g. iPhone 11 or an older Pixel). Ensure that critical flows (logging something, scrolling, navigating) remain smooth and that blur doesn’t break the app on Android (no graphical glitches). If the Android blur was causing trouble, confirm our fallback (semi-transparent backgrounds) kick in.
+
+ Memory Leaks: Using Xcode Instruments or Android Profiler, check that no continuous increase in memory usage occurs during animations or after navigating back and forth (e.g., ensure BlurViews are unmounted properly, Reanimated loops are cleared). This prevents long-term performance degradation (especially for an app users might keep open all day).
+
+ Battery Drain: Do an informal battery test – use the app in a scenario with many effects (like leave the AI “thinking” animation on for a minute, scroll around a lot with glows happening) and see if the device gets hot or battery drops unusually fast. Given our minimal approach, it shouldn’t. But if we notice heat, we identify which effect is likely the cause (often heavy blur or constant re-rendering) and address it (maybe throttle the effect or add a warning not to overuse, etc.).
+
+User Experience Validation:
+
+ User Testing Reactions: Although not purely a checklist item, gather a few target users (e.g., a fitness coach, a casual health user) to try a prototype. Their subjective feedback on the look-and-feel is valuable. Specifically ask if the app “feels premium and fluid” to them. If anything feels “cheap” or “too much”, tweak accordingly.
+
+ No Dark Patterns: Review all interactions especially around streaks and economy to ensure we didn’t inadvertently create a coercive effect. The glows and animations should encourage and celebrate, not shame or pressure. For instance, a red glow on a missed goal could be seen as negative; we likely avoid glows entirely in negative cases or use a neutral styling. Ensure our design choices align with motivating users positively.
+
+By systematically verifying each item above, we ensure that the final shipped product meets the high bar set out in the objectives. The design system isn’t just theoretical – it proves itself in real use by being beautiful, meaningful, and performant. Any issues found during QA will be addressed by referring back to the guidelines and adjusting the implementation or design token values. The acceptance criteria is essentially that the app feels like an Apple-crafted product: that intangible smoothness and cohesiveness should be present, which this checklist helps objectify and measure.
+
+Assumptions & Unknowns:
+
+{{audience_or_user}}: We assume the target users include fitness professionals, casual health enthusiasts, and biohackers – a broad range that appreciates a premium feel but also demands clarity and performance. The design caters to both serious data tracking and a friendly, inviting daily tool.
+
+{{new_color_system}}: We are defining a new color system from scratch tailored to MyMacro AI’s needs (rather than relying on an existing palette). This includes the semantic colors above and neutral UI colors. It will be validated for accessibility and visual appeal.
+
+{{typography_system}}: Not detailed here, but we assume a modern, clean typography (perhaps San Francisco on iOS, Roboto on Android or a cross-platform equivalent) that complements the minimal design. Sizes and weights will be adjusted to remain readable over translucent backgrounds.
+
+{{icon_set}}: We assume we have or will use an icon set that matches the design (possibly thin outlined icons to match the light feel, with filled versions when active). Icons should clearly represent categories (heart, water, etc.) and work in both light and dark mode (with appropriate tint from our color tokens).
+
+{{target_min_device}}: We target at least devices like iPhone 12 or equivalent Android (Snapdragon 700 series or above) for full effects. Newer devices will handle everything smoothly. Older or lower-end devices will automatically get reduced effects as discussed.
+
+{{performance_budget}}: We assume a reasonable performance budget such that typical screens render under ~16ms and heavy transitions maybe up to ~32ms frame time budget on target devices (to stay 60fps). In practice, this means avoiding more than a couple of large blur views at once and limiting concurrent animations.
+
+{{animation_budget}}: As Option A (Premium minimal) is chosen, the “animation budget” is conservative: only a handful of elements animate at any given time. For instance, a screen transition might animate 3-5 elements in sequence, not 20 all at once. This keeps the experience elegant and also easier on the hardware. Option B (more expressive) could increase that, but we default to A for now.
+
+Design Option Choices: We proceeded with Option A: Premium minimal by default – subtle glows, restrained yet refined motion. Option B (more expressive glows/motion) and Option C (ultra-minimal) are possible pivots if testing showed need, but at this stage, A gives the best balance of luxury feel and practicality. If stakeholders later want more flash, we can dial up to B safely because the system is in place to handle more glow/animation intensities.
+
+Unknown Technicals: We assume we can overcome any technical hurdles (e.g., complex animations can be done with Reanimated/Skia if needed). If something like the liquid seam is too hard to do performant in RN, we might simplify it. We note these as things to prototype. Also, any usage of advanced sensors (like tilt for highlights) would require permission and adding listeners – we’d only do that if it proves worth it in prototypes.
+
+By documenting these assumptions and unknowns, we acknowledge areas to watch. Throughout development, we’ll refine them (for example, finalize exactly which device is our performance baseline, or pick the exact icon set). This living design system will guide MyMacro AI’s implementation, ensuring that the end product realizes the “Apple-grade glassmorphism + semantic glow + signature motion” vision in full.

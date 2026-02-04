@@ -1,0 +1,252 @@
+{
+  "expo": {
+    "name": "MyMacro AI",
+    "slug": "MyMacroAI",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "mymacroai",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1410"
+    },
+    "notification": {
+      "color": "#FF5C00",
+      "androidMode": "default",
+      "androidCollapsedTitle": "MyMacro AI"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mymacroai.app",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "MyMacroAI reads your health data including sleep, heart rate, and activity to provide personalized nutrition and recovery insights tailored to your body's needs.",
+        "NSHealthUpdateUsageDescription": "MyMacroAI writes health data like water intake, body weight, and nutrition to help you track your progress and keep all your health data in one place.",
+        "NSCameraUsageDescription": "MyMacroAI uses your camera to scan food, barcodes, and nutrition labels for instant macro tracking with AI-powered analysis.",
+        "NSMicrophoneUsageDescription": "MyMacroAI uses your microphone for voice-based food logging, allowing you to log meals hands-free by simply speaking.",
+        "NSPhotoLibraryUsageDescription": "MyMacroAI accesses your photo library to analyze food photos for nutrition information and to save progress photos.",
+        "NSPhotoLibraryAddUsageDescription": "MyMacroAI saves your physique progress photos and food scan results to your photo library.",
+        "NSUserTrackingUsageDescription": "MyMacroAI uses this data to provide personalized nutrition recommendations and improve the app experience.",
+        "NSCalendarsUsageDescription": "MyMacroAI accesses your calendar to schedule meal reminders and sync nutrition goals with your daily schedule.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "MyMacroAI creates calendar events for meal planning and nutrition reminders.",
+        "NSRemindersUsageDescription": "MyMacroAI uses reminders to help you stay on track with your nutrition goals and meal timing.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification",
+          "processing"
+        ],
+        "BGTaskSchedulerPermittedIdentifiers": [
+          "com.mymacroai.app.refresh",
+          "com.mymacroai.app.sync"
+        ],
+        "NSSupportsLiveActivities": true
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": [
+          "health-records"
+        ],
+        "com.apple.developer.healthkit.background-delivery": true,
+        "com.apple.security.application-groups": [
+          "group.com.mymacroai.app"
+        ],
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          }
+        ]
+      },
+      "associatedDomains": [
+        "applinks:mymacro.ai",
+        "applinks:www.mymacro.ai"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF5C00"
+      },
+      "package": "com.mymacroai.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_BODY_WATER_MASS",
+        "android.permission.health.READ_BONE_MASS",
+        "android.permission.health.READ_HEIGHT",
+        "android.permission.health.READ_LEAN_BODY_MASS",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.WRITE_HYDRATION",
+        "android.permission.health.WRITE_WEIGHT",
+        "android.permission.health.WRITE_NUTRITION",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.FOREGROUND_SERVICE"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.READ_CONTACTS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "mymacro.ai",
+              "pathPrefix": "/app"
+            },
+            {
+              "scheme": "https",
+              "host": "www.mymacro.ai",
+              "pathPrefix": "/app"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "mymacroai"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "name": "MyMacro AI",
+      "shortName": "MyMacro",
+      "description": "AI-powered nutrition coaching and macro tracking",
+      "themeColor": "#FF5C00",
+      "backgroundColor": "#0B1410"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MyMacroAI uses your camera to scan food and barcodes for instant nutrition tracking."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MyMacroAI accesses your photos to analyze food images for nutrition information.",
+          "cameraPermission": "MyMacroAI uses your camera to capture food photos for AI-powered macro analysis."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FF5C00",
+          "mode": "production"
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "MyMacroAI uses Face ID to securely access your health data and preferences."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "MyMacroAI accesses your calendar to schedule meal reminders and sync nutrition goals."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "MyMacroAI uses your microphone for voice-based food logging."
+        }
+      ],
+      "expo-apple-authentication",
+      "expo-tracking-transparency",
+      "expo-localization"
+    ],
+    "owner": "joshuakhoury",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "fallbackToCacheTimeout": 30000,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b427e4b6-d1d6-4418-831e-5d2532c35238"
+      },
+      "appStoreUrl": "https://apps.apple.com/app/mymacro-ai/id123456789",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.mymacroai.app"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "hooks": {
+      "postPublish": [
+        {
+          "file": "sentry-expo/upload-sourcemaps",
+          "config": {}
+        }
+      ]
+    }
+  }
+}

@@ -19,7 +19,22 @@
       "Bash(do if file \"$f\")",
       "Bash(then grep -P [x{4E00}-x{9FFF}] $f)",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(wc:*)",
+      "Bash(/opt/homebrew/bin/npm install expo-clipboard)",
+      "Bash(npm start)",
+      "Bash(lsof:*)",
+      "Bash(npm run ios:*)",
+      "Bash(pkill:*)",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "Bash(pod install)",
+      "Bash(ruby --version:*)",
+      "Bash(sudo gem install:*)",
+      "Bash(xcrun simctl terminate:*)",
+      "Bash(xcrun simctl launch:*)",
+      "Bash(xcrun simctl:*)",
+      "Bash(EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start:*)",
+      "Bash(kill:*)"
     ]
   }
 }

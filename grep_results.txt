@@ -1,0 +1,27 @@
+node_modules/.package-lock.json:    "node_modules/react-native-worklets-core": {
+node_modules/.package-lock.json:      "resolved": "https://registry.npmjs.org/react-native-worklets-core/-/react-native-worklets-core-1.6.2.tgz",
+node_modules/react-native-worklets-core/react-native-worklets-core.podspec:  s.name         = "react-native-worklets-core"
+node_modules/react-native-worklets-core/react-native-worklets-core.podspec:  s.source       = { :git => "https://github.com/margelo/react-native-worklets-core.git", :tag => "#{s.version}" }
+node_modules/react-native-worklets-core/README.md:# 🧵 react-native-worklets-core
+node_modules/react-native-worklets-core/README.md:> In most cases, react-native-worklets-core shouldn't be used as a standalone dependency but rather as a peer-dependency for other modules such as [react-native-vision-camera](https://github.com/mrousavy/react-native-vision-camera), [react-native-wishlist](https://github.com/margelo/react-native-wishlist), or [react-native-skia](https://github.com/Shopify/react-native-skia).
+node_modules/react-native-worklets-core/README.md:    yarn add react-native-worklets-core
+node_modules/react-native-worklets-core/README.md:        ["react-native-worklets-core/plugin"],
+node_modules/react-native-worklets-core/package.json:  "name": "react-native-worklets-core",
+node_modules/react-native-worklets-core/package.json:  "repository": "https://github.com/margelo/react-native-worklets-core",
+node_modules/react-native-worklets-core/package.json:    "url": "https://github.com/margelo/react-native-worklets-core/issues"
+node_modules/react-native-worklets-core/package.json:  "homepage": "https://github.com/margelo/react-native-worklets-core#readme",
+node_modules/react-native-worklets-core/cpp/WKTJsiWorklet.h:          "react-native-worklets-core/plugin.\n"
+node_modules/react-native-worklets-core/android/build.gradle:  throw new GradleException("react-native-worklets-core: Failed to find node_modules/ path!")
+node_modules/react-native-worklets-core/android/build.gradle:  into "${project.buildDir}/headers/rnworklets/react-native-worklets-core/"
+node_modules/react-native-worklets-core/android/src/main/java/com/worklets/WorkletsModule.java:      Log.e(NAME, "Failed to initialize react-native-worklets-core!", exception);
+node_modules/react-native-worklets-core/lib/module/NativeWorklets.js:console.log("Loading react-native-worklets-core...");
+node_modules/react-native-worklets-core/lib/module/NativeWorklets.js:  console.log("react-native-worklets-core installed.");
+node_modules/react-native-worklets-core/lib/module/worklet.js:    super(`The function "${funcName}" is not a Worklet! \n` + `- Make sure the function "${funcName}" is decorated with the 'worklet' directive! \n` + `- Make sure react-native-worklets-core is installed properly! \n` + `- Make sure to add the react-native-worklets-core babel plugin to your babel.config.js! \n` + `- Make sure that no other plugin overrides the react-native-worklets-core babel plugin! \n` + `Expected "${funcName}" to contain ${expected}, but "${funcName}" only has these properties: ${received}`);
+node_modules/react-native-worklets-core/lib/commonjs/NativeWorklets.js:console.log("Loading react-native-worklets-core...");
+node_modules/react-native-worklets-core/lib/commonjs/NativeWorklets.js:  console.log("react-native-worklets-core installed.");
+node_modules/react-native-worklets-core/lib/commonjs/worklet.js:    super(`The function "${funcName}" is not a Worklet! \n` + `- Make sure the function "${funcName}" is decorated with the 'worklet' directive! \n` + `- Make sure react-native-worklets-core is installed properly! \n` + `- Make sure to add the react-native-worklets-core babel plugin to your babel.config.js! \n` + `- Make sure that no other plugin overrides the react-native-worklets-core babel plugin! \n` + `Expected "${funcName}" to contain ${expected}, but "${funcName}" only has these properties: ${received}`);
+node_modules/react-native-worklets-core/src/worklet.ts:        `- Make sure react-native-worklets-core is installed properly! \n` +
+node_modules/react-native-worklets-core/src/worklet.ts:        `- Make sure to add the react-native-worklets-core babel plugin to your babel.config.js! \n` +
+node_modules/react-native-worklets-core/src/worklet.ts:        `- Make sure that no other plugin overrides the react-native-worklets-core babel plugin! \n` +
+node_modules/react-native-worklets-core/src/NativeWorklets.ts:console.log("Loading react-native-worklets-core...");
+node_modules/react-native-worklets-core/src/NativeWorklets.ts:  console.log("react-native-worklets-core installed.");
