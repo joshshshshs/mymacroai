@@ -42,13 +42,14 @@ export default function ForgotPasswordScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
 
-    try {
-      await authService.resetPassword(email.trim());
+    const result = await authService.resetPassword(email.trim());
+    
+    if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSent(true);
-    } catch (error: any) {
+    } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Could not send reset email. Please try again.');
+      Alert.alert('Error', result.error || 'Could not send reset email. Please try again.');
     }
 
     setLoading(false);
