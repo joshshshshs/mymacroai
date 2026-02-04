@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { Stack, Redirect } from 'expo-router';
 import { useUserStore } from '@/src/store/UserStore';
 
 /**
@@ -12,7 +12,7 @@ export default function AuthLayout() {
 
   // 如果用户已认证，重定向到主界面
   if (isAuthenticated) {
-    return null; // 将由上层路由处理重定向
+    return <Redirect href="/(tabs)" />;
   }
 
   return (
