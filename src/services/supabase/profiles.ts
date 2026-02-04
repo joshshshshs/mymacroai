@@ -6,6 +6,7 @@
 
 import { supabase } from '@/src/lib/supabase';
 import { StorageService } from './storage';
+import { cacheService, CacheKeys, CacheTTL } from '../cache/CacheService';
 
 // ============================================================================
 // TYPES
@@ -60,9 +61,17 @@ export async function getCurrentProfile(): Promise<PublicProfile | null> {
 }
 
 /**
- * Get a profile by user ID
+ * Get a profile by user ID (with caching)
  */
 export async function getProfileById(userId: string): Promise<PublicProfile | null> {
+    const cacheKey = CacheKeys.userProfile(userId);
+
+    // Check cache first
+    const cached = cacheService.get<PublicProfile>(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
     try {
         const { data, error } = await supabase
             .from('profiles')
@@ -77,6 +86,11 @@ export async function getProfileById(userId: string): Promise<PublicProfile | nu
             }
             if (__DEV__) console.warn('[ProfilesService] Get profile error:', error.code);
             return null;
+        }
+
+        // Cache the result
+        if (data) {
+            cacheService.set(cacheKey, data, { ttlSeconds: CacheTTL.USER_PROFILE });
         }
 
         return data as PublicProfile;
@@ -131,6 +145,9 @@ export async function updateProfile(
             }
             return { success: false, error: error.message };
         }
+
+        // Invalidate profile cache on update
+        cacheService.delete(CacheKeys.userProfile(user.id));
 
         return { success: true };
     } catch (error) {

@@ -14,8 +14,8 @@ import {
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { useAuth } from '../../hooks/useAuth';
-import { useHaptics } from '../../hooks/useHaptics';
+import { useAuth } from '@/src/hooks/useAuth';
+import { useHaptics } from '@/src/hooks/useHaptics';
 import { ThemedText } from '@/src/components/ui/ThemedText';
 
 export default function LoginScreen() {

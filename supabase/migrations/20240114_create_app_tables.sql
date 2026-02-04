@@ -140,6 +140,7 @@ create index if not exists idx_squad_members_user
 -- 4. REACTIONS TABLE
 -- Stores emoji reactions/nudges between squad members
 -- =====================================================
+drop table if exists public.reactions cascade;
 create table if not exists public.reactions (
   id uuid default gen_random_uuid() primary key,
   from_user_id uuid references auth.users(id) not null,

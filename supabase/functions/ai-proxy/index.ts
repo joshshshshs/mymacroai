@@ -38,12 +38,19 @@ const getCorsHeaders = (origin: string | null) => {
 
 // Input Schema Definition
 const RequestSchema = z.object({
-    intent: z.enum(['nlu', 'vision', 'speech', 'log_food']),
-    payload: z.string().trim().min(1).max(2000),
+    intent: z.enum(['nlu', 'vision', 'speech', 'log_food', 'chat', 'contextual']),
+    payload: z.string().trim().min(1).max(4000),
     image: z.string().optional(), // Base64 string for vision
     images: z.array(z.string().min(1)).max(3).optional(),
     audio: z.string().optional(), // Base64 string for speech
     audioMimeType: z.string().optional(),
+    // Chat-specific fields
+    systemPrompt: z.string().max(2000).optional(),
+    messages: z.array(z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string()
+    })).max(50).optional(),
+    messageType: z.enum(['greeting', 'insight', 'recommendation', 'summary']).optional(),
 });
 
 serve(async (req) => {
@@ -146,7 +153,7 @@ serve(async (req) => {
             });
         }
 
-        const { intent, payload, image, images, audio, audioMimeType } = validation.data;
+        const { intent, payload, image, images, audio, audioMimeType, systemPrompt, messages, messageType } = validation.data;
         const normalizedIntent = intent === 'log_food' ? 'nlu' : intent;
 
         // 6. Call Gemini API
@@ -234,6 +241,57 @@ Return only JSON in this shape:
                 generationConfig: {
                     temperature: 0.1,
                     maxOutputTokens: 512,
+                },
+            };
+        } else if (normalizedIntent === 'chat') {
+            // Multi-turn Chat
+            const chatContents = [];
+
+            // Add system instruction if provided
+            if (systemPrompt) {
+                chatContents.push({
+                    role: 'user',
+                    parts: [{ text: `[System Instruction]\n${systemPrompt}\n[End System Instruction]\n\nAcknowledge with "Understood." only.` }]
+                });
+                chatContents.push({
+                    role: 'model',
+                    parts: [{ text: 'Understood.' }]
+                });
+            }
+
+            // Add conversation history
+            if (messages && messages.length > 0) {
+                for (const msg of messages) {
+                    chatContents.push({
+                        role: msg.role === 'assistant' ? 'model' : 'user',
+                        parts: [{ text: msg.content }]
+                    });
+                }
+            }
+
+            apiBody = {
+                contents: chatContents,
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 1024,
+                },
+            };
+        } else if (normalizedIntent === 'contextual') {
+            // Contextual message generation (greetings, insights, etc.)
+            const contextPrompts = {
+                greeting: "Generate a brief, friendly greeting based on the context. Keep it under 50 words.",
+                insight: "Provide a helpful insight based on the data. Be specific and actionable. Under 100 words.",
+                recommendation: "Give a personalized recommendation. Be direct and specific. Under 100 words.",
+                summary: "Summarize the key points concisely. Use bullet points if helpful. Under 150 words.",
+            };
+
+            const typeInstruction = contextPrompts[messageType || 'insight'];
+
+            apiBody = {
+                contents: [{ parts: [{ text: `${typeInstruction}\n\nContext:\n${payload}` }] }],
+                generationConfig: {
+                    temperature: 0.6,
+                    maxOutputTokens: 256,
                 },
             };
         } else {

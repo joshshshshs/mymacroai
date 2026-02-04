@@ -57,7 +57,7 @@ const handler = async (request: Request): Promise<Response> => {
         }
 
         // Log the email attempt (create table if doesn't exist - will silently fail)
-        await serviceClient.from('founder_emails').insert({ email }).catch(() => {});
+        await serviceClient.from('founder_emails').insert({ email }).catch(() => { });
 
         const res = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -66,7 +66,7 @@ const handler = async (request: Request): Promise<Response> => {
                 Authorization: `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: "MyMacro AI <founder@mymacro.ai>",
+                from: "MyMacro AI <support@mymacro.app>",
                 to: [email],
                 subject: "Welcome to the Inner Circle",
                 html: `

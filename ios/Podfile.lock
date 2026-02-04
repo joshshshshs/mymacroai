@@ -1,6 +1,8 @@
 PODS:
   - boost (1.84.0)
   - DoubleConversion (1.1.6)
+  - EASClient (0.13.3):
+    - ExpoModulesCore
   - EXApplication (6.0.2):
     - ExpoModulesCore
   - EXAV (15.0.2):
@@ -16,7 +18,7 @@ PODS:
     - ExpoModulesCore
   - EXNotifications (0.29.14):
     - ExpoModulesCore
-  - Expo (52.0.48):
+  - Expo (52.0.49):
     - ExpoModulesCore
   - expo-dev-client (5.0.20):
     - EXManifests
@@ -261,7 +263,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLocalAuthentication (15.0.2):
     - ExpoModulesCore
-  - ExpoLocalization (17.0.8):
+  - ExpoLocalization (16.0.1):
     - ExpoModulesCore
   - ExpoModulesCore (2.2.3):
     - DoubleConversion
@@ -294,6 +296,34 @@ PODS:
     - ExpoModulesCore
   - ExpoSQLite (15.1.4):
     - ExpoModulesCore
+  - EXStructuredHeaders (4.0.0)
+  - EXUpdates (0.27.5):
+    - DoubleConversion
+    - EASClient
+    - EXManifests
+    - ExpoModulesCore
+    - EXStructuredHeaders
+    - EXUpdatesInterface
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.10.14.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - ReachabilitySwift
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - EXUpdatesInterface (1.0.0):
     - ExpoModulesCore
   - fast_float (6.1.4)
@@ -306,8 +336,11 @@ PODS:
   - MMKV (2.3.0):
     - MMKVCore (~> 2.3.0)
   - MMKVCore (2.3.0)
-  - PurchasesHybridCommon (17.27.0):
-    - RevenueCat (= 5.54.0)
+  - PurchasesHybridCommon (17.31.0):
+    - RevenueCat (= 5.57.0)
+  - PurchasesHybridCommonUI (17.31.0):
+    - PurchasesHybridCommon (= 17.31.0)
+    - RevenueCatUI (= 5.57.0)
   - RCT-Folly (2024.10.14.00):
     - boost
     - DoubleConversion
@@ -333,6 +366,7 @@ PODS:
     - FBLazyVector (= 0.76.9)
     - RCTRequired (= 0.76.9)
     - React-Core (= 0.76.9)
+  - ReachabilitySwift (5.2.4)
   - React (0.76.9):
     - React-Core (= 0.76.9)
     - React-Core/DevSupport (= 0.76.9)
@@ -1674,7 +1708,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-slider (5.1.1):
+  - react-native-slider (4.5.5):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1687,7 +1721,7 @@ PODS:
     - React-featureflags
     - React-graphics
     - React-ImageManager
-    - react-native-slider/common (= 5.1.1)
+    - react-native-slider/common (= 4.5.5)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-rendererdebug
@@ -1696,7 +1730,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-slider/common (5.1.1):
+  - react-native-slider/common (4.5.5):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1989,7 +2023,9 @@ PODS:
     - React-logger
     - React-perflogger
     - React-utils (= 0.76.9)
-  - RevenueCat (5.54.0)
+  - RevenueCat (5.57.0)
+  - RevenueCatUI (5.57.0):
+    - RevenueCat (= 5.57.0)
   - RNAppleHealthKit (1.7.0):
     - React
   - RNCAsyncStorage (1.23.1):
@@ -2013,7 +2049,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNGestureHandler (2.30.0):
+  - RNGestureHandler (2.20.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2034,8 +2070,11 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNPurchases (9.6.15):
-    - PurchasesHybridCommon (= 17.27.0)
+  - RNPaywalls (9.7.6):
+    - PurchasesHybridCommonUI (= 17.31.0)
+    - React-Core
+  - RNPurchases (9.7.6):
+    - PurchasesHybridCommon (= 17.31.0)
     - React-Core
   - RNReanimated (3.16.7):
     - DoubleConversion
@@ -2223,6 +2262,7 @@ PODS:
 DEPENDENCIES:
   - boost (from `../node_modules/react-native/third-party-podspecs/boost.podspec`)
   - DoubleConversion (from `../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
+  - EASClient (from `../node_modules/expo-eas-client/ios`)
   - EXApplication (from `../node_modules/expo-application/ios`)
   - EXAV (from `../node_modules/expo-av/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
@@ -2258,6 +2298,8 @@ DEPENDENCIES:
   - ExpoSensors (from `../node_modules/expo-sensors/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSQLite (from `../node_modules/expo-sqlite/ios`)
+  - EXStructuredHeaders (from `../node_modules/expo-structured-headers/ios`)
+  - EXUpdates (from `../node_modules/expo-updates/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
   - fast_float (from `../node_modules/react-native/third-party-podspecs/fast_float.podspec`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
@@ -2328,6 +2370,7 @@ DEPENDENCIES:
   - RNAppleHealthKit (from `../node_modules/react-native-health`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
+  - RNPaywalls (from `../node_modules/react-native-purchases-ui`)
   - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
@@ -2339,7 +2382,10 @@ SPEC REPOS:
     - MMKV
     - MMKVCore
     - PurchasesHybridCommon
+    - PurchasesHybridCommonUI
+    - ReachabilitySwift
     - RevenueCat
+    - RevenueCatUI
     - SocketRocket
     - ZXingObjC
 
@@ -2348,6 +2394,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/third-party-podspecs/boost.podspec"
   DoubleConversion:
     :podspec: "../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec"
+  EASClient:
+    :path: "../node_modules/expo-eas-client/ios"
   EXApplication:
     :path: "../node_modules/expo-application/ios"
   EXAV:
@@ -2418,6 +2466,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-splash-screen/ios"
   ExpoSQLite:
     :path: "../node_modules/expo-sqlite/ios"
+  EXStructuredHeaders:
+    :path: "../node_modules/expo-structured-headers/ios"
+  EXUpdates:
+    :path: "../node_modules/expo-updates/ios"
   EXUpdatesInterface:
     :path: "../node_modules/expo-updates-interface/ios"
   fast_float:
@@ -2555,6 +2607,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
+  RNPaywalls:
+    :path: "../node_modules/react-native-purchases-ui"
   RNPurchases:
     :path: "../node_modules/react-native-purchases"
   RNReanimated:
@@ -2569,6 +2623,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   boost: 1dca942403ed9342f98334bf4c3621f011aa7946
   DoubleConversion: f16ae600a246532c4020132d54af21d0ddb2a385
+  EASClient: 88b5fd19d0787186a0c7e6ba76deb2d4f96395ce
   EXApplication: 4c72f6017a14a65e338c5e74fca418f35141e819
   EXAV: 4c41f0a6ae54a0b96597abc90e37962ab2ee0d85
   EXConstants: fcfc75800824ac2d5c592b5bc74130bad17b146b
@@ -2576,7 +2631,7 @@ SPEC CHECKSUMS:
   EXJSONUtils: 01fc7492b66c234e395dcffdd5f53439c5c29c93
   EXManifests: a19d50504b8826546a4782770317bc83fffec87d
   EXNotifications: 9d3d17e52c95f377750d4a2ae553a716313dd4aa
-  Expo: 3889933926fade17d8607f449c57b87c4022433f
+  Expo: 4bb70893882e6382b41d1e910d7226c6a1b85f0a
   expo-dev-client: db44302cdbe0ec55b0ef1849c9a23a76dec6dbac
   expo-dev-launcher: 792cd1c83fbec4a1a66fe91a0c283368dbad851c
   expo-dev-menu: dd3197d2b0107ee036ffd85f95e75a950ab52ada
@@ -2598,12 +2653,14 @@ SPEC CHECKSUMS:
   ExpoLinearGradient: 35ebd83b16f80b3add053a2fd68cc328ed927f60
   ExpoLinking: 8d12bee174ba0cdf31239706578e29e74a417402
   ExpoLocalAuthentication: eb2be9c7bcdc68e9434d4be4bb5aa5cf7943e816
-  ExpoLocalization: d9168d5300a5b03e5e78b986124d11fb6ec3ebbd
+  ExpoLocalization: 7776ea3bdb112125390745bbaf919b734b2ad1c7
   ExpoModulesCore: c25d77625038b1968ea1afefc719862c0d8dd993
   ExpoSecureStore: 9a3665d7161dd1031be386e278bffd623658f316
   ExpoSensors: 02a52ddab1e3a8a1438258c3d87d1ee5f721743a
   ExpoSplashScreen: 8261985ce9778f904abc7e31bed3538dce67ed4d
   ExpoSQLite: 10fceac6748e9e8f010c70733e0e704fa67399ab
+  EXStructuredHeaders: 09c70347b282e3d2507e25fb4c747b1b885f87f6
+  EXUpdates: ab23a394ca582d01c35e9efd1efe79bc9789e3e9
   EXUpdatesInterface: 7c977640bdd8b85833c19e3959ba46145c5719db
   fast_float: 06eeec4fe712a76acc9376682e4808b05ce978b6
   FBLazyVector: 7605ea4810e0e10ae4815292433c09bf4324ba45
@@ -2612,11 +2669,13 @@ SPEC CHECKSUMS:
   hermes-engine: 9e868dc7be781364296d6ee2f56d0c1a9ef0bb11
   MMKV: c953dbaac0da392c24b005e763c03ce2638b4ed7
   MMKVCore: d078dce7d6586a888b2c2ef5343b6242678e3ee8
-  PurchasesHybridCommon: 6969808772a0c2ac7df66abe59e0a88a9e42820b
+  PurchasesHybridCommon: 21a11c5d66c8a52cf9aede45cecc2efe1551b98b
+  PurchasesHybridCommonUI: 60fbb660ebbf224df733c90849c4f3b8f6819f4b
   RCT-Folly: ea9d9256ba7f9322ef911169a9f696e5857b9e17
   RCTDeprecation: ebe712bb05077934b16c6bf25228bdec34b64f83
   RCTRequired: ca91e5dd26b64f577b528044c962baf171c6b716
   RCTTypeSafety: e7678bd60850ca5a41df9b8dc7154638cb66871f
+  ReachabilitySwift: 32793e867593cfc1177f5d16491e3a197d2fccda
   React: 4641770499c39f45d4e7cde1eba30e081f9d8a3d
   React-callinvoker: 4bef67b5c7f3f68db5929ab6a4d44b8a002998ea
   React-Core: a68cea3e762814e60ecc3fa521c7f14c36c99245
@@ -2644,7 +2703,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: d80ff86c8902872d397d9622f1a97aadcc12cead
   react-native-mmkv: 19bc20b3797f49c50ab4167eac443314502e6eec
   react-native-safe-area-context: cd916088cac5300c3266876218377518987b995e
-  react-native-slider: 8e2760006d21535363068e2b05441cca5f58230f
+  react-native-slider: d8c35cc0162af73c9448f4b18c34d09e841cc1ab
   React-nativeconfig: 8efdb1ef1e9158c77098a93085438f7e7b463678
   React-NativeModulesApple: cebca2e5320a3d66e123cade23bd90a167ffce5e
   React-perflogger: 72e653eb3aba9122f9e57cf012d22d2486f33358
@@ -2672,11 +2731,13 @@ SPEC CHECKSUMS:
   React-utils: ed818f19ab445000d6b5c4efa9d462449326cc9f
   ReactCodegen: f853a20cc9125c5521c8766b4b49375fec20648b
   ReactCommon: 300d8d9c5cb1a6cd79a67cf5d8f91e4d477195f9
-  RevenueCat: c692534cd6f0d0593f1bbe69b32b09a274422419
+  RevenueCat: 2d8aa56c68fa8e92c0d669e5e797c4a93e284f20
+  RevenueCatUI: 25c86cf10c6cb9e3e9f308c48df55b31bf7fdba5
   RNAppleHealthKit: 86ef7ab70f762b802f5c5289372de360cca701f9
   RNCAsyncStorage: 66991bb6672ed988a8c56289a08bf4fc3a29d4b3
-  RNGestureHandler: fd23049e4760cd4353e6515517568d5c65333bc7
-  RNPurchases: fb38356129a4d6f217ab7c1efddfacd96a538c27
+  RNGestureHandler: fffddeb8af59709c6d8de11b6461a6af63cad532
+  RNPaywalls: d8ebe418a058fdc7c7b6dd1b3ecb07058d4f1d89
+  RNPurchases: 462fb7edb0304dba1db46e3d38368a271ebe4cc2
   RNReanimated: 2e5069649cbab2c946652d3b97589b2ae0526220
   RNScreens: 362f4c861dd155f898908d5035d97b07a3f1a9d1
   RNSVG: b889dc9c1948eeea0576a16cc405c91c37a12c19

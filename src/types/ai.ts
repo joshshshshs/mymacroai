@@ -1,5 +1,5 @@
 // AI-related type definitions
-import type { User, UserPreferences, HealthData, NutritionData } from './index';
+import type { User, UserPreferences, HealthData, NutritionData } from './core';
 
 export interface AIContext {
     user: User;

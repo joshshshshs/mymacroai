@@ -1,18 +1,18 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { Stack, Redirect } from 'expo-router';
 import { useUserStore } from '@/src/store/UserStore';
 
 /**
- * 认证模块布局 - 管理登录和引导流程
- * 根据用户引导状态自动路由到相应界面
+ * Auth Module Layout - Manages login and onboarding flow
+ * Routes users based on authentication and onboarding state
  */
 export default function AuthLayout() {
   const isOnboardingCompleted = useUserStore(state => state.isOnboardingCompleted);
   const isAuthenticated = useUserStore(state => state.isAuthenticated);
 
-  // 如果用户已认证，重定向到主界面
+  // Redirect authenticated users to main tabs
   if (isAuthenticated) {
-    return null; // 将由上层路由处理重定向
+    return <Redirect href="/(tabs)" />;
   }
 
   return (

@@ -477,7 +477,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
 
         <p><strong>This week's wins:</strong></p>
         <ul style="color: #b0b0b0;">
-            ${(data.wins || ['Hit protein goal 5/7 days', 'Logged every meal']).map((w: string) => `<li>${w}</li>`).join('')}
+            ${((data.wins as string[]) || ['Hit protein goal 5/7 days', 'Logged every meal']).map((w: string) => `<li>${w}</li>`).join('')}
         </ul>
 
         <center><a href="https://mymacro.ai/app" class="cta">View Full Report</a></center>
@@ -544,7 +544,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
     }),
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         return new Response(null, { headers: corsHeaders });
@@ -581,7 +581,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                from: 'MyMacro AI <hello@mymacro.ai>',
+                from: 'MyMacro AI <support@mymacro.app>',
                 to: email,
                 subject,
                 html,
@@ -612,9 +612,10 @@ serve(async (req) => {
         );
 
     } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal error';
         console.error('[send-email] Error:', error);
         return new Response(
-            JSON.stringify({ error: error.message || 'Internal error' }),
+            JSON.stringify({ error: message }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }

@@ -1,32 +1,26 @@
+import { supabase } from '../../lib/supabase';
 import { useUserStore } from '@/src/store/UserStore';
-
-// Assuming basic supabase setup or raw fetch if package not installed yet for client
-// For this strict implementation, we'll use a fetch wrapper to the Edge Function URL.
-
-const SUPABASE_PROJECT_URL = "https://YOUR_PROJECT_ID.supabase.co"; // Placeholder
-const FUNCTION_NAME = "send-founder-email";
-
-// Note: In production, use the Supabase JS Client `functions.invoke`.
-// We will simulate a robust call structure here.
 
 class FounderService {
 
     async claimFounderStatus(email: string): Promise<boolean> {
         try {
-            // 1. Call Edge Function
-            // const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, { body: { email } });
+            // Call Edge Function
+            const { data, error } = await supabase.functions.invoke('send-founder-email', {
+                body: { email }
+            });
 
-            // Basic validation
-            if (!email.includes('@')) throw new Error("Invalid Email");
+            if (error) {
+                console.error("Founder Function Error:", error);
+                throw error;
+            }
 
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // 2. Update Local Store
             // In a real flow, the Edge Function might return the "Founder #ID"
+            // For now, we still simulate the ID generation locally or parse it from data if available
+            // Assuming data contains: { id: ..., message: ... } or similar from Resend
+
             const randomFounderID = Math.floor(Math.random() * 500) + 1;
 
-            // Access store outside of hook (Zustand getState)
             useUserStore.getState().setFounderStatus({
                 isFounder: true,
                 number: randomFounderID
