@@ -325,8 +325,8 @@ class OuraServiceClass {
      * Check if user is connected to Oura
      */
     async isConnected(): Promise<boolean> {
-        const status = await wearableAuthService.getConnectionStatus('oura');
-        return status.connected;
+        const status = wearableAuthService.getConnectionStatus('oura');
+        return status === 'connected';
     }
 }
 

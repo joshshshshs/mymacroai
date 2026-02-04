@@ -152,7 +152,9 @@ export default function CycleDetailScreen() {
     // Mock data
     const currentDay = 14;
     const cycleLength = 28;
-    const currentPhase: 'Menstrual' | 'Follicular' | 'Ovulation' | 'Luteal' = 'Ovulation';
+    // TODO: Replace with actual user cycle data
+    type CyclePhase = 'Menstrual' | 'Follicular' | 'Ovulation' | 'Luteal';
+    const currentPhase = 'Ovulation' as CyclePhase;
     const daysUntilPeriod = 14;
     const fertileWindow = true;
 

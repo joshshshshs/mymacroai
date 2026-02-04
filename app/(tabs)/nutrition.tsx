@@ -565,9 +565,21 @@ export default function NutritionScreen() {
     // Get date string for lookups (YYYY-MM-DD format)
     const dateString = selectedDate.toISOString().split('T')[0];
 
+    // #region agent log
+    React.useEffect(() => {
+        fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'nutrition.tsx:dateChange',message:'Selected date changed',data:{dateString,selectedDateISO:selectedDate.toISOString(),today:new Date().toISOString().split('T')[0],allDailyIntakeKeys:Object.keys(dailyIntakes),allDailyLogKeys:Object.keys(dailyLogs)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3-H4'})}).catch(()=>{});
+    }, [dateString]);
+    // #endregion
+
     // Get intake and logs for selected date
     const dateIntake = dailyIntakes[dateString] || { calories: 0, protein: 0, carbs: 0, fats: 0 };
     const dateLogs = dailyLogs[dateString] || [];
+
+    // #region agent log
+    React.useEffect(() => {
+        fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'nutrition.tsx:dataLoaded',message:'Data loaded for date',data:{dateString,dateIntakeCalories:dateIntake.calories,dateLogsCount:dateLogs.length,dateLogsItems:dateLogs.map(l=>({id:l.id,name:l.foodName,cal:l.calories}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    }, [dateString, dateIntake.calories, dateLogs.length]);
+    // #endregion
 
     // Nutrition data for selected date
     const target = adjustedTarget.calories || dailyTarget.calories || 2500;
@@ -630,6 +642,9 @@ export default function NutritionScreen() {
         Haptics.selectionAsync();
         const d = new Date(selectedDate);
         d.setDate(d.getDate() - 1);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'nutrition.tsx:handleDatePrev',message:'Navigating to previous date',data:{from:selectedDate.toISOString().split('T')[0],to:d.toISOString().split('T')[0]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
         setSelectedDate(d);
     };
 
@@ -637,6 +652,9 @@ export default function NutritionScreen() {
         Haptics.selectionAsync();
         const d = new Date(selectedDate);
         d.setDate(d.getDate() + 1);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'nutrition.tsx:handleDateNext',message:'Navigating to next date',data:{from:selectedDate.toISOString().split('T')[0],to:d.toISOString().split('T')[0]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
         setSelectedDate(d);
     };
 

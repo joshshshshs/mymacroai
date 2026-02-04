@@ -19,7 +19,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase } from '@/src/lib/supabase';
 import { useCombinedTheme } from '@/src/design-system/theme';
 import { SPACING, RADIUS } from '@/src/design-system/tokens';
 
@@ -68,14 +68,14 @@ export default function ReportRecipeScreen() {
 
         try {
             // Get current user
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await getSupabase().auth.getUser();
             if (!user) {
                 Alert.alert('Error', 'You must be logged in to report content.');
                 return;
             }
 
             // Insert report into database
-            const { error } = await supabase
+            const { error } = await getSupabase()
                 .from('reports')
                 .insert({
                     reporter_id: user.id,
@@ -88,7 +88,7 @@ export default function ReportRecipeScreen() {
                 // If reports table doesn't exist yet, just flag the recipe
                 if (error.code === '42P01') {
                     // Table doesn't exist - just flag the recipe directly
-                    await supabase
+                    await getSupabase()
                         .from('public_recipes')
                         .update({ is_flagged: true })
                         .eq('id', recipeId);

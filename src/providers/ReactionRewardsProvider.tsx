@@ -9,7 +9,7 @@ import React, { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase } from '@/src/lib/supabase';
 import { useUserStore } from '@/src/store/UserStore';
 import { ReactionRewardsService } from '@/src/services/supabase/reactionRewards';
 
@@ -26,7 +26,7 @@ export const ReactionRewardsProvider: React.FC<Props> = ({ children }) => {
 
         const setupSubscription = async () => {
             // Get current user
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await getSupabase().auth.getUser();
             if (!user || !isMounted) return;
 
             // Subscribe to reaction rewards

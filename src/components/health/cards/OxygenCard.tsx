@@ -3,14 +3,15 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
     spo2: number;
+    onPress?: () => void;
 }
 
-export const OxygenCard: React.FC<Props> = ({ spo2 }) => {
+export const OxygenCard: React.FC<Props> = ({ spo2, onPress }) => {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
 
@@ -29,8 +30,10 @@ export const OxygenCard: React.FC<Props> = ({ spo2 }) => {
     const statusColor = isOptimal ? colors.optimal : isNormal ? colors.normal : colors.low;
     const statusText = isOptimal ? 'Optimal' : isNormal ? 'Normal' : 'Low';
 
+    const Container = onPress ? TouchableOpacity : View;
+    
     return (
-        <View style={[styles.card, { backgroundColor: colors.bg }]}>
+        <Container onPress={onPress} style={[styles.card, { backgroundColor: colors.bg }]}>
             <View style={styles.header}>
                 <Ionicons name="water" size={18} color="#0EA5E9" />
                 <Text style={[styles.label, { color: colors.textSecondary }]}>SpO2</Text>
@@ -45,7 +48,7 @@ export const OxygenCard: React.FC<Props> = ({ spo2 }) => {
                 <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                 <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
             </View>
-        </View>
+        </Container>
     );
 };
 

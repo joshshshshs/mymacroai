@@ -5,7 +5,7 @@
  * Uses Supabase Storage buckets.
  */
 
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase, supabase } from '@/src/lib/supabase';
 import * as FileSystem from 'expo-file-system';
 // @ts-ignore - base64-arraybuffer may not have types
 import { decode } from 'base64-arraybuffer';
@@ -44,7 +44,7 @@ async function uploadImage(
         const contentType = extension === 'png' ? 'image/png' : 'image/jpeg';
 
         // Upload to Supabase
-        const { data, error } = await supabase.storage
+        const { data, error } = await getSupabase().storage
             .from(bucketName)
             .upload(fileName, decode(base64), {
                 contentType,
@@ -58,7 +58,7 @@ async function uploadImage(
         }
 
         // Get public URL
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = getSupabase().storage
             .from(bucketName)
             .getPublicUrl(data.path);
 
@@ -94,7 +94,7 @@ export async function uploadAvatar(uri: string, userId: string): Promise<UploadR
  */
 export async function deleteImage(bucketName: string, path: string): Promise<boolean> {
     try {
-        const { error } = await supabase.storage
+        const { error } = await getSupabase().storage
             .from(bucketName)
             .remove([path]);
 

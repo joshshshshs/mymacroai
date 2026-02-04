@@ -4,7 +4,7 @@
  * Tracks user events for admin dashboard and nightly reports.
  */
 
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase, supabase } from '@/src/lib/supabase';
 
 // ============================================================================
 // TYPES
@@ -65,9 +65,9 @@ export async function trackError(
  */
 async function trackEvent(event: AnalyticsEvent): Promise<void> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
 
-        await supabase.from('analytics_events').insert({
+        await getSupabase().from('analytics_events').insert({
             user_id: user?.id || null,
             event_type: event.event_type,
             event_name: event.event_name,
@@ -102,7 +102,7 @@ export async function getDailyStats(days: number = 7): Promise<DailyStats[]> {
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
 
-        const { data, error } = await supabase.rpc('get_daily_analytics_stats', {
+        const { data, error } = await getSupabase().rpc('get_daily_analytics_stats', {
             start_date: startDate.toISOString(),
         });
 
@@ -129,7 +129,7 @@ export async function getTodayQuickStats(): Promise<{
     try {
         const today = new Date().toISOString().split('T')[0];
 
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('analytics_events')
             .select('id, user_id, event_type')
             .gte('created_at', `${today}T00:00:00`)

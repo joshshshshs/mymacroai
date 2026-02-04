@@ -3,15 +3,16 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RespirationData } from '@/hooks/useHealthData';
 
 interface Props {
     data: RespirationData;
+    onPress?: () => void;
 }
 
-export const RespirationCard: React.FC<Props> = ({ data }) => {
+export const RespirationCard: React.FC<Props> = ({ data, onPress }) => {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
 
@@ -28,8 +29,10 @@ export const RespirationCard: React.FC<Props> = ({ data }) => {
     const tempColor = isElevated ? colors.warning : colors.textSecondary;
     const tempSign = data.tempDeviation >= 0 ? '+' : '';
 
+    const Container = onPress ? TouchableOpacity : View;
+    
     return (
-        <View style={[styles.card, { backgroundColor: colors.bg }]}>
+        <Container onPress={onPress} style={[styles.card, { backgroundColor: colors.bg }]}>
             <View style={styles.header}>
                 <Ionicons name="pulse" size={18} color={colors.accent} />
                 <Text style={[styles.label, { color: colors.textSecondary }]}>RESPIRATION</Text>
@@ -47,7 +50,7 @@ export const RespirationCard: React.FC<Props> = ({ data }) => {
                     {tempSign}{data.tempDeviation.toFixed(1)}°C
                 </Text>
             </View>
-        </View>
+        </Container>
     );
 };
 

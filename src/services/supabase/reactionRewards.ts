@@ -6,7 +6,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase, supabase } from '@/src/lib/supabase';
 
 // Constants
 const COINS_PER_HEART = 10;
@@ -126,7 +126,7 @@ export async function subscribeToReactionRewards(
     onReward: (amount: number) => void
 ): Promise<() => void> {
     // Get user's recipe IDs
-    const { data: recipes } = await supabase
+    const { data: recipes } = await getSupabase()
         .from('public_recipes')
         .select('id')
         .eq('author_id', userId);
@@ -138,7 +138,7 @@ export async function subscribeToReactionRewards(
     const recipeIds = recipes.map((r: { id: string }) => r.id);
 
     // Subscribe to new reactions on user's recipes
-    const channel = supabase
+    const channel = getSupabase()
         .channel('reaction-rewards')
         .on(
             'postgres_changes',
@@ -163,7 +163,7 @@ export async function subscribeToReactionRewards(
 
     // Return unsubscribe function
     return () => {
-        supabase.removeChannel(channel);
+        getSupabase().removeChannel(channel);
     };
 }
 

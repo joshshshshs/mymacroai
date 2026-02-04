@@ -358,8 +358,8 @@ class WhoopServiceClass {
      * Check if user is connected to WHOOP
      */
     async isConnected(): Promise<boolean> {
-        const status = await wearableAuthService.getConnectionStatus('whoop');
-        return status.connected;
+        const status = wearableAuthService.getConnectionStatus('whoop');
+        return status === 'connected';
     }
 }
 

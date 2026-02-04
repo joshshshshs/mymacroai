@@ -76,6 +76,14 @@ const DEVICE_METADATA: Record<WearableProviderId, Omit<WearableDevice, 'connecti
         description: 'Steps, heart rate, sleep (Android only)',
         supportsOAuth: false, // Uses SDK
     },
+    fitbit: {
+        id: 'fitbit',
+        name: 'Fitbit',
+        icon: '⌚',
+        color: '#00B0B9',
+        description: 'Activity, sleep, heart rate tracking',
+        supportsOAuth: true,
+    },
     google_fit: {
         id: 'google_fit',
         name: 'Google Fit',
@@ -166,9 +174,11 @@ export function useWearableConnections() {
                 for (const providerId of ['oura', 'whoop', 'google_fit'] as WearableProviderId[]) {
                     if (connectedProviders.includes(providerId)) continue;
 
-                    const tokens = await wearableAuthService.handleCallback(providerId, code, state);
+                    // Reconstruct URL from code and state for the handler
+                    const callbackUrl = `myapp://oauth?code=${code}&state=${state}`;
+                    const result = await wearableAuthService.handleCallback(providerId, callbackUrl);
 
-                    if (tokens) {
+                    if (result.success) {
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         await loadConnectionStatuses();
                         break;
@@ -233,21 +243,15 @@ export function useWearableConnections() {
             }
 
             // OAuth-based providers
-            const authUrl = await wearableAuthService.startAuthFlow(deviceId);
+            const authResult = await wearableAuthService.startAuthFlow(deviceId);
 
-            if (!authUrl) {
-                throw new Error('Failed to generate authorization URL');
+            if (!authResult.success) {
+                throw new Error(authResult.error || 'Failed to start authorization flow');
             }
 
-            // Open authorization URL in browser
-            const canOpen = await Linking.canOpenURL(authUrl);
-            if (canOpen) {
-                await Linking.openURL(authUrl);
-                // The OAuth callback will handle the rest
-                return true;
-            } else {
-                throw new Error('Cannot open authorization URL');
-            }
+            // Update the connection status
+            await loadConnectionStatuses();
+            return true;
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Connection failed';
             logger.error(`Failed to connect to ${deviceId}:`, err);
@@ -338,7 +342,7 @@ export function useWearableConnections() {
      * Sync all connected devices
      */
     const syncAll = useCallback(async (): Promise<void> => {
-        const connectedDevices = devices.filter(d => d.connectionStatus.connected);
+        const connectedDevices = devices.filter(d => d.connectionStatus === 'connected');
 
         for (const device of connectedDevices) {
             await syncDevice(device.id);
@@ -348,7 +352,7 @@ export function useWearableConnections() {
     /**
      * Get connected device count
      */
-    const connectedCount = devices.filter(d => d.connectionStatus.connected).length;
+    const connectedCount = devices.filter(d => d.connectionStatus === 'connected').length;
 
     return {
         devices,

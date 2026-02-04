@@ -22,10 +22,13 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
   "exclude": [
     "node_modules",
+    "node_modules_old",
     "supabase/functions/**"
   ],
   "extends": "expo/tsconfig.base"

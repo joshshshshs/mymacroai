@@ -1,16 +1,14 @@
 /**
- * Log Meal Modal - "Smart Buffet" Meal Builder
+ * Log Meal Modal - Premium Food Logging Experience
  * 
- * Premium cart-style interface for logging meals with:
- * - Dynamic context header based on meal type
- * - Omni-Search bar with barcode/voice/camera
- * - Smart tabs (History, Favorites, My Meals)
- * - AI-predicted foods with gold glow
- * - Multi-select food items with animated checkmarks
- * - Floating "Plate" dock for cart summary
+ * State-of-the-art food search with:
+ * - Instant search with smart suggestions
+ * - Quick actions: Barcode, Camera AI, Voice
+ * - Recent foods with AI predictions
+ * - Beautiful modern UI with haptic feedback
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -19,6 +17,10 @@ import {
     useColorScheme,
     TextInput,
     ScrollView,
+    Keyboard,
+    ActivityIndicator,
+    Dimensions,
+    Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -30,384 +32,301 @@ import Animated, {
     useSharedValue,
     withSpring,
     withSequence,
+    withTiming,
     FadeIn,
     FadeInDown,
+    FadeInUp,
+    FadeOut,
     SlideInDown,
+    SlideOutDown,
+    runOnJS,
+    interpolate,
+    Extrapolation,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 import { SPACING, RADIUS } from '@/src/design-system/tokens';
-import { useHaptics } from '@/hooks/useHaptics';
 import { useUserStore } from '@/src/store/UserStore';
-import { searchFoods, MOCK_FOOD_DB } from '@/src/data/mockFoodDB';
-import { FoodItem as DBFoodItem } from '@/src/types/food';
-import { FoodIcon } from '@/src/components/food/FoodIcon';
+import { FoodSearchService, SearchResult } from '@/src/services/food/FoodSearchService';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ============================================================================
-// CONSTANTS
+// DESIGN TOKENS
 // ============================================================================
 
 const COLORS = {
-    vitaminOrange: '#FF5C00',
-    neonOrange: '#FF9E00',
-    warmWhite: '#FFF5F0',
-    softGrey: '#F2F2F7',
+    // Primary brand
+    primary: '#FF5C00',
+    primaryLight: '#FF8C40',
+    primaryDark: '#E04500',
+    
+    // Macros
     protein: '#3B82F6',
     carbs: '#22C55E',
     fats: '#F59E0B',
+    calories: '#FF5C00',
+    
+    // Semantic
+    success: '#22C55E',
+    warning: '#F59E0B',
+    error: '#EF4444',
     aiGold: '#FFD700',
-    favoriteRed: '#FF3B5C',
+    
+    // Neutral
+    white: '#FFFFFF',
+    black: '#000000',
 };
 
-const MEAL_CONFIG: Record<string, { title: string; subtitle: string; icon: string }> = {
-    breakfast: { title: 'Morning Fuel', subtitle: '600 - 800', icon: '🌅' },
-    lunch: { title: 'Midday Refuel', subtitle: '700 - 900', icon: '☀️' },
-    dinner: { title: 'Evening Recovery', subtitle: '600 - 800', icon: '🌙' },
-    snacks: { title: 'Quick Bite', subtitle: '150 - 300', icon: '🍿' },
+const MEAL_CONFIG: Record<string, { 
+    title: string; 
+    subtitle: string; 
+    icon: string;
+    gradient: [string, string];
+}> = {
+    breakfast: { 
+        title: 'Breakfast', 
+        subtitle: 'Start your day right', 
+        icon: '🌅',
+        gradient: ['#FF9500', '#FF5E3A'],
+    },
+    lunch: { 
+        title: 'Lunch', 
+        subtitle: 'Midday fuel', 
+        icon: '☀️',
+        gradient: ['#FFCC00', '#FF9500'],
+    },
+    dinner: { 
+        title: 'Dinner', 
+        subtitle: 'Evening recovery', 
+        icon: '🌙',
+        gradient: ['#5856D6', '#AF52DE'],
+    },
+    snacks: { 
+        title: 'Snack', 
+        subtitle: 'Quick energy', 
+        icon: '🍿',
+        gradient: ['#34C759', '#30D158'],
+    },
 };
 
-// Tabs: Search, History, Favorites, My Meals
-const SMART_TABS = ['Search', 'History', 'Favorites', 'My Meals'];
-
-// Mock food data - History (recent foods)
-const HISTORY_FOODS = [
-    { id: 'h1', name: 'Greek Yogurt with Berries', calories: 180, protein: 15, carbs: 22, fats: 4, isPredicted: true, time: '2 hours ago' },
-    { id: 'h2', name: 'Scrambled Eggs (2)', calories: 200, protein: 14, carbs: 2, fats: 15, isPredicted: true, time: 'Yesterday' },
-    { id: 'h3', name: 'Whole Wheat Toast', calories: 120, protein: 4, carbs: 22, fats: 2, isPredicted: false, time: 'Yesterday' },
-    { id: 'h4', name: 'Banana', calories: 105, protein: 1, carbs: 27, fats: 0, isPredicted: false, time: '2 days ago' },
-    { id: 'h5', name: 'Oatmeal with Honey', calories: 220, protein: 6, carbs: 40, fats: 4, isPredicted: false, time: '2 days ago' },
-    { id: 'h6', name: 'Avocado Toast', calories: 280, protein: 8, carbs: 26, fats: 18, isPredicted: false, time: '3 days ago' },
-];
-
-// Mock food data - Favorites (starred foods)
-const FAVORITE_FOODS = [
-    { id: 'f1', name: 'Protein Smoothie', calories: 320, protein: 30, carbs: 35, fats: 8, emoji: '🥤' },
-    { id: 'f2', name: 'Grilled Chicken Breast', calories: 165, protein: 31, carbs: 0, fats: 4, emoji: '🍗' },
-    { id: 'f3', name: 'Salmon Fillet', calories: 280, protein: 25, carbs: 0, fats: 18, emoji: '🐟' },
-    { id: 'f4', name: 'Greek Salad', calories: 150, protein: 5, carbs: 12, fats: 10, emoji: '🥗' },
-    { id: 'f5', name: 'Almonds (1oz)', calories: 160, protein: 6, carbs: 6, fats: 14, emoji: '🥜' },
-];
-
-// Mock food data - My Meals (saved combinations)
-const MY_MEALS = [
-    { id: 'm1', name: 'Standard Oats', foods: ['Oatmeal', 'Banana', 'Honey', 'Almond Milk'], calories: 380, emoji: '🥣' },
-    { id: 'm2', name: 'Power Breakfast', foods: ['Eggs (3)', 'Avocado Toast', 'Orange Juice'], calories: 520, emoji: '💪' },
-    { id: 'm3', name: 'Quick Protein', foods: ['Protein Shake', 'Banana'], calories: 350, emoji: '⚡' },
-    { id: 'm4', name: 'Lean Lunch', foods: ['Grilled Chicken', 'Brown Rice', 'Broccoli'], calories: 450, emoji: '🥦' },
-    { id: 'm5', name: 'Post-Workout', foods: ['Whey Protein', 'Peanut Butter', 'Oats'], calories: 480, emoji: '🏋️' },
-];
-
 // ============================================================================
-// FOOD ITEM CARD COMPONENT
+// QUICK ACTION BUTTON
 // ============================================================================
 
-interface FoodItem {
-    id: string;
-    name: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fats: number;
-    isPredicted?: boolean;
-    time?: string;
-    emoji?: string;
+interface QuickActionProps {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    color: string;
+    onPress: () => void;
+    delay?: number;
 }
 
-interface FoodItemCardProps {
-    item: FoodItem;
-    isSelected: boolean;
-    onToggle: () => void;
-    index: number;
-    isDark: boolean;
-    showTime?: boolean;
-}
-
-const FoodItemCard: React.FC<FoodItemCardProps> = ({ item, isSelected, onToggle, index, isDark, showTime }) => {
+const QuickAction: React.FC<QuickActionProps> = ({ icon, label, color, onPress, delay = 0 }) => {
     const scale = useSharedValue(1);
-    const { light } = useHaptics();
-
+    
     const handlePress = () => {
-        light();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         scale.value = withSequence(
-            withSpring(0.95, { damping: 15 }),
+            withSpring(0.9, { damping: 15 }),
             withSpring(1, { damping: 12 })
         );
-        onToggle();
+        onPress();
     };
-
+    
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
     }));
+    
+    return (
+        <Animated.View entering={FadeInUp.delay(delay).springify()} style={animatedStyle}>
+            <TouchableOpacity style={styles.quickAction} onPress={handlePress} activeOpacity={0.8}>
+                <LinearGradient
+                    colors={[color, `${color}CC`]}
+                    style={styles.quickActionGradient}
+                >
+                    <Ionicons name={icon} size={24} color={COLORS.white} />
+                </LinearGradient>
+                <Text style={styles.quickActionLabel}>{label}</Text>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
 
-    const cardBg = isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF';
-    const textColor = isDark ? '#FFFFFF' : '#1A1A1A';
+// ============================================================================
+// FOOD RESULT CARD
+// ============================================================================
+
+interface FoodCardProps {
+    food: SearchResult;
+    isSelected: boolean;
+    onToggle: () => void;
+    onPress: () => void;
+    index: number;
+    isDark: boolean;
+}
+
+const FoodCard: React.FC<FoodCardProps> = ({ 
+    food, 
+    isSelected, 
+    onToggle, 
+    onPress,
+    index, 
+    isDark 
+}) => {
+    const scale = useSharedValue(1);
+    const checkScale = useSharedValue(isSelected ? 1 : 0);
+    
+    useEffect(() => {
+        checkScale.value = withSpring(isSelected ? 1 : 0, { damping: 15 });
+    }, [isSelected]);
+    
+    const handlePress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        scale.value = withSequence(
+            withSpring(0.97, { damping: 20 }),
+            withSpring(1, { damping: 15 })
+        );
+        onPress();
+    };
+    
+    const handleToggle = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        scale.value = withSequence(
+            withSpring(0.95, { damping: 20 }),
+            withSpring(1, { damping: 15 })
+        );
+        onToggle();
+    };
+    
+    const cardStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+    
+    const checkStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: checkScale.value }],
+        opacity: checkScale.value,
+    }));
+    
+    const cardBg = isDark ? 'rgba(255,255,255,0.06)' : COLORS.white;
+    const textColor = isDark ? COLORS.white : '#1A1A1A';
     const subtextColor = isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93';
-
+    
     return (
         <Animated.View
-            entering={FadeInDown.delay(index * 50).springify()}
-            style={animatedStyle}
+            entering={FadeInDown.delay(index * 40).springify()}
+            style={cardStyle}
         >
             <TouchableOpacity
                 style={[
                     styles.foodCard,
-                    {
+                    { 
                         backgroundColor: cardBg,
-                        borderColor: item.isPredicted ? `${COLORS.aiGold}40` : 'transparent',
-                        borderWidth: item.isPredicted ? 1.5 : 0,
+                        borderColor: isSelected ? COLORS.primary : 'transparent',
+                        borderWidth: isSelected ? 2 : 0,
                     },
                 ]}
                 onPress={handlePress}
                 activeOpacity={0.9}
             >
-                {/* AI Predicted Glow */}
-                {item.isPredicted && (
-                    <View style={styles.predictedGlow}>
-                        <LinearGradient
-                            colors={['rgba(255,215,0,0.15)', 'transparent']}
-                            style={StyleSheet.absoluteFillObject}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        />
-                    </View>
-                )}
-
-                {/* Food Icon */}
-                <View style={styles.foodImage}>
-                    <FoodIcon foodName={item.name} size="medium" />
+                {/* Food Icon Circle */}
+                <View style={[styles.foodIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F5F5F7' }]}>
+                    <Text style={styles.foodIconEmoji}>
+                        {getFoodEmoji(food.name)}
+                    </Text>
                 </View>
-
+                
                 {/* Food Info */}
                 <View style={styles.foodInfo}>
                     <View style={styles.foodNameRow}>
                         <Text style={[styles.foodName, { color: textColor }]} numberOfLines={1}>
-                            {item.name}
+                            {food.name}
                         </Text>
-                        {item.isPredicted && (
-                            <View style={styles.aiTag}>
-                                <Text style={styles.aiTagText}>AI</Text>
-                            </View>
+                        {food.isVerified && (
+                            <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
                         )}
                     </View>
-                    <View style={styles.foodMeta}>
-                        {showTime && item.time ? (
-                            <Text style={[styles.foodServing, { color: subtextColor }]}>{item.time}</Text>
+                    
+                    <Text style={[styles.foodServing, { color: subtextColor }]}>
+                        {food.servingSize} {food.servingUnit}
+                    </Text>
+                    
+                    {/* Macro Pills */}
+                    <View style={styles.macroPills}>
+                        <View style={[styles.macroPill, { backgroundColor: `${COLORS.protein}20` }]}>
+                            <Text style={[styles.macroPillText, { color: COLORS.protein }]}>
+                                P {food.protein}g
+                            </Text>
+                        </View>
+                        <View style={[styles.macroPill, { backgroundColor: `${COLORS.carbs}20` }]}>
+                            <Text style={[styles.macroPillText, { color: COLORS.carbs }]}>
+                                C {food.carbs}g
+                            </Text>
+                        </View>
+                        <View style={[styles.macroPill, { backgroundColor: `${COLORS.fats}20` }]}>
+                            <Text style={[styles.macroPillText, { color: COLORS.fats }]}>
+                                F {food.fat}g
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+                
+                {/* Calories + Add Button */}
+                <View style={styles.foodActions}>
+                    <Text style={[styles.foodCalories, { color: COLORS.primary }]}>
+                        {food.calories}
+                    </Text>
+                    <Text style={[styles.foodCaloriesUnit, { color: subtextColor }]}>kcal</Text>
+                    
+                    <TouchableOpacity
+                        style={[
+                            styles.addButton,
+                            {
+                                backgroundColor: isSelected 
+                                    ? COLORS.primary 
+                                    : (isDark ? 'rgba(255,255,255,0.1)' : `${COLORS.primary}15`),
+                            },
+                        ]}
+                        onPress={handleToggle}
+                        activeOpacity={0.8}
+                    >
+                        {isSelected ? (
+                            <Animated.View style={checkStyle}>
+                                <Ionicons name="checkmark" size={20} color={COLORS.white} />
+                            </Animated.View>
                         ) : (
-                            <Text style={[styles.foodServing, { color: subtextColor }]}>1 serving</Text>
+                            <Ionicons name="add" size={20} color={COLORS.primary} />
                         )}
-                        <View style={styles.macroDots}>
-                            <View style={[styles.macroDot, { backgroundColor: COLORS.protein }]} />
-                            <View style={[styles.macroDot, { backgroundColor: COLORS.carbs }]} />
-                            <View style={[styles.macroDot, { backgroundColor: COLORS.fats }]} />
-                        </View>
-                    </View>
+                    </TouchableOpacity>
                 </View>
-
-                {/* Calories */}
-                <Text style={[styles.foodCalories, { color: COLORS.vitaminOrange }]}>
-                    {item.calories}
-                </Text>
-
-                {/* Add/Selected Button */}
-                <TouchableOpacity
-                    style={[
-                        styles.addButton,
-                        {
-                            backgroundColor: isSelected
-                                ? COLORS.vitaminOrange
-                                : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,92,0,0.1)'),
-                        },
-                    ]}
-                    onPress={handlePress}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons
-                        name={isSelected ? 'checkmark' : 'add'}
-                        size={20}
-                        color={isSelected ? '#FFFFFF' : COLORS.vitaminOrange}
-                    />
-                </TouchableOpacity>
             </TouchableOpacity>
         </Animated.View>
     );
 };
 
-// ============================================================================
-// FAVORITE CARD COMPONENT
-// ============================================================================
-
-interface FavoriteCardProps {
-    item: typeof FAVORITE_FOODS[0];
-    isSelected: boolean;
-    onToggle: () => void;
-    index: number;
-    isDark: boolean;
-}
-
-const FavoriteCard: React.FC<FavoriteCardProps> = ({ item, isSelected, onToggle, index, isDark }) => {
-    const scale = useSharedValue(1);
-    const { light } = useHaptics();
-
-    const handlePress = () => {
-        light();
-        scale.value = withSequence(
-            withSpring(0.95, { damping: 15 }),
-            withSpring(1, { damping: 12 })
-        );
-        onToggle();
+// Helper to get food emoji
+function getFoodEmoji(name: string): string {
+    const lowerName = name.toLowerCase();
+    const emojiMap: Record<string, string> = {
+        'egg': '🥚', 'chicken': '🍗', 'rice': '🍚', 'banana': '🍌',
+        'yogurt': '🥛', 'oatmeal': '🥣', 'oats': '🥣', 'salmon': '🐟',
+        'avocado': '🥑', 'almond': '🥜', 'sweet potato': '🍠',
+        'broccoli': '🥦', 'protein': '💪', 'bread': '🍞', 'apple': '🍎',
+        'cottage': '🧀', 'beans': '🫘', 'spinach': '🥬', 'olive': '🫒',
+        'turkey': '🦃', 'tuna': '🐟', 'beef': '🥩', 'shrimp': '🦐',
+        'tofu': '🧈', 'milk': '🥛', 'cheese': '🧀', 'quinoa': '🌾',
+        'pasta': '🍝', 'bagel': '🥯', 'orange': '🍊', 'strawberr': '🍓',
+        'blueberr': '🫐', 'mango': '🥭', 'carrot': '🥕', 'pepper': '🫑',
+        'cucumber': '🥒', 'tomato': '🍅', 'bar': '🍫', 'hummus': '🧆',
+        'chocolate': '🍫', 'pancake': '🥞', 'waffle': '🧇', 'bacon': '🥓',
+        'coffee': '☕', 'trail': '🥜', 'nut': '🥜',
     };
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-
-    const cardBg = isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF';
-    const textColor = isDark ? '#FFFFFF' : '#1A1A1A';
-    const subtextColor = isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93';
-
-    return (
-        <Animated.View
-            entering={FadeInDown.delay(index * 60).springify()}
-            style={animatedStyle}
-        >
-            <TouchableOpacity
-                style={[styles.favoriteCard, { backgroundColor: cardBg }]}
-                onPress={handlePress}
-                activeOpacity={0.9}
-            >
-                {/* Heart Icon */}
-                <View style={styles.favoriteHeart}>
-                    <Ionicons name="heart" size={12} color={COLORS.favoriteRed} />
-                </View>
-
-                {/* Food Icon */}
-                <FoodIcon foodName={item.name} size="large" />
-
-                {/* Name */}
-                <Text style={[styles.favoriteName, { color: textColor }]} numberOfLines={2}>
-                    {item.name}
-                </Text>
-
-                {/* Calories */}
-                <Text style={[styles.favoriteCalories, { color: COLORS.vitaminOrange }]}>
-                    {item.calories} kcal
-                </Text>
-
-                {/* Macros */}
-                <View style={styles.favoriteMacros}>
-                    <Text style={[styles.favoriteMacroText, { color: subtextColor }]}>
-                        P:{item.protein}g
-                    </Text>
-                </View>
-
-                {/* Add Button */}
-                <TouchableOpacity
-                    style={[
-                        styles.favoriteAddButton,
-                        {
-                            backgroundColor: isSelected
-                                ? COLORS.vitaminOrange
-                                : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,92,0,0.1)'),
-                        },
-                    ]}
-                    onPress={handlePress}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons
-                        name={isSelected ? 'checkmark' : 'add'}
-                        size={18}
-                        color={isSelected ? '#FFFFFF' : COLORS.vitaminOrange}
-                    />
-                </TouchableOpacity>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-};
-
-// ============================================================================
-// MY MEAL CARD COMPONENT
-// ============================================================================
-
-interface MyMealCardProps {
-    meal: typeof MY_MEALS[0];
-    isSelected: boolean;
-    onToggle: () => void;
-    index: number;
-    isDark: boolean;
+    
+    for (const [key, emoji] of Object.entries(emojiMap)) {
+        if (lowerName.includes(key)) return emoji;
+    }
+    return '🍽️';
 }
-
-const MyMealCard: React.FC<MyMealCardProps> = ({ meal, isSelected, onToggle, index, isDark }) => {
-    const scale = useSharedValue(1);
-    const { light } = useHaptics();
-
-    const handlePress = () => {
-        light();
-        scale.value = withSequence(
-            withSpring(0.95, { damping: 15 }),
-            withSpring(1, { damping: 12 })
-        );
-        onToggle();
-    };
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-
-    const cardBg = isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF';
-    const textColor = isDark ? '#FFFFFF' : '#1A1A1A';
-    const subtextColor = isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93';
-
-    return (
-        <Animated.View
-            entering={FadeInDown.delay(index * 70).springify()}
-            style={animatedStyle}
-        >
-            <TouchableOpacity
-                style={[styles.myMealCard, { backgroundColor: cardBg }]}
-                onPress={handlePress}
-                activeOpacity={0.9}
-            >
-                {/* Left: Food Icon */}
-                <FoodIcon foodName={meal.name} size="medium" />
-
-                {/* Middle: Info */}
-                <View style={styles.myMealInfo}>
-                    <Text style={[styles.myMealName, { color: textColor }]}>{meal.name}</Text>
-                    <Text style={[styles.myMealFoods, { color: subtextColor }]} numberOfLines={1}>
-                        {meal.foods.join(' • ')}
-                    </Text>
-                    <View style={styles.myMealStats}>
-                        <View style={styles.myMealCalorieBadge}>
-                            <Text style={styles.myMealCalorieText}>{meal.calories} kcal</Text>
-                        </View>
-                        <Text style={[styles.myMealItemCount, { color: subtextColor }]}>
-                            {meal.foods.length} items
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Right: Add Button */}
-                <TouchableOpacity
-                    style={[
-                        styles.myMealAddButton,
-                        {
-                            backgroundColor: isSelected
-                                ? COLORS.vitaminOrange
-                                : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,92,0,0.1)'),
-                        },
-                    ]}
-                    onPress={handlePress}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons
-                        name={isSelected ? 'checkmark' : 'add'}
-                        size={22}
-                        color={isSelected ? '#FFFFFF' : COLORS.vitaminOrange}
-                    />
-                </TouchableOpacity>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -418,468 +337,365 @@ export default function LogMealModal() {
     const isDark = colorScheme === 'dark';
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { light, medium } = useHaptics();
     const params = useLocalSearchParams<{ mealType?: string }>();
-
-    const mealType = params.mealType || 'breakfast';
-    const mealConfig = MEAL_CONFIG[mealType] || MEAL_CONFIG.breakfast;
-
+    const searchInputRef = useRef<TextInput>(null);
+    
+    const mealType = (params.mealType || 'snacks') as keyof typeof MEAL_CONFIG;
+    const mealConfig = MEAL_CONFIG[mealType] || MEAL_CONFIG.snacks;
+    
     // State
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState(1); // Default to History
-    const [selectedItems, setSelectedItems] = useState<string[]>([]);
-    const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
-
-    // Database search results
-    const searchResults = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        return searchFoods(searchQuery).slice(0, 10);
-    }, [searchQuery]);
-
-    // Auto-switch to Search tab when typing
-    const handleSearchChange = (text: string) => {
-        setSearchQuery(text);
-        if (text.trim() && activeTab !== 0) {
-            setActiveTab(0); // Switch to Search tab
-        }
-    };
-
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const [selectedFoods, setSelectedFoods] = useState<Map<string, SearchResult>>(new Map());
+    const [showKeyboard, setShowKeyboard] = useState(false);
+    
+    // Suggestions based on meal type
+    const suggestions = useMemo(() => 
+        FoodSearchService.getSuggestions(mealType as any), 
+    [mealType]);
+    
+    // Popular foods
+    const popularFoods = useMemo(() => 
+        FoodSearchService.getPopularFoods().slice(0, 6), 
+    []);
+    
     // Colors
-    const colors = {
-        bg: isDark ? '#0A0A0C' : COLORS.warmWhite,
-        surface: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-        text: isDark ? '#FFFFFF' : '#1A1A1A',
+    const colors = useMemo(() => ({
+        bg: isDark ? '#0A0A0C' : '#F5F5F7',
+        surface: isDark ? 'rgba(255,255,255,0.06)' : COLORS.white,
+        text: isDark ? COLORS.white : '#1A1A1A',
         textSecondary: isDark ? 'rgba(255,255,255,0.5)' : '#8E8E93',
-        border: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-    };
-
-    // Computed values
+        border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    }), [isDark]);
+    
+    // Computed
     const totalCalories = useMemo(() => {
-        let total = 0;
-        // Add calories from selected food items
-        [...HISTORY_FOODS, ...FAVORITE_FOODS].forEach(f => {
-            if (selectedItems.includes(f.id)) total += f.calories;
-        });
-        // Add calories from selected meals
-        MY_MEALS.forEach(m => {
-            if (selectedMeals.includes(m.id)) total += m.calories;
-        });
-        return total;
-    }, [selectedItems, selectedMeals]);
-
-    const totalSelectedCount = selectedItems.length + selectedMeals.length;
-
-    const predictedFoods = useMemo(() => HISTORY_FOODS.filter(f => f.isPredicted), []);
-    const recentFoods = useMemo(() => HISTORY_FOODS.filter(f => !f.isPredicted), []);
-
+        return Array.from(selectedFoods.values()).reduce((sum, f) => sum + f.calories, 0);
+    }, [selectedFoods]);
+    
+    const totalSelectedCount = selectedFoods.size;
+    
+    // Search with debounce
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+        
+        setIsSearching(true);
+        const timeoutId = setTimeout(async () => {
+            const results = await FoodSearchService.search(searchQuery);
+            setSearchResults(results);
+            setIsSearching(false);
+        }, 150);
+        
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
+    
     // Handlers
-    const handleClose = () => {
-        light();
+    const handleClose = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.back();
-    };
-
-    const handleToggleItem = (id: string) => {
-        setSelectedItems(prev =>
-            prev.includes(id)
-                ? prev.filter(x => x !== id)
-                : [...prev, id]
-        );
-    };
-
-    const handleToggleMeal = (id: string) => {
-        setSelectedMeals(prev =>
-            prev.includes(id)
-                ? prev.filter(x => x !== id)
-                : [...prev, id]
-        );
-    };
-
-    const handleLogMeal = () => {
-        medium();
-
-        // Get the logFood function from store
+    }, [router]);
+    
+    const handleToggleFood = useCallback((food: SearchResult) => {
+        setSelectedFoods(prev => {
+            const newMap = new Map(prev);
+            if (newMap.has(food.id)) {
+                newMap.delete(food.id);
+            } else {
+                newMap.set(food.id, food);
+            }
+            return newMap;
+        });
+    }, []);
+    
+    const handleFoodPress = useCallback((food: SearchResult) => {
+        // Navigate to food detail
+        router.push({
+            pathname: '/(modals)/food-detail',
+            params: { foodId: food.id, mealType },
+        } as any);
+    }, [router, mealType]);
+    
+    const handleLogMeal = useCallback(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
         const { logFood } = useUserStore.getState();
-
-        // Normalize mealType to match the expected type
-        const normalizedMealType = (mealType === 'snacks' || mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner')
-            ? mealType as 'breakfast' | 'lunch' | 'dinner' | 'snacks'
-            : 'snacks';
-
-        // Log each selected food item with the correct meal type
-        [...HISTORY_FOODS, ...FAVORITE_FOODS].forEach(food => {
-            if (selectedItems.includes(food.id)) {
-                logFood(
-                    food.calories,
-                    food.protein,
-                    food.carbs,
-                    food.fats,
-                    food.name,
-                    normalizedMealType
-                );
-            }
+        const normalizedMealType = (['breakfast', 'lunch', 'dinner', 'snacks'].includes(mealType) 
+            ? mealType 
+            : 'snacks') as 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'log-meal.tsx:handleLogMeal',message:'About to log foods',data:{foodCount:selectedFoods.size,mealType:normalizedMealType,todayDate:new Date().toISOString().split('T')[0],foods:Array.from(selectedFoods.values()).map((f:any)=>({name:f.name,cal:f.calories}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H2'})}).catch(()=>{});
+        // #endregion
+        
+        selectedFoods.forEach(food => {
+            logFood(
+                food.calories,
+                food.protein,
+                food.carbs,
+                food.fat,
+                food.name,
+                normalizedMealType
+            );
         });
-
-        // Log each selected meal (as a single combined entry) with the correct meal type
-        MY_MEALS.forEach(meal => {
-            if (selectedMeals.includes(meal.id)) {
-                // For meal combos, we estimate macros based on calorie ratio
-                const estimatedProtein = Math.round(meal.calories * 0.25 / 4); // 25% from protein
-                const estimatedCarbs = Math.round(meal.calories * 0.45 / 4); // 45% from carbs
-                const estimatedFats = Math.round(meal.calories * 0.30 / 9); // 30% from fats
-
-                logFood(
-                    meal.calories,
-                    estimatedProtein,
-                    estimatedCarbs,
-                    estimatedFats,
-                    meal.name,
-                    normalizedMealType
-                );
-            }
-        });
-
+        
         router.back();
-    };
-
-    const handleTabPress = (index: number) => {
-        light();
-        setActiveTab(index);
-    };
-
-    const handleSearchIcon = (type: 'barcode' | 'voice' | 'camera') => {
-        light();
+    }, [selectedFoods, mealType, router]);
+    
+    const handleQuickAction = useCallback((type: 'barcode' | 'camera' | 'voice') => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        
         switch (type) {
             case 'barcode':
-                router.push('/(modals)/scan' as any);
+                router.push('/(modals)/barcode-scanner' as any);
+                break;
+            case 'camera':
+                router.push({
+                    pathname: '/(modals)/food-camera',
+                    params: { mealType },
+                } as any);
                 break;
             case 'voice':
                 router.push('/(modals)/voice-log' as any);
                 break;
-            case 'camera':
-                router.push('/(modals)/scan' as any);
-                break;
         }
-    };
-
-    // Render tab content
-    const renderTabContent = () => {
-        switch (activeTab) {
-            case 0: // Search (Database Results)
-                return (
-                    <View style={styles.section}>
-                        {searchQuery.trim() ? (
-                            <>
-                                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                                    🔍 SEARCH RESULTS
-                                </Text>
-                                {searchResults.length > 0 ? (
-                                    searchResults.map((food, index) => (
-                                        <FoodItemCard
-                                            key={food.id}
-                                            item={{
-                                                id: food.id,
-                                                name: food.name,
-                                                calories: food.macros.calories,
-                                                protein: food.macros.protein,
-                                                carbs: food.macros.carbs,
-                                                fats: food.macros.fat,
-                                                isPredicted: false,
-                                                emoji: food.isVerified ? '✅' : '🍽️',
-                                            }}
-                                            isSelected={selectedItems.includes(food.id)}
-                                            onToggle={() => handleToggleItem(food.id)}
-                                            index={index}
-                                            isDark={isDark}
-                                        />
-                                    ))
-                                ) : (
-                                    <View style={styles.emptyHint}>
-                                        <Ionicons name="search-outline" size={24} color={colors.textSecondary} />
-                                        <Text style={[styles.emptyHintText, { color: colors.textSecondary }]}>
-                                            No results for "{searchQuery}"
-                                        </Text>
-                                    </View>
-                                )}
-                            </>
-                        ) : (
-                            <View style={styles.emptyHint}>
-                                <Ionicons name="search-outline" size={24} color={colors.textSecondary} />
-                                <Text style={[styles.emptyHintText, { color: colors.textSecondary }]}>
-                                    Type to search verified foods
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                );
-
-            case 1: // History
-                return (
-                    <>
-                        {/* Predicted Section */}
-                        {predictedFoods.length > 0 && (
-                            <View style={styles.section}>
-                                <Text style={[styles.sectionTitle, { color: COLORS.aiGold }]}>
-                                    ✨ Predicted for You
-                                </Text>
-                                {predictedFoods.map((item, index) => (
-                                    <FoodItemCard
-                                        key={item.id}
-                                        item={item}
-                                        isSelected={selectedItems.includes(item.id)}
-                                        onToggle={() => handleToggleItem(item.id)}
-                                        index={index}
-                                        isDark={isDark}
-                                        showTime
-                                    />
-                                ))}
-                            </View>
-                        )}
-
-                        {/* Recent History Section */}
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                                RECENT HISTORY
-                            </Text>
-                            {recentFoods.map((item, index) => (
-                                <FoodItemCard
-                                    key={item.id}
-                                    item={item}
-                                    isSelected={selectedItems.includes(item.id)}
-                                    onToggle={() => handleToggleItem(item.id)}
-                                    index={index + predictedFoods.length}
-                                    isDark={isDark}
-                                    showTime
-                                />
-                            ))}
-                        </View>
-                    </>
-                );
-
-            case 2: // Favorites
-                return (
-                    <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                            ❤️ YOUR FAVORITES
-                        </Text>
-                        <View style={styles.favoritesGrid}>
-                            {FAVORITE_FOODS.map((item, index) => (
-                                <FavoriteCard
-                                    key={item.id}
-                                    item={item}
-                                    isSelected={selectedItems.includes(item.id)}
-                                    onToggle={() => handleToggleItem(item.id)}
-                                    index={index}
-                                    isDark={isDark}
-                                />
-                            ))}
-                        </View>
-
-                        {/* Empty state hint */}
-                        <View style={styles.emptyHint}>
-                            <Ionicons name="heart-outline" size={20} color={colors.textSecondary} />
-                            <Text style={[styles.emptyHintText, { color: colors.textSecondary }]}>
-                                Tap the heart on any food to add it here
-                            </Text>
-                        </View>
-                    </View>
-                );
-
-            case 3: // My Meals
-                return (
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeaderRow}>
-                            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                                🍽️ SAVED MEALS
-                            </Text>
-                            <TouchableOpacity style={styles.createMealButton}>
-                                <Ionicons name="add-circle" size={18} color={COLORS.vitaminOrange} />
-                                <Text style={styles.createMealText}>Create New</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {MY_MEALS.map((meal, index) => (
-                            <MyMealCard
-                                key={meal.id}
-                                meal={meal}
-                                isSelected={selectedMeals.includes(meal.id)}
-                                onToggle={() => handleToggleMeal(meal.id)}
-                                index={index}
-                                isDark={isDark}
-                            />
-                        ))}
-
-                        {/* Tip */}
-                        <View style={[styles.tipCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)' }]}>
-                            <Ionicons name="bulb-outline" size={18} color={COLORS.aiGold} />
-                            <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-                                Save your common combinations as "Meals" for quick one-tap logging.
-                            </Text>
-                        </View>
-                    </View>
-                );
-
-            default:
-                return null;
+    }, [router, mealType]);
+    
+    const handleSearchFocus = useCallback(() => {
+        setShowKeyboard(true);
+    }, []);
+    
+    const handleSearchBlur = useCallback(() => {
+        if (!searchQuery.trim()) {
+            setShowKeyboard(false);
         }
-    };
+    }, [searchQuery]);
 
     return (
         <View style={[styles.container, { backgroundColor: colors.bg }]}>
             <Stack.Screen options={{ headerShown: false }} />
-
-            {/* Mesh Gradient Background */}
+            
+            {/* Background Gradient */}
             <LinearGradient
-                colors={isDark
-                    ? ['#0A0A0C', '#121214', '#0A0A0C']
-                    : [COLORS.warmWhite, COLORS.softGrey, '#FFFFFF']
+                colors={isDark 
+                    ? ['#0A0A0C', '#121215', '#0A0A0C'] 
+                    : ['#F5F5F7', '#FFFFFF', '#F5F5F7']
                 }
                 style={StyleSheet.absoluteFillObject}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
             />
-
+            
             <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {/* Context Header */}
+                {/* Header */}
                 <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
-                    <View style={styles.headerContent}>
-                        <Text style={styles.headerEmoji}>{mealConfig.icon}</Text>
+                    <View style={styles.headerLeft}>
+                        <View style={styles.mealIconContainer}>
+                            <LinearGradient
+                                colors={mealConfig.gradient}
+                                style={styles.mealIconGradient}
+                            >
+                                <Text style={styles.mealIcon}>{mealConfig.icon}</Text>
+                            </LinearGradient>
+                        </View>
                         <View>
                             <Text style={[styles.headerTitle, { color: colors.text }]}>
                                 {mealConfig.title}
                             </Text>
                             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                                Target: {mealConfig.subtitle} kcal
+                                {mealConfig.subtitle}
                             </Text>
                         </View>
                     </View>
+                    
                     <TouchableOpacity
                         style={[styles.closeButton, { backgroundColor: colors.surface }]}
                         onPress={handleClose}
                     >
-                        <Ionicons name="close" size={20} color={colors.text} />
+                        <Ionicons name="close" size={22} color={colors.text} />
                     </TouchableOpacity>
                 </Animated.View>
-
-                {/* Omni-Search Bar */}
-                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.searchContainer}>
-                    <BlurView
-                        intensity={isDark ? 40 : 60}
-                        tint={isDark ? 'dark' : 'light'}
-                        style={[styles.searchBar, { borderColor: colors.border }]}
-                    >
+                
+                {/* Search Bar */}
+                <Animated.View 
+                    entering={FadeInDown.delay(100).springify()} 
+                    style={styles.searchContainer}
+                >
+                    <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <Ionicons name="search" size={20} color={colors.textSecondary} />
                         <TextInput
+                            ref={searchInputRef}
                             style={[styles.searchInput, { color: colors.text }]}
-                            placeholder={`Search eggs, oats, coffee...`}
+                            placeholder="Search foods..."
                             placeholderTextColor={colors.textSecondary}
                             value={searchQuery}
-                            onChangeText={handleSearchChange}
+                            onChangeText={setSearchQuery}
+                            onFocus={handleSearchFocus}
+                            onBlur={handleSearchBlur}
+                            returnKeyType="search"
+                            autoCorrect={false}
                         />
-                        <View style={styles.searchIcons}>
-                            <TouchableOpacity
-                                style={styles.searchIconButton}
-                                onPress={() => handleSearchIcon('barcode')}
-                            >
-                                <Ionicons name="barcode-outline" size={18} color={colors.textSecondary} />
+                        {isSearching ? (
+                            <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : searchQuery ? (
+                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.searchIconButton}
-                                onPress={() => handleSearchIcon('voice')}
-                            >
-                                <Ionicons name="mic-outline" size={18} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.searchIconButton}
-                                onPress={() => handleSearchIcon('camera')}
-                            >
-                                <Ionicons name="camera-outline" size={18} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                    </BlurView>
+                        ) : null}
+                    </View>
                 </Animated.View>
-
-                {/* Smart Tabs */}
-                <Animated.View entering={FadeInDown.delay(150).springify()}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.tabsContainer}
-                    >
-                        {SMART_TABS.map((tab, index) => (
-                            <TouchableOpacity
-                                key={tab}
-                                style={[
-                                    styles.tab,
-                                    {
-                                        backgroundColor: activeTab === index
-                                            ? COLORS.vitaminOrange
-                                            : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
-                                    },
-                                ]}
-                                onPress={() => handleTabPress(index)}
-                            >
-                                <Text
-                                    style={[
-                                        styles.tabText,
-                                        {
-                                            color: activeTab === index
-                                                ? '#FFFFFF'
-                                                : colors.textSecondary,
-                                        },
-                                    ]}
-                                >
-                                    {tab}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </Animated.View>
-
-                {/* Tab Content */}
+                
+                {/* Quick Actions */}
+                {!showKeyboard && !searchQuery && (
+                    <Animated.View entering={FadeInDown.delay(150).springify()} style={styles.quickActions}>
+                        <QuickAction 
+                            icon="barcode-outline" 
+                            label="Scan" 
+                            color="#007AFF"
+                            onPress={() => handleQuickAction('barcode')}
+                            delay={0}
+                        />
+                        <QuickAction 
+                            icon="camera-outline" 
+                            label="Photo AI" 
+                            color={COLORS.primary}
+                            onPress={() => handleQuickAction('camera')}
+                            delay={50}
+                        />
+                        <QuickAction 
+                            icon="mic-outline" 
+                            label="Voice" 
+                            color="#AF52DE"
+                            onPress={() => handleQuickAction('voice')}
+                            delay={100}
+                        />
+                    </Animated.View>
+                )}
+                
+                {/* Content */}
                 <ScrollView
-                    style={styles.foodList}
+                    style={styles.content}
                     contentContainerStyle={[
-                        styles.foodListContent,
-                        { paddingBottom: totalSelectedCount > 0 ? 120 : 40 },
+                        styles.contentContainer,
+                        { paddingBottom: totalSelectedCount > 0 ? 140 : 40 }
                     ]}
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                 >
-                    {renderTabContent()}
+                    {/* Search Results */}
+                    {searchQuery.trim() ? (
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                                {isSearching ? 'SEARCHING...' : `RESULTS (${searchResults.length})`}
+                            </Text>
+                            {searchResults.length > 0 ? (
+                                searchResults.map((food, index) => (
+                                    <FoodCard
+                                        key={food.id}
+                                        food={food}
+                                        isSelected={selectedFoods.has(food.id)}
+                                        onToggle={() => handleToggleFood(food)}
+                                        onPress={() => handleFoodPress(food)}
+                                        index={index}
+                                        isDark={isDark}
+                                    />
+                                ))
+                            ) : !isSearching && (
+                                <View style={styles.emptyState}>
+                                    <Ionicons name="search-outline" size={40} color={colors.textSecondary} />
+                                    <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                                        No results for "{searchQuery}"
+                                    </Text>
+                                    <TouchableOpacity 
+                                        style={styles.emptyStateButton}
+                                        onPress={() => handleQuickAction('camera')}
+                                    >
+                                        <Ionicons name="camera" size={18} color={COLORS.white} />
+                                        <Text style={styles.emptyStateButtonText}>Use Photo AI</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+                    ) : (
+                        <>
+                            {/* Suggestions for meal */}
+                            <View style={styles.section}>
+                                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                                    ✨ SUGGESTED FOR {mealConfig.title.toUpperCase()}
+                                </Text>
+                                {suggestions.map((food, index) => (
+                                    <FoodCard
+                                        key={food.id}
+                                        food={food}
+                                        isSelected={selectedFoods.has(food.id)}
+                                        onToggle={() => handleToggleFood(food)}
+                                        onPress={() => handleFoodPress(food)}
+                                        index={index}
+                                        isDark={isDark}
+                                    />
+                                ))}
+                            </View>
+                            
+                            {/* Popular Foods */}
+                            <View style={styles.section}>
+                                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                                    🔥 POPULAR FOODS
+                                </Text>
+                                {popularFoods.map((food, index) => (
+                                    <FoodCard
+                                        key={food.id}
+                                        food={food}
+                                        isSelected={selectedFoods.has(food.id)}
+                                        onToggle={() => handleToggleFood(food)}
+                                        onPress={() => handleFoodPress(food)}
+                                        index={index + suggestions.length}
+                                        isDark={isDark}
+                                    />
+                                ))}
+                            </View>
+                        </>
+                    )}
                 </ScrollView>
             </SafeAreaView>
-
-            {/* Plate Dock (Cart) */}
+            
+            {/* Bottom Cart */}
             {totalSelectedCount > 0 && (
                 <Animated.View
                     entering={SlideInDown.springify()}
-                    style={[styles.plateDock, { paddingBottom: insets.bottom + 8 }]}
+                    exiting={SlideOutDown.springify()}
+                    style={[styles.cart, { paddingBottom: insets.bottom + 8 }]}
                 >
                     <BlurView
-                        intensity={isDark ? 60 : 80}
+                        intensity={isDark ? 60 : 90}
                         tint={isDark ? 'dark' : 'light'}
-                        style={[styles.plateDockBlur, { borderColor: colors.border }]}
+                        style={[styles.cartBlur, { borderColor: colors.border }]}
                     >
-                        <View style={styles.plateDockContent}>
-                            <View style={styles.plateInfo}>
-                                <Text style={[styles.plateCount, { color: colors.text }]}>
+                        <View style={styles.cartContent}>
+                            <View style={styles.cartInfo}>
+                                <Text style={[styles.cartCount, { color: colors.text }]}>
                                     {totalSelectedCount} item{totalSelectedCount !== 1 ? 's' : ''} selected
                                 </Text>
-                                <Text style={[styles.plateCalories, { color: colors.textSecondary }]}>
-                                    {totalCalories} kcal
-                                </Text>
+                                <View style={styles.cartCalories}>
+                                    <Text style={styles.cartCaloriesValue}>{totalCalories}</Text>
+                                    <Text style={[styles.cartCaloriesUnit, { color: colors.textSecondary }]}>kcal</Text>
+                                </View>
                             </View>
+                            
                             <TouchableOpacity
                                 style={styles.logButton}
                                 onPress={handleLogMeal}
                                 activeOpacity={0.9}
                             >
                                 <LinearGradient
-                                    colors={[COLORS.vitaminOrange, COLORS.neonOrange]}
+                                    colors={[COLORS.primary, COLORS.primaryLight]}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
                                     style={styles.logButtonGradient}
                                 >
-                                    <Text style={styles.logButtonText}>Log {totalCalories} kcal</Text>
+                                    <Ionicons name="checkmark-circle" size={20} color={COLORS.white} />
+                                    <Text style={styles.logButtonText}>Log Meal</Text>
                                 </LinearGradient>
                             </TouchableOpacity>
                         </View>
@@ -901,7 +717,7 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
     },
-
+    
     // Header
     header: {
         flexDirection: 'row',
@@ -910,16 +726,26 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.xl,
         paddingVertical: SPACING.md,
     },
-    headerContent: {
+    headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: SPACING.md,
     },
-    headerEmoji: {
-        fontSize: 32,
+    mealIconContainer: {
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    mealIconGradient: {
+        width: 48,
+        height: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mealIcon: {
+        fontSize: 24,
     },
     headerTitle: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: '800',
         letterSpacing: -0.5,
     },
@@ -935,70 +761,63 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
+    
     // Search
     searchContainer: {
         paddingHorizontal: SPACING.xl,
-        marginBottom: SPACING.md,
+        marginBottom: SPACING.lg,
     },
     searchBar: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.md,
+        paddingVertical: Platform.OS === 'ios' ? SPACING.md : SPACING.sm,
         borderRadius: RADIUS.xl,
         borderWidth: 1,
-        overflow: 'hidden',
+        gap: SPACING.sm,
     },
     searchInput: {
         flex: 1,
         fontSize: 16,
-        marginLeft: SPACING.sm,
         paddingVertical: 4,
     },
-    searchIcons: {
+    
+    // Quick Actions
+    quickActions: {
         flexDirection: 'row',
-        gap: SPACING.sm,
+        justifyContent: 'center',
+        gap: SPACING.xl,
+        paddingHorizontal: SPACING.xl,
+        marginBottom: SPACING.lg,
     },
-    searchIconButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+    quickAction: {
+        alignItems: 'center',
+        gap: SPACING.xs,
+    },
+    quickActionGradient: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
     },
-
-    // Tabs
-    tabsContainer: {
-        paddingHorizontal: SPACING.xl,
-        paddingBottom: SPACING.md,
-        gap: SPACING.sm,
-    },
-    tab: {
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: SPACING.sm,
-        borderRadius: RADIUS.xl,
-    },
-    tabText: {
-        fontSize: 14,
+    quickActionLabel: {
+        fontSize: 12,
         fontWeight: '600',
+        color: '#8E8E93',
     },
-
-    // Food List
-    foodList: {
+    
+    // Content
+    content: {
         flex: 1,
     },
-    foodListContent: {
+    contentContainer: {
         paddingHorizontal: SPACING.xl,
     },
+    
+    // Section
     section: {
-        marginBottom: SPACING.lg,
-    },
-    sectionHeaderRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: SPACING.md,
+        marginBottom: SPACING.xl,
     },
     sectionTitle: {
         fontSize: 11,
@@ -1006,7 +825,7 @@ const styles = StyleSheet.create({
         letterSpacing: 1.5,
         marginBottom: SPACING.md,
     },
-
+    
     // Food Card
     foodCard: {
         flexDirection: 'row',
@@ -1015,25 +834,21 @@ const styles = StyleSheet.create({
         borderRadius: RADIUS.lg,
         marginBottom: SPACING.sm,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
-        overflow: 'hidden',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        elevation: 2,
     },
-    predictedGlow: {
-        ...StyleSheet.absoluteFillObject,
-    },
-    foodImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
+    foodIconCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: SPACING.md,
     },
-    foodEmoji: {
-        fontSize: 24,
+    foodIconEmoji: {
+        fontSize: 22,
     },
     foodInfo: {
         flex: 1,
@@ -1041,46 +856,43 @@ const styles = StyleSheet.create({
     foodNameRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: SPACING.xs,
+        gap: 6,
     },
     foodName: {
         fontSize: 15,
         fontWeight: '600',
         flex: 1,
     },
-    aiTag: {
-        backgroundColor: COLORS.aiGold,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    aiTagText: {
-        fontSize: 9,
-        fontWeight: '800',
-        color: '#000',
-    },
-    foodMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.sm,
-        marginTop: 4,
-    },
     foodServing: {
         fontSize: 12,
+        marginTop: 2,
+        marginBottom: 6,
     },
-    macroDots: {
+    macroPills: {
         flexDirection: 'row',
-        gap: 3,
+        gap: 6,
     },
-    macroDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+    macroPill: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    macroPillText: {
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    foodActions: {
+        alignItems: 'flex-end',
+        marginLeft: SPACING.sm,
     },
     foodCalories: {
-        fontSize: 16,
-        fontWeight: '700',
-        marginRight: SPACING.md,
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    foodCaloriesUnit: {
+        fontSize: 10,
+        fontWeight: '600',
+        marginBottom: SPACING.xs,
     },
     addButton: {
         width: 36,
@@ -1089,204 +901,88 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
-    // Favorites Grid
-    favoritesGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        marginHorizontal: -SPACING.xs,
-    },
-    favoriteCard: {
-        width: '47%',
-        marginHorizontal: '1.5%',
-        marginBottom: SPACING.md,
-        padding: SPACING.md,
-        borderRadius: RADIUS.lg,
+    
+    // Empty State
+    emptyState: {
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
-        position: 'relative',
+        paddingVertical: SPACING.xl * 2,
     },
-    favoriteHeart: {
-        position: 'absolute',
-        top: SPACING.sm,
-        right: SPACING.sm,
-    },
-    favoriteEmoji: {
-        fontSize: 36,
-        marginBottom: SPACING.sm,
-    },
-    favoriteName: {
-        fontSize: 14,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 4,
-    },
-    favoriteCalories: {
+    emptyStateText: {
         fontSize: 15,
-        fontWeight: '700',
-        marginBottom: 4,
-    },
-    favoriteMacros: {
-        flexDirection: 'row',
-        gap: 4,
-    },
-    favoriteMacroText: {
-        fontSize: 11,
         fontWeight: '500',
-    },
-    favoriteAddButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: SPACING.sm,
-    },
-    emptyHint: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: SPACING.sm,
-        marginTop: SPACING.xl,
-        paddingVertical: SPACING.md,
-    },
-    emptyHintText: {
-        fontSize: 13,
-        fontWeight: '500',
-    },
-
-    // My Meals
-    myMealCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: SPACING.lg,
-        borderRadius: RADIUS.lg,
-        marginBottom: SPACING.sm,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-    myMealEmoji: {
-        width: 56,
-        height: 56,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: SPACING.md,
-    },
-    myMealEmojiText: {
-        fontSize: 28,
-    },
-    myMealInfo: {
-        flex: 1,
-    },
-    myMealName: {
-        fontSize: 16,
-        fontWeight: '700',
-        marginBottom: 4,
-    },
-    myMealFoods: {
-        fontSize: 12,
-        marginBottom: 6,
-    },
-    myMealStats: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.sm,
-    },
-    myMealCalorieBadge: {
-        backgroundColor: `${COLORS.vitaminOrange}15`,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
-    },
-    myMealCalorieText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: COLORS.vitaminOrange,
-    },
-    myMealItemCount: {
-        fontSize: 11,
-    },
-    myMealAddButton: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    createMealButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    createMealText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: COLORS.vitaminOrange,
-    },
-    tipCard: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: SPACING.sm,
-        padding: SPACING.md,
-        borderRadius: RADIUS.lg,
         marginTop: SPACING.md,
+        marginBottom: SPACING.lg,
     },
-    tipText: {
-        flex: 1,
-        fontSize: 13,
-        lineHeight: 18,
+    emptyStateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.primary,
+        paddingVertical: SPACING.md,
+        paddingHorizontal: SPACING.xl,
+        borderRadius: RADIUS.xl,
+        gap: SPACING.xs,
     },
-
-    // Plate Dock
-    plateDock: {
+    emptyStateButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: COLORS.white,
+    },
+    
+    // Cart
+    cart: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        paddingHorizontal: SPACING.xl,
+        paddingHorizontal: SPACING.lg,
     },
-    plateDockBlur: {
+    cartBlur: {
         borderRadius: RADIUS['2xl'],
         borderWidth: 1,
         overflow: 'hidden',
     },
-    plateDockContent: {
+    cartContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: SPACING.md,
     },
-    plateInfo: {
+    cartInfo: {
         flex: 1,
     },
-    plateCount: {
-        fontSize: 15,
+    cartCount: {
+        fontSize: 14,
         fontWeight: '600',
     },
-    plateCalories: {
-        fontSize: 12,
+    cartCalories: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
         marginTop: 2,
+    },
+    cartCaloriesValue: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: COLORS.primary,
+    },
+    cartCaloriesUnit: {
+        fontSize: 12,
+        fontWeight: '500',
     },
     logButton: {
         borderRadius: RADIUS.lg,
         overflow: 'hidden',
     },
     logButtonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingHorizontal: SPACING.xl,
         paddingVertical: SPACING.md,
+        gap: SPACING.xs,
     },
     logButtonText: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: COLORS.white,
     },
 });

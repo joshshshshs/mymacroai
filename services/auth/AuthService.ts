@@ -11,6 +11,16 @@ import {
   failure,
 } from '../../utils/errors';
 
+// Guard: Ensure supabase is configured before using auth methods
+const getSupabase = () => {
+  if (!supabase) {
+    throw new Error(
+      'Supabase not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env'
+    );
+  }
+  return supabase;
+};
+
 export interface AuthResult {
   success: boolean;
   user: User | null;
@@ -60,7 +70,7 @@ class AuthService {
         };
       }
 
-      const { data: authData, error } = await supabase.auth.signUp({
+      const { data: authData, error } = await getSupabase().auth.signUp({
         email,
         password,
         options: {
@@ -114,7 +124,7 @@ class AuthService {
         };
       }
 
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await getSupabase().auth.signInWithPassword({
         email,
         password,
       });
@@ -152,7 +162,7 @@ class AuthService {
    */
   async signOut(): Promise<{ success: boolean; error: string | null }> {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await getSupabase().auth.signOut();
 
       if (error) {
         logger.error('Sign out error:', error);
@@ -178,7 +188,7 @@ class AuthService {
    */
   async getSession(): Promise<{ session: Session | null; error: string | null }> {
     try {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await getSupabase().auth.getSession();
 
       if (error) {
         logger.error('Get session error:', error);
@@ -197,7 +207,7 @@ class AuthService {
    */
   async getUser(): Promise<{ user: User | null; error: string | null }> {
     try {
-      const { data, error } = await supabase.auth.getUser();
+      const { data, error } = await getSupabase().auth.getUser();
 
       if (error) {
         logger.error('Get user error:', error);
@@ -220,7 +230,7 @@ class AuthService {
         return { success: false, error: 'Please enter a valid email address' };
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
         redirectTo: 'mymacroai://reset-password',
       });
 
@@ -249,7 +259,7 @@ class AuthService {
         };
       }
 
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await getSupabase().auth.updateUser({
         password: newPassword,
       });
 
@@ -274,7 +284,7 @@ class AuthService {
     avatar_url?: string;
   }): Promise<{ success: boolean; error: string | null }> {
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await getSupabase().auth.updateUser({
         data: updates,
       });
 
@@ -297,7 +307,7 @@ class AuthService {
   onAuthStateChange(
     callback: (event: string, session: Session | null) => void
   ): { unsubscribe: () => void } {
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data } = getSupabase().auth.onAuthStateChange((event, session) => {
       logger.log('Auth state changed:', event);
       callback(event, session);
     });

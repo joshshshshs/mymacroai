@@ -24,8 +24,9 @@ import {
     Dimensions,
     ScrollView,
     useColorScheme,
+    Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -377,6 +378,7 @@ export default function AIChatModal() {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const colors = getColors(isDark);
+    const insets = useSafeAreaInsets();
 
     const router = useRouter();
     const listRef = useRef<SectionList>(null);
@@ -386,8 +388,23 @@ export default function AIChatModal() {
     const [isLoading, setIsLoading] = useState(true);
     const [isTyping, setIsTyping] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
 
     const sendButtonScale = useSharedValue(1);
+
+    // #region agent log
+    useEffect(() => {
+        const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+            setKeyboardVisible(true);
+            fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-chat.tsx:keyboard',message:'Keyboard shown',data:{keyboardHeight:e.endCoordinates.height,insets:{bottom:insets.bottom,top:insets.top}},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-keyboard'})}).catch(()=>{});
+        });
+        const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardVisible(false);
+            fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-chat.tsx:keyboard',message:'Keyboard hidden',data:{insets:{bottom:insets.bottom}},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-keyboard'})}).catch(()=>{});
+        });
+        return () => { showSub.remove(); hideSub.remove(); };
+    }, [insets]);
+    // #endregion
 
     useEffect(() => {
         loadMessages();
@@ -505,7 +522,7 @@ export default function AIChatModal() {
             />
             <AnimatedBackground colors={colors} />
 
-            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+            <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Premium Header - LOWERED with extra padding */}
                 <Animated.View
                     entering={FadeInDown.duration(400)}
@@ -562,7 +579,7 @@ export default function AIChatModal() {
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.flex}
-                    keyboardVerticalOffset={0}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
                 >
                     <SectionList<ChatMessage, MessageSection>
                         ref={listRef as any}
@@ -622,9 +639,18 @@ export default function AIChatModal() {
                     )}
 
                     {/* Input Area */}
+                    {/* #region agent log */}
+                    {(() => { fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-chat.tsx:inputRender',message:'Input container rendered',data:{bottomPadding:Math.max(insets.bottom,12),insetsBottom:insets.bottom,keyboardVisible},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-padding'})}).catch(()=>{}); return null; })()}
+                    {/* #endregion */}
                     <Animated.View
                         entering={FadeInUp.duration(400).delay(200)}
-                        style={[styles.inputContainer, { borderTopColor: colors.border }]}
+                        style={[
+                            styles.inputContainer, 
+                            { 
+                                borderTopColor: colors.border,
+                                paddingBottom: Math.max(insets.bottom, 12),
+                            }
+                        ]}
                     >
                         <BlurView intensity={colors.blurIntensity} tint="default" style={[styles.inputWrapper, { borderColor: colors.border }]}>
                             <TextInput
@@ -935,7 +961,7 @@ const styles = StyleSheet.create({
     // Input
     inputContainer: {
         paddingHorizontal: SPACING.lg,
-        paddingVertical: 12,
+        paddingTop: 12,
         borderTopWidth: 1,
     },
     inputWrapper: {

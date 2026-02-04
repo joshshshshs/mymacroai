@@ -8,7 +8,7 @@
  * 4. Generates personalized, data-driven responses
  */
 
-import { supabase } from '../../lib/supabase';
+import { getSupabase } from '../../lib/supabase';
 import { AI_TOOLS, AIToolName } from './tools/definitions';
 import { generateMasterPrompt, UserContext } from './prompts/masterPrompt';
 import { executeTool, getUserStatus } from './toolExecutor';
@@ -135,7 +135,7 @@ class CoachService {
 
         try {
             // Call Supabase Edge Function with tools
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     action: 'chat_with_tools',
                     systemPrompt,
@@ -213,7 +213,7 @@ class CoachService {
 
         // Send result back to AI
         try {
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     action: 'chat_with_tool_result',
                     systemPrompt,

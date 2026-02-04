@@ -6,7 +6,7 @@
 import Purchases, { PurchasesPackage, PurchasesOffering, LOG_LEVEL, CustomerInfo } from 'react-native-purchases';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { supabase } from '../../lib/supabase';
+import { getSupabase } from '../../lib/supabase';
 import { RC_ENTITLEMENTS, RC_PRODUCTS, SubscriptionTier } from '../../config/tiers';
 
 // Environment-based API keys
@@ -176,7 +176,7 @@ class RevenueCatService {
             }
 
             // Update Supabase
-            const { error } = await supabase.rpc('update_subscription', {
+            const { error } = await getSupabase().rpc('update_subscription', {
                 p_user_id: userId,
                 p_tier: tier,
                 p_rc_customer_id: customerInfo.originalAppUserId,
@@ -291,7 +291,7 @@ class RevenueCatService {
                 await this.syncWithSupabase(userId);
 
                 // Track subscription event
-                await supabase.from('subscription_events').insert({
+                await getSupabase().from('subscription_events').insert({
                     user_id: userId,
                     event_type: 'subscribed',
                     from_tier: 'free',
