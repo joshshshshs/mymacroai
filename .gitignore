@@ -40,8 +40,3 @@ tsconfig.single.*
 
 # Old node_modules backup
 node_modules_old/
-
-# Environment variables
-.env
-.env.*
-!.env.example

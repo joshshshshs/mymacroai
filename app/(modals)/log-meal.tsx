@@ -428,10 +428,6 @@ export default function LogMealModal() {
             ? mealType 
             : 'snacks') as 'breakfast' | 'lunch' | 'dinner' | 'snacks';
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'log-meal.tsx:handleLogMeal',message:'About to log foods',data:{foodCount:selectedFoods.size,mealType:normalizedMealType,todayDate:new Date().toISOString().split('T')[0],foods:Array.from(selectedFoods.values()).map((f:any)=>({name:f.name,cal:f.calories}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H2'})}).catch(()=>{});
-        // #endregion
-        
         selectedFoods.forEach(food => {
             logFood(
                 food.calories,
