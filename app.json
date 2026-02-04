@@ -4,12 +4,12 @@
     "slug": "MyMacroAI",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/app icons/apple-devices/AppIcon.appiconset/icon-ios-1024x1024.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "mymacroai",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/white bkg.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0B1410"
     },
@@ -69,13 +69,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/app icons/android/playstore-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.mymacroai.app",
       "versionCode": 1,
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -118,7 +116,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/app icons/android/playstore-icon.png",
+          "icon": "./assets/icon.png",
           "color": "#FF5C00",
           "sounds": []
         }

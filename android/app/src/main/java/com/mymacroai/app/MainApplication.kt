@@ -1,4 +1,4 @@
-package com.mymacroai
+package com.mymacroai.app
 
 import android.app.Application
 import android.content.res.Configuration
