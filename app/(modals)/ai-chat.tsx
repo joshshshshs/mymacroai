@@ -392,19 +392,15 @@ export default function AIChatModal() {
 
     const sendButtonScale = useSharedValue(1);
 
-    // #region agent log
     useEffect(() => {
-        const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+        const showSub = Keyboard.addListener('keyboardDidShow', () => {
             setKeyboardVisible(true);
-            fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-chat.tsx:keyboard',message:'Keyboard shown',data:{keyboardHeight:e.endCoordinates.height,insets:{bottom:insets.bottom,top:insets.top}},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-keyboard'})}).catch(()=>{});
         });
         const hideSub = Keyboard.addListener('keyboardDidHide', () => {
             setKeyboardVisible(false);
-            fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-chat.tsx:keyboard',message:'Keyboard hidden',data:{insets:{bottom:insets.bottom}},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-keyboard'})}).catch(()=>{});
         });
         return () => { showSub.remove(); hideSub.remove(); };
-    }, [insets]);
-    // #endregion
+    }, []);
 
     useEffect(() => {
         loadMessages();
@@ -639,9 +635,6 @@ export default function AIChatModal() {
                     )}
 
                     {/* Input Area */}
-                    {/* #region agent log */}
-                    {(() => { fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-chat.tsx:inputRender',message:'Input container rendered',data:{bottomPadding:Math.max(insets.bottom,12),insetsBottom:insets.bottom,keyboardVisible},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-padding'})}).catch(()=>{}); return null; })()}
-                    {/* #endregion */}
                     <Animated.View
                         entering={FadeInUp.duration(400).delay(200)}
                         style={[
