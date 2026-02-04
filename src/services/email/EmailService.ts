@@ -4,7 +4,7 @@
  * Triggers transactional and marketing emails via Supabase Edge Function
  */
 
-import { supabase } from '../../lib/supabase';
+import { getSupabase } from '../../lib/supabase';
 
 export type EmailTemplate =
     | 'welcome'
@@ -37,7 +37,7 @@ class EmailService {
      */
     async send(params: SendEmailParams): Promise<EmailResult> {
         try {
-            const { data, error } = await supabase.functions.invoke('send-email', {
+            const { data, error } = await getSupabase().functions.invoke('send-email', {
                 body: params,
             });
 

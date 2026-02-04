@@ -4,7 +4,7 @@
  */
 
 import { logger } from '../../../utils/logger';
-import { supabase } from '../../lib/supabase';
+import { getSupabase } from '../../lib/supabase';
 
 export const MAX_SQUAD_SIZE = 5;
 
@@ -78,7 +78,7 @@ class SocialConstraintsService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Fetch current squad
-      const { data: squad, error: fetchError } = await supabase
+      const { data: squad, error: fetchError } = await getSupabase()
         .from('squads')
         .select('*, squad_members(*)')
         .eq('id', squadId)
@@ -104,7 +104,7 @@ class SocialConstraintsService {
       const consistencyScore = await this.calculateConsistencyScore(userId);
 
       // Add member
-      const { error: insertError } = await supabase.from('squad_members').insert({
+      const { error: insertError } = await getSupabase().from('squad_members').insert({
         squad_id: squadId,
         user_id: userId,
         username,
@@ -134,7 +134,7 @@ class SocialConstraintsService {
     userId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { error } = await supabase
+      const { error } = await getSupabase()
         .from('squad_members')
         .delete()
         .eq('squad_id', squadId)
@@ -157,7 +157,7 @@ class SocialConstraintsService {
    */
   async getSquadMembersRanked(squadId: string): Promise<SquadMember[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('squad_members')
         .select('*')
         .eq('squad_id', squadId)
@@ -198,7 +198,7 @@ class SocialConstraintsService {
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
       // Fetch logs for last 30 days
-      const { data: logs, error } = await supabase
+      const { data: logs, error } = await getSupabase()
         .from('nutrition_logs')
         .select('created_at')
         .eq('user_id', userId)
@@ -358,7 +358,7 @@ class SocialConstraintsService {
       }
 
       // Check if reaction already exists (prevent spam)
-      const { data: existing } = await supabase
+      const { data: existing } = await getSupabase()
         .from('reactions')
         .select('id')
         .eq('user_id', userId)
@@ -370,7 +370,7 @@ class SocialConstraintsService {
       }
 
       // Add reaction
-      const { error } = await supabase.from('reactions').insert({
+      const { error } = await getSupabase().from('reactions').insert({
         user_id: userId,
         target_user_id: targetUserId,
         target_id: targetId,
@@ -396,7 +396,7 @@ class SocialConstraintsService {
    */
   async getReactions(targetId: string): Promise<Reaction[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('reactions')
         .select('*')
         .eq('target_id', targetId)
@@ -427,12 +427,12 @@ class SocialConstraintsService {
    */
   async areInSameSquad(userId1: string, userId2: string): Promise<boolean> {
     try {
-      const { data: squads1 } = await supabase
+      const { data: squads1 } = await getSupabase()
         .from('squad_members')
         .select('squad_id')
         .eq('user_id', userId1);
 
-      const { data: squads2 } = await supabase
+      const { data: squads2 } = await getSupabase()
         .from('squad_members')
         .select('squad_id')
         .eq('user_id', userId2);
@@ -460,7 +460,7 @@ class SocialConstraintsService {
       for (const member of members) {
         const metrics = await this.calculateConsistencyScore(member.userId);
 
-        await supabase
+        await getSupabase()
           .from('squad_members')
           .update({
             consistency_score: metrics.consistencyScore,

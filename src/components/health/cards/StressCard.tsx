@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { StressLevel } from '@/hooks/useHealthData';
@@ -13,9 +13,10 @@ import { COLORS } from '@/src/design-system/tokens';
 interface Props {
     level: StressLevel;
     history: number[];
+    onPress?: () => void;
 }
 
-export const StressCard: React.FC<Props> = ({ level, history }) => {
+export const StressCard: React.FC<Props> = ({ level, history, onPress }) => {
     const { colors: themeColors, isDark } = useCombinedTheme();
 
     // Map stress levels to semantic colors
@@ -60,8 +61,10 @@ export const StressCard: React.FC<Props> = ({ level, history }) => {
         return path;
     };
 
+    const Container = onPress ? TouchableOpacity : View;
+    
     return (
-        <View style={[styles.card, { backgroundColor: colors.bg }]}>
+        <Container onPress={onPress} style={[styles.card, { backgroundColor: colors.bg }]}>
             <View style={styles.header}>
                 <Ionicons name="fitness" size={18} color={stressColor} />
                 <Text style={[styles.label, { color: colors.textSecondary }]}>STRESS</Text>
@@ -87,7 +90,7 @@ export const StressCard: React.FC<Props> = ({ level, history }) => {
                     />
                 </Svg>
             </View>
-        </View>
+        </Container>
     );
 };
 

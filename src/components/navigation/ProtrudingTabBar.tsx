@@ -7,17 +7,13 @@
  */
 
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { View, TouchableOpacity, StyleSheet, useColorScheme, Dimensions, Image } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SPACING, MOTION, COLORS, MATERIALS } from '../../design-system/tokens';
 import { useTabBarStore } from '@/src/store/tabBarStore';
-
-// AI tab logo assets
-const AI_LOGO_LIGHT = require('../../../assets/white bkg.png');
-const AI_LOGO_DARK = require('../../../assets/black bkg.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_BAR_WIDTH = 350;
@@ -130,24 +126,11 @@ export const ProtrudingTabBar: React.FC<ProtrudingTabBarProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={tab.label}
               >
-                {tab.name === 'ai-hub' ? (
-                  <Image
-                    source={isDark ? AI_LOGO_DARK : AI_LOGO_LIGHT}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      opacity: isActive ? 1 : 0.6,
-                    }}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <Ionicons
-                    name={isActive ? tab.iconFilled : tab.icon}
-                    size={24}
-                    color={isActive ? activeIconColor : inactiveColor}
-                  />
-                )}
+                <Ionicons
+                  name={isActive ? tab.iconFilled : tab.icon}
+                  size={24}
+                  color={isActive ? activeIconColor : inactiveColor}
+                />
               </TouchableOpacity>
             );
           })}

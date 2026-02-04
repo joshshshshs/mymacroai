@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useUserStore } from '../store/UserStore';
 import { revenueCatService } from '../services/paywall/RevenueCat';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 import {
     SubscriptionTier,
     TierFeatures,
@@ -147,7 +147,7 @@ export function usePremium(): UsePremiumReturn {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('usage_tracking')
                 .select('count')
                 .eq('user_id', userId)
@@ -196,7 +196,7 @@ export function usePremium(): UsePremiumReturn {
             const today = new Date().toISOString().split('T')[0];
 
             // Upsert usage record
-            const { error } = await supabase.rpc('increment_usage', {
+            const { error } = await getSupabase().rpc('increment_usage', {
                 p_user_id: userId,
                 p_feature: feature,
                 p_period_start: today,

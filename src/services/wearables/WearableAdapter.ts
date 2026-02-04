@@ -4,7 +4,7 @@
  */
 
 import { logger } from '../../../utils/logger';
-import { supabase } from '../../lib/supabase';
+import { getSupabase } from '../../lib/supabase';
 
 export type WearableProvider = 'oura' | 'whoop' | 'garmin' | 'manual';
 
@@ -341,7 +341,7 @@ class WearableAdapterService {
    */
   async saveRecoveryData(userId: string, data: NormalizedRecoveryData): Promise<boolean> {
     try {
-      const { error } = await supabase.from('recovery_data').insert({
+      const { error } = await getSupabase().from('recovery_data').insert({
         user_id: userId,
         recovery_score: data.recoveryScore,
         sleep_quality: data.sleepQuality,
@@ -371,7 +371,7 @@ class WearableAdapterService {
    */
   async getLatestRecovery(userId: string): Promise<NormalizedRecoveryData | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('recovery_data')
         .select('*')
         .eq('user_id', userId)

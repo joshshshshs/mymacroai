@@ -4,7 +4,7 @@
  * Handles feature requests, voting, and roadmap management.
  */
 
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase, supabase } from '@/src/lib/supabase';
 
 // ============================================================================
 // TYPES
@@ -62,12 +62,12 @@ export async function createFeatureRequest(
     input: CreateRequestInput
 ): Promise<{ success: boolean; requestId?: string; error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('feature_requests')
             .insert({
                 author_id: user.id,
@@ -94,9 +94,9 @@ export async function getFeatureRequests(
     pageSize: number = 20
 ): Promise<FeatureRequest[]> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
 
-        let query = supabase
+        let query = getSupabase()
             .from('feature_requests')
             .select(`
                 *,
@@ -132,7 +132,7 @@ export async function getFeatureRequests(
         let userVotes: Record<string, VoteType> = {};
         if (user) {
             const requestIds = data.map((r: FeatureRequest) => r.id);
-            const { data: votesData } = await supabase
+            const { data: votesData } = await getSupabase()
                 .from('feature_votes')
                 .select('request_id, vote_type')
                 .eq('user_id', user.id)
@@ -157,9 +157,9 @@ export async function getFeatureRequests(
 
 export async function getFeatureRequestById(requestId: string): Promise<FeatureRequest | null> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
 
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('feature_requests')
             .select(`
                 *,
@@ -176,7 +176,7 @@ export async function getFeatureRequestById(requestId: string): Promise<FeatureR
         // Get user's vote
         let userVote: VoteType | null = null;
         if (user) {
-            const { data: voteData } = await supabase
+            const { data: voteData } = await getSupabase()
                 .from('feature_votes')
                 .select('vote_type')
                 .eq('user_id', user.id)
@@ -206,13 +206,13 @@ export async function voteOnFeature(
     voteType: VoteType
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
 
         // Check existing vote
-        const { data: existing } = await supabase
+        const { data: existing } = await getSupabase()
             .from('feature_votes')
             .select('id, vote_type')
             .eq('user_id', user.id)
@@ -222,17 +222,17 @@ export async function voteOnFeature(
         if (existing) {
             if (existing.vote_type === voteType) {
                 // Same vote - remove it
-                await supabase.from('feature_votes').delete().eq('id', existing.id);
+                await getSupabase().from('feature_votes').delete().eq('id', existing.id);
             } else {
                 // Different vote - update it
-                await supabase
+                await getSupabase()
                     .from('feature_votes')
                     .update({ vote_type: voteType })
                     .eq('id', existing.id);
             }
         } else {
             // No existing vote - create new
-            const { error } = await supabase
+            const { error } = await getSupabase()
                 .from('feature_votes')
                 .insert({
                     user_id: user.id,

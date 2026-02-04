@@ -79,7 +79,7 @@ export default function AppLaunchScreen() {
   }, []);
 
   const navigateToWelcome = () => {
-    router.replace('/dashboard');
+    router.replace('/(tabs)/dashboard');
   };
 
   const logoStyle = useAnimatedStyle(() => ({

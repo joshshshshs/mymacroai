@@ -3,13 +3,14 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { CycleData } from '@/hooks/useHealthData';
 
 interface Props {
     data: CycleData;
+    onPress?: () => void;
 }
 
 const PHASES = ['MENSTRUAL', 'FOLLICULAR', 'OVULATION', 'LUTEAL'];
@@ -20,7 +21,7 @@ const PHASE_COLORS: Record<string, string> = {
     LUTEAL: '#8B5CF6',
 };
 
-export const CycleStatusCard: React.FC<Props> = ({ data }) => {
+export const CycleStatusCard: React.FC<Props> = ({ data, onPress }) => {
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
 
@@ -40,8 +41,10 @@ export const CycleStatusCard: React.FC<Props> = ({ data }) => {
     const strokeWidth = 8;
     const radius = (size - strokeWidth) / 2;
 
+    const Container = onPress ? TouchableOpacity : View;
+    
     return (
-        <View style={[styles.card, { backgroundColor: colors.bg }]}>
+        <Container onPress={onPress} style={[styles.card, { backgroundColor: colors.bg }]}>
             <View style={styles.content}>
                 {/* Left: Phase Gauge */}
                 <View style={styles.gaugeSection}>
@@ -87,7 +90,7 @@ export const CycleStatusCard: React.FC<Props> = ({ data }) => {
                     <Text style={[styles.bmrUnit, { color: colors.textSecondary }]}>kcal/day</Text>
                 </View>
             </View>
-        </View>
+        </Container>
     );
 };
 

@@ -4,7 +4,7 @@
  * Handles public recipe CRUD, feed queries, and reactions.
  */
 
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase, supabase } from '@/src/lib/supabase';
 import { StorageService } from './storage';
 import { getSampleRecipeById } from '@/src/data/sampleRecipes';
 
@@ -103,7 +103,7 @@ export interface PublishRecipeInput {
 export async function publishRecipe(input: PublishRecipeInput): Promise<{ success: boolean; recipeId?: string; error?: string }> {
     try {
         // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
@@ -115,7 +115,7 @@ export async function publishRecipe(input: PublishRecipeInput): Promise<{ succes
         }
 
         // Insert recipe
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('public_recipes')
             .insert({
                 author_id: user.id,
@@ -142,7 +142,7 @@ export async function publishRecipe(input: PublishRecipeInput): Promise<{ succes
         }
 
         // Update user's recipe count
-        await supabase.rpc('increment_recipe_count', { user_id: user.id });
+        await getSupabase().rpc('increment_recipe_count', { user_id: user.id });
 
         return { success: true, recipeId: data.id };
     } catch (error) {
@@ -236,7 +236,7 @@ export async function getPublicFeed(
  */
 export async function getRandomTopRecipes(count: number = 3): Promise<PublicRecipe[]> {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('public_recipes')
             .select(`
                 *,
@@ -276,9 +276,9 @@ export async function getRecipeById(recipeId: string): Promise<PublicRecipe | nu
             }
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
 
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('public_recipes')
             .select(`
                 *,
@@ -306,7 +306,7 @@ export async function getRecipeById(recipeId: string): Promise<PublicRecipe | nu
         // Get user's reaction if logged in
         let userReaction: ReactionType | null = null;
         if (user) {
-            const { data: reactionData } = await supabase
+            const { data: reactionData } = await getSupabase()
                 .from('reactions')
                 .select('reaction_type')
                 .eq('recipe_id', recipeId)
@@ -341,13 +341,13 @@ export async function reactToRecipe(
     reactionType: ReactionType
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
 
         // Check for existing reaction
-        const { data: existing } = await supabase
+        const { data: existing } = await getSupabase()
             .from('reactions')
             .select('id, reaction_type')
             .eq('recipe_id', recipeId)
@@ -357,17 +357,17 @@ export async function reactToRecipe(
         if (existing) {
             if (existing.reaction_type === reactionType) {
                 // Same reaction - remove it (toggle off)
-                await supabase.from('reactions').delete().eq('id', existing.id);
+                await getSupabase().from('reactions').delete().eq('id', existing.id);
             } else {
                 // Different reaction - update it
-                await supabase
+                await getSupabase()
                     .from('reactions')
                     .update({ reaction_type: reactionType })
                     .eq('id', existing.id);
             }
         } else {
             // No existing reaction - create new
-            const { error } = await supabase
+            const { error } = await getSupabase()
                 .from('reactions')
                 .insert({
                     user_id: user.id,
@@ -389,10 +389,10 @@ export async function reactToRecipe(
 
 export async function removeReaction(recipeId: string): Promise<boolean> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) return false;
 
-        await supabase
+        await getSupabase()
             .from('reactions')
             .delete()
             .eq('recipe_id', recipeId)

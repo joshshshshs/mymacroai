@@ -339,8 +339,8 @@ export class NotificationAnalytics {
    */
   private async loadHistoricalData(): Promise<void> {
     try {
-      const eventsData = storageService.getItem<string>(NotificationAnalytics.EVENTS_KEY);
-      const campaignsData = storageService.getItem<string>(NotificationAnalytics.CAMPAIGNS_KEY);
+      const eventsData = await storageService.getItem<string>(NotificationAnalytics.EVENTS_KEY);
+      const campaignsData = await storageService.getItem<string>(NotificationAnalytics.CAMPAIGNS_KEY);
 
       if (eventsData) {
         this.events = JSON.parse(eventsData);

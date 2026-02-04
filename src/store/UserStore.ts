@@ -341,8 +341,12 @@ export const useUserStore = create<UserState>()(
                     }
                 })),
 
-            logFood: (calories, protein, carbs, fats, name = 'Quick Add', mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snacks') => {
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            logFood: (calories, protein, carbs, fats, name = 'Quick Add', mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snacks', targetDate?: string) => {
+                const today = targetDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/f574fcfe-6ee3-42f5-8653-33237ef6f5dc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'UserStore.ts:logFood',message:'Logging food to date',data:{targetDate:today,providedTargetDate:targetDate||'none',actualToday:new Date().toISOString().split('T')[0],name,calories,mealType:mealType||'auto'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+                // #endregion
 
                 // Auto-determine meal type based on current time if not specified
                 const determineMealType = (): 'breakfast' | 'lunch' | 'dinner' | 'snacks' => {

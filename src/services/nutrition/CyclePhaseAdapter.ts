@@ -5,7 +5,7 @@
  */
 
 import { logger } from '../../../utils/logger';
-import { supabase } from '../../lib/supabase';
+import { getSupabase } from '../../lib/supabase';
 
 export type CyclePhase = 'menstrual' | 'follicular' | 'ovulatory' | 'luteal' | 'unknown';
 
@@ -293,7 +293,7 @@ class CyclePhaseAdapterService {
    */
   async logCycleData(userId: string, cycleData: CycleData): Promise<boolean> {
     try {
-      const { error } = await supabase.from('cycle_tracking').insert({
+      const { error } = await getSupabase().from('cycle_tracking').insert({
         user_id: userId,
         phase: cycleData.phase,
         day_of_cycle: cycleData.dayOfCycle,
@@ -320,7 +320,7 @@ class CyclePhaseAdapterService {
    */
   async getLatestCycleData(userId: string): Promise<CycleData | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('cycle_tracking')
         .select('*')
         .eq('user_id', userId)

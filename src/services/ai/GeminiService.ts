@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { getSupabase } from '../../lib/supabase';
 import { getUserContextForAI } from '../../store/UserStore';
 
 // Intent types for OmniLogger
@@ -50,7 +50,7 @@ class GeminiService {
     // NLU Processing (Secure Proxy)
     async processNaturalLanguage(input: string): Promise<NLUResult> {
         try {
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     intent: 'nlu',
                     payload: input
@@ -115,7 +115,7 @@ Return JSON: {
     recommendations: string[]
 }`;
 
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     intent: 'vision',
                     payload: analysisPrompt,
@@ -164,7 +164,7 @@ Return JSON: {
             const prompt = "Identify this food and estimate calories, protein, carbs, and fat per serving. Return JSON: { name, calories, protein, carbs, fats }";
             const isMulti = Array.isArray(base64Image);
 
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     intent: 'vision',
                     payload: prompt,
@@ -186,7 +186,7 @@ Return JSON: {
 
     async transcribeAudio(base64Audio: string, mimeType: string): Promise<string> {
         try {
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     intent: 'speech',
                     payload: 'Transcribe the audio verbatim. Return only the transcript text.',
@@ -235,7 +235,7 @@ Return JSON: {
         prompt: string
     ): Promise<string> {
         try {
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     intent: 'contextual',
                     messageType: type,
@@ -277,7 +277,7 @@ Return JSON: {
 ${userContext}
 --- END USER PROFILE ---`;
 
-            const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            const { data, error } = await getSupabase().functions.invoke('ai-proxy', {
                 body: {
                     intent: 'chat',
                     systemPrompt: fullSystemPrompt,
@@ -371,3 +371,26 @@ ${userContext}
 }
 
 export const geminiService = new GeminiService();
+
+// Parameter extraction helpers for Intent processing
+export function getStringParam(params: Record<string, any>, key: string, defaultValue: string = ''): string {
+    const value = params[key];
+    return typeof value === 'string' ? value : defaultValue;
+}
+
+export function getNumberParam(params: Record<string, any>, key: string, defaultValue: number = 0): number {
+    const value = params[key];
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? defaultValue : parsed;
+    }
+    return defaultValue;
+}
+
+export function getArrayParam(params: Record<string, any>, key: string): string[] {
+    const value = params[key];
+    if (Array.isArray(value)) return value.map(v => String(v));
+    if (typeof value === 'string') return [value];
+    return [];
+}

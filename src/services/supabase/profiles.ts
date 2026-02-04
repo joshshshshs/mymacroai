@@ -4,7 +4,7 @@
  * Handles public profiles, follows, and user discovery.
  */
 
-import { supabase } from '@/src/lib/supabase';
+import { getSupabase, supabase } from '@/src/lib/supabase';
 import { StorageService } from './storage';
 
 // ============================================================================
@@ -49,7 +49,7 @@ export interface ProfileUpdateInput {
  */
 export async function getCurrentProfile(): Promise<PublicProfile | null> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) return null;
 
         return getProfileById(user.id);
@@ -64,7 +64,7 @@ export async function getCurrentProfile(): Promise<PublicProfile | null> {
  */
 export async function getProfileById(userId: string): Promise<PublicProfile | null> {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('profiles')
             .select('*')
             .eq('id', userId)
@@ -91,7 +91,7 @@ export async function getProfileById(userId: string): Promise<PublicProfile | nu
  */
 export async function getProfileByUsername(username: string): Promise<PublicProfile | null> {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('profiles')
             .select('*')
             .eq('username', username)
@@ -111,12 +111,12 @@ export async function updateProfile(
     input: ProfileUpdateInput
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
 
-        const { error } = await supabase
+        const { error } = await getSupabase()
             .from('profiles')
             .update({
                 ...input,
@@ -145,7 +145,7 @@ export async function updateAvatar(
     imageUri: string
 ): Promise<{ success: boolean; avatarUrl?: string; error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
@@ -157,7 +157,7 @@ export async function updateAvatar(
         }
 
         // Update profile
-        const { error } = await supabase
+        const { error } = await getSupabase()
             .from('profiles')
             .update({ avatar_url: uploadResult.url })
             .eq('id', user.id);
@@ -181,10 +181,10 @@ export async function updateAvatar(
  */
 export async function isFollowing(targetUserId: string): Promise<boolean> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) return false;
 
-        const { data } = await supabase
+        const { data } = await getSupabase()
             .from('follows')
             .select('follower_id')
             .eq('follower_id', user.id)
@@ -204,7 +204,7 @@ export async function followUser(
     targetUserId: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
@@ -213,7 +213,7 @@ export async function followUser(
             return { success: false, error: 'Cannot follow yourself' };
         }
 
-        const { error } = await supabase
+        const { error } = await getSupabase()
             .from('follows')
             .insert({
                 follower_id: user.id,
@@ -240,12 +240,12 @@ export async function unfollowUser(
     targetUserId: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
         if (!user) {
             return { success: false, error: 'Not authenticated' };
         }
 
-        const { error } = await supabase
+        const { error } = await getSupabase()
             .from('follows')
             .delete()
             .eq('follower_id', user.id)
@@ -270,7 +270,7 @@ export async function getFollowers(
     pageSize: number = 20
 ): Promise<PublicProfile[]> {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('follows')
             .select(`
                 follower:profiles!follower_id (*)
@@ -295,7 +295,7 @@ export async function getFollowing(
     pageSize: number = 20
 ): Promise<PublicProfile[]> {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('follows')
             .select(`
                 following:profiles!following_id (*)
@@ -320,9 +320,9 @@ export async function getFollowing(
  */
 export async function getSuggestedProfiles(limit: number = 10): Promise<PublicProfile[]> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getSupabase().auth.getUser();
 
-        let query = supabase
+        let query = getSupabase()
             .from('profiles')
             .select('*')
             .order('follower_count', { ascending: false })
@@ -365,7 +365,7 @@ export async function searchProfiles(
         const sanitizedQuery = sanitizeSearchQuery(query);
         if (!sanitizedQuery) return [];
 
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('profiles')
             .select('*')
             .or(`username.ilike.%${sanitizedQuery}%,display_name.ilike.%${sanitizedQuery}%`)

@@ -161,6 +161,7 @@ export interface User {
 
 export interface UserPreferences {
     theme: 'light' | 'dark' | 'system';
+    accentTheme?: 'default' | 'ocean' | 'forest' | 'sunset' | 'lavender' | 'midnight' | 'rose' | 'mint' | 'gold';
     notifications: boolean;
     healthSync: boolean;
     aiRecommendations: boolean;
